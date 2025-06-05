@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,7 +40,7 @@ const Projects = () => {
     try {
       const { data, error } = await supabase
         .from('projects')
-        .select('*')
+        .select('id, name, description, created_at, updated_at')
         .order('updated_at', { ascending: false });
 
       if (error) throw error;

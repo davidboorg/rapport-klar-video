@@ -60,6 +60,7 @@ export type Database = {
       projects: {
         Row: {
           created_at: string
+          description: string | null
           financial_data: Json | null
           id: string
           name: string
@@ -70,6 +71,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           financial_data?: Json | null
           id?: string
           name: string
@@ -80,6 +82,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           financial_data?: Json | null
           id?: string
           name?: string

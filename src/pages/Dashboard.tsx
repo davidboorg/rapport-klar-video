@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,7 +32,7 @@ const Dashboard = () => {
     try {
       const { data, error } = await supabase
         .from('projects')
-        .select('*')
+        .select('id, name, description, created_at, updated_at')
         .order('updated_at', { ascending: false })
         .limit(5);
 
@@ -213,7 +212,7 @@ const Dashboard = () => {
                   >
                     <div>
                       <h4 className="font-medium text-slate-900">{project.name}</h4>
-                      <p className="text-sm text-slate-600">{project.description}</p>
+                      <p className="text-sm text-slate-600">{project.description || "Ingen beskrivning"}</p>
                       <p className="text-xs text-slate-500 mt-1">
                         Uppdaterad {new Date(project.updated_at).toLocaleDateString('sv-SE')}
                       </p>
