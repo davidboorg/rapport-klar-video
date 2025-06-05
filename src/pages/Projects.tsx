@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,9 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import Navbar from "@/components/Navbar";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { 
   FileText, 
   Video, 
@@ -26,65 +29,40 @@ import {
   Clock
 } from "lucide-react";
 
+interface Project {
+  id: string;
+  name: string;
+  status: "uploading" | "processing" | "completed" | "failed";
+  created_at: string;
+  updated_at: string;
+  pdf_url?: string;
+  financial_data?: any;
+}
+
 const Projects = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const { user } = useAuth();
 
-  const projects = [
-    {
-      id: 1,
-      name: "Q3 2024 Kvartalsrapport",
-      status: "completed",
-      type: "quarterly",
-      createdAt: "2024-01-15",
-      completedAt: "2024-01-15",
-      fileSize: "2.4 MB",
-      duration: "2:45",
-      views: 156,
-      thumbnail: "/placeholder.svg",
+  const { data: projects = [], isLoading, error } = useQuery({
+    queryKey: ['projects', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching projects:', error);
+        throw error;
+      }
+      
+      return data as Project[];
     },
-    {
-      id: 2,
-      name: "Årsredovisning 2023",
-      status: "processing",
-      type: "annual",
-      createdAt: "2024-01-14",
-      fileSize: "5.8 MB",
-      progress: 65,
-    },
-    {
-      id: 3,
-      name: "Q2 2024 Delårsrapport",
-      status: "completed",
-      type: "interim",
-      createdAt: "2024-01-13",
-      completedAt: "2024-01-13",
-      fileSize: "3.1 MB",
-      duration: "3:12",
-      views: 89,
-      thumbnail: "/placeholder.svg",
-    },
-    {
-      id: 4,
-      name: "Q1 2024 Kvartalsrapport",
-      status: "draft",
-      type: "quarterly",
-      createdAt: "2024-01-10",
-      fileSize: "1.9 MB",
-    },
-    {
-      id: 5,
-      name: "Hållbarhetsrapport 2023",
-      status: "completed",
-      type: "sustainability",
-      createdAt: "2024-01-08",
-      completedAt: "2024-01-09",
-      fileSize: "4.2 MB",
-      duration: "4:20",
-      views: 234,
-      thumbnail: "/placeholder.svg",
-    },
-  ];
+    enabled: !!user,
+  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -92,21 +70,13 @@ const Projects = () => {
         return <Badge className="bg-green-100 text-green-700">Klar</Badge>;
       case "processing":
         return <Badge className="bg-yellow-100 text-yellow-700">Bearbetas</Badge>;
-      case "draft":
-        return <Badge className="bg-gray-100 text-gray-700">Utkast</Badge>;
+      case "uploading":
+        return <Badge className="bg-blue-100 text-blue-700">Laddas upp</Badge>;
+      case "failed":
+        return <Badge className="bg-red-100 text-red-700">Misslyckades</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
-  };
-
-  const getTypeLabel = (type: string) => {
-    const types: { [key: string]: string } = {
-      quarterly: "Kvartalsrapport",
-      annual: "Årsredovisning", 
-      interim: "Delårsrapport",
-      sustainability: "Hållbarhetsrapport",
-    };
-    return types[type] || type;
   };
 
   const filteredProjects = projects.filter(project => {
@@ -114,6 +84,39 @@ const Projects = () => {
     const matchesTab = activeTab === "all" || project.status === activeTab;
     return matchesSearch && matchesTab;
   });
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <FileText className="mx-auto h-12 w-12 text-slate-400 mb-4" />
+            <h3 className="text-lg font-medium text-slate-900 mb-2">
+              Logga in för att se dina projekt
+            </h3>
+            <p className="text-slate-500">
+              Du behöver vara inloggad för att komma åt dina finansiella rapporter
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-slate-500 mt-4">Laddar projekt...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -161,8 +164,8 @@ const Projects = () => {
             <TabsTrigger value="processing">
               Bearbetas ({projects.filter(p => p.status === "processing").length})
             </TabsTrigger>
-            <TabsTrigger value="draft">
-              Utkast ({projects.filter(p => p.status === "draft").length})
+            <TabsTrigger value="uploading">
+              Laddas upp ({projects.filter(p => p.status === "uploading").length})
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -183,7 +186,7 @@ const Projects = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-base truncate">{project.name}</CardTitle>
-                      <p className="text-sm text-slate-500">{getTypeLabel(project.type)}</p>
+                      <p className="text-sm text-slate-500">Finansiell rapport</p>
                     </div>
                   </div>
                   <DropdownMenu>
@@ -223,44 +226,16 @@ const Projects = () => {
                   {/* Status */}
                   <div className="flex items-center justify-between">
                     {getStatusBadge(project.status)}
-                    <span className="text-xs text-slate-500">{project.fileSize}</span>
+                    <span className="text-xs text-slate-500">
+                      {project.pdf_url ? "PDF uppladdad" : "Ingen PDF"}
+                    </span>
                   </div>
-
-                  {/* Progress for processing projects */}
-                  {project.status === "processing" && project.progress && (
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-600">Bearbetning</span>
-                        <span className="text-slate-600">{project.progress}%</span>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${project.progress}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Completed project info */}
-                  {project.status === "completed" && (
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <div className="flex items-center">
-                        <Clock className="w-3 h-3 mr-1" />
-                        {project.duration}
-                      </div>
-                      <div className="flex items-center">
-                        <Play className="w-3 h-3 mr-1" />
-                        {project.views} visningar
-                      </div>
-                    </div>
-                  )}
 
                   {/* Created date */}
                   <div className="text-xs text-slate-500">
-                    Skapad: {new Date(project.createdAt).toLocaleDateString('sv-SE')}
-                    {project.completedAt && (
-                      <span> • Klar: {new Date(project.completedAt).toLocaleDateString('sv-SE')}</span>
+                    Skapad: {new Date(project.created_at).toLocaleDateString('sv-SE')}
+                    {project.updated_at !== project.created_at && (
+                      <span> • Uppdaterad: {new Date(project.updated_at).toLocaleDateString('sv-SE')}</span>
                     )}
                   </div>
 
@@ -276,7 +251,7 @@ const Projects = () => {
                           <Download className="w-3 h-3" />
                         </Button>
                       </>
-                    ) : project.status === "draft" ? (
+                    ) : project.status === "uploading" ? (
                       <Button size="sm" variant="outline" className="flex-1">
                         <Edit className="w-3 h-3 mr-1" />
                         Fortsätt redigera
@@ -295,11 +270,11 @@ const Projects = () => {
         </div>
 
         {/* Empty state */}
-        {filteredProjects.length === 0 && (
+        {filteredProjects.length === 0 && !isLoading && (
           <div className="text-center py-12">
             <FileText className="mx-auto h-12 w-12 text-slate-400 mb-4" />
             <h3 className="text-lg font-medium text-slate-900 mb-2">
-              Inga projekt hittades
+              {searchTerm ? "Inga projekt hittades" : "Inga projekt ännu"}
             </h3>
             <p className="text-slate-500">
               {searchTerm ? "Försök med ett annat sökord" : "Ladda upp din första rapport för att komma igång"}

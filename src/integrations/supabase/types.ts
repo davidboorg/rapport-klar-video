@@ -9,7 +9,114 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      generated_content: {
+        Row: {
+          created_at: string
+          generation_status: Database["public"]["Enums"]["project_status"]
+          id: string
+          project_id: string
+          script_text: string | null
+          template_used: string | null
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          generation_status?: Database["public"]["Enums"]["project_status"]
+          id?: string
+          project_id: string
+          script_text?: string | null
+          template_used?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          generation_status?: Database["public"]["Enums"]["project_status"]
+          id?: string
+          project_id?: string
+          script_text?: string | null
+          template_used?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_content_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_content_template_used_fkey"
+            columns: ["template_used"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          financial_data: Json | null
+          id: string
+          name: string
+          pdf_url: string | null
+          status: Database["public"]["Enums"]["project_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          financial_data?: Json | null
+          id?: string
+          name: string
+          pdf_url?: string | null
+          status?: Database["public"]["Enums"]["project_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          financial_data?: Json | null
+          id?: string
+          name?: string
+          pdf_url?: string | null
+          status?: Database["public"]["Enums"]["project_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          preview_image: string | null
+          style_config: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          preview_image?: string | null
+          style_config: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          preview_image?: string | null
+          style_config?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +125,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      project_status: "uploading" | "processing" | "completed" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +240,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      project_status: ["uploading", "processing", "completed", "failed"],
+    },
   },
 } as const
