@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Play, Eye, EyeOff, CheckCircle } from "lucide-react";
 
 const Register = () => {
@@ -22,6 +22,7 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { register, loading } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,18 +56,28 @@ const Register = () => {
       return;
     }
 
-    try {
-      await register({ firstName, lastName, email, company, password });
+    const { error } = await register(email, password, { firstName, lastName, company });
+    
+    if (error) {
+      if (error.message === "User already registered") {
+        toast({
+          title: "E-postadressen används redan",
+          description: "Det finns redan ett konto med denna e-postadress",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Registrering misslyckades",
+          description: error.message || "Ett fel uppstod. Försök igen.",
+          variant: "destructive",
+        });
+      }
+    } else {
       toast({
         title: "Kontot skapat!",
-        description: "Välkommen till ReportFlow",
+        description: "Kontrollera din e-post för att bekräfta ditt konto",
       });
-    } catch (error) {
-      toast({
-        title: "Registrering misslyckades",
-        description: "Ett fel uppstod. Försök igen.",
-        variant: "destructive",
-      });
+      navigate("/login");
     }
   };
 

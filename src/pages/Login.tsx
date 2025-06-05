@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Play, Eye, EyeOff } from "lucide-react";
 
 const Login = () => {
@@ -15,6 +15,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { login, loading } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,18 +29,28 @@ const Login = () => {
       return;
     }
 
-    try {
-      await login(email, password);
+    const { error } = await login(email, password);
+    
+    if (error) {
+      if (error.message === "Invalid login credentials") {
+        toast({
+          title: "Felaktiga uppgifter",
+          description: "E-postadressen eller lösenordet är felaktigt",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Inloggning misslyckades",
+          description: error.message || "Ett fel uppstod. Försök igen.",
+          variant: "destructive",
+        });
+      }
+    } else {
       toast({
         title: "Välkommen tillbaka!",
         description: "Du har loggats in framgångsrikt",
       });
-    } catch (error) {
-      toast({
-        title: "Inloggning misslyckades",
-        description: "Kontrollera dina uppgifter och försök igen",
-        variant: "destructive",
-      });
+      navigate("/dashboard");
     }
   };
 

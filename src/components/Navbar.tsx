@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { Link, useLocation } from "react-router-dom";
 import { Play, Settings, User, LogOut, Menu } from "lucide-react";
 import {
@@ -25,10 +25,16 @@ const Navbar = () => {
     { name: "Mallar", href: "/templates", current: location.pathname === "/templates" },
   ];
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setMobileMenuOpen(false);
   };
+
+  // Get user display information from metadata
+  const firstName = user?.user_metadata?.first_name || "";
+  const lastName = user?.user_metadata?.last_name || "";
+  const company = user?.user_metadata?.company || "";
+  const email = user?.email || "";
 
   return (
     <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
@@ -71,7 +77,7 @@ const Navbar = () => {
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-blue-100 text-blue-600">
-                        {user?.firstName?.[0]}{user?.lastName?.[0]}
+                        {firstName?.[0]}{lastName?.[0]}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -80,14 +86,16 @@ const Navbar = () => {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {user?.firstName} {user?.lastName}
+                        {firstName} {lastName}
                       </p>
                       <p className="text-xs leading-none text-slate-600">
-                        {user?.email}
+                        {email}
                       </p>
-                      <p className="text-xs leading-none text-slate-500">
-                        {user?.company}
-                      </p>
+                      {company && (
+                        <p className="text-xs leading-none text-slate-500">
+                          {company}
+                        </p>
+                      )}
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -148,14 +156,14 @@ const Navbar = () => {
               <div className="flex items-center px-3">
                 <Avatar className="h-10 w-10">
                   <AvatarFallback className="bg-blue-100 text-blue-600">
-                    {user?.firstName?.[0]}{user?.lastName?.[0]}
+                    {firstName?.[0]}{lastName?.[0]}
                   </AvatarFallback>
                 </Avatar>
                 <div className="ml-3">
                   <div className="text-base font-medium text-slate-800">
-                    {user?.firstName} {user?.lastName}
+                    {firstName} {lastName}
                   </div>
-                  <div className="text-sm font-medium text-slate-600">{user?.email}</div>
+                  <div className="text-sm font-medium text-slate-600">{email}</div>
                 </div>
               </div>
               <div className="mt-3 px-2 space-y-1">
