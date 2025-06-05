@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, FileText, Calendar, Settings } from "lucide-react";
+import { Plus, FileText, Calendar, Settings, Trash2 } from "lucide-react";
 
 interface Project {
   id: string;
@@ -91,6 +92,53 @@ const Projects = () => {
       toast({
         title: "Fel",
         description: "Kunde inte skapa projekt. Försök igen.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenProject = (project: Project) => {
+    toast({
+      title: "Öppnar projekt",
+      description: `Öppnar ${project.name}...`,
+    });
+    // TODO: Navigate to project editor when implemented
+    console.log('Opening project:', project);
+  };
+
+  const handleEditProject = (project: Project) => {
+    toast({
+      title: "Redigerar projekt",
+      description: `Redigerar ${project.name}...`,
+    });
+    // TODO: Open edit dialog when implemented
+    console.log('Editing project:', project);
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    if (!confirm('Är du säker på att du vill ta bort detta projekt?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Projekt borttaget",
+        description: "Projektet har tagits bort framgångsrikt.",
+      });
+
+      fetchProjects();
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte ta bort projekt. Försök igen.",
         variant: "destructive",
       });
     }
@@ -236,8 +284,12 @@ const Projects = () => {
                         {project.description || "Ingen beskrivning"}
                       </CardDescription>
                     </div>
-                    <Button variant="ghost" size="sm">
-                      <Settings className="h-4 w-4" />
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleDeleteProject(project.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </CardHeader>
@@ -249,10 +301,16 @@ const Projects = () => {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button className="flex-1">
+                    <Button 
+                      className="flex-1"
+                      onClick={() => handleOpenProject(project)}
+                    >
                       Öppna Projekt
                     </Button>
-                    <Button variant="outline">
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleEditProject(project)}
+                    >
                       Redigera
                     </Button>
                   </div>

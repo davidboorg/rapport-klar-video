@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Play, FileText, Video, TrendingUp } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 interface Project {
   id: string;
@@ -19,6 +19,7 @@ interface Project {
 const Dashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,6 +44,16 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenProject = (projectId: string) => {
+    // For now, navigate to projects page with the specific project
+    // In the future, this could navigate to a project editor page
+    navigate(`/projects?id=${projectId}`);
+    toast({
+      title: "Öppnar projekt",
+      description: "Navigerar till projektvy...",
+    });
   };
 
   const stats = [
@@ -217,7 +228,11 @@ const Dashboard = () => {
                         Uppdaterad {new Date(project.updated_at).toLocaleDateString('sv-SE')}
                       </p>
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleOpenProject(project.id)}
+                    >
                       Öppna
                     </Button>
                   </div>
