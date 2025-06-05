@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,10 +10,19 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Navbar from "@/components/Navbar";
-import { useAuth } from "@/contexts/AuthContext";
+import ScriptEditor from "@/components/ScriptEditor";
+import FinancialDataDisplay from "@/components/FinancialDataDisplay";
+import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { 
   FileText, 
   Video, 
@@ -26,7 +34,9 @@ import {
   Trash2,
   Play,
   Calendar,
-  Clock
+  Clock,
+  Wand2,
+  Brain
 } from "lucide-react";
 
 interface Project {
@@ -39,12 +49,24 @@ interface Project {
   financial_data?: any;
 }
 
+interface GeneratedContent {
+  id: string;
+  project_id: string;
+  script_text: string;
+  generation_status: string;
+  created_at: string;
+}
+
 const Projects = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [isScriptEditorOpen, setScriptEditorOpen] = useState(false);
+  const [isAnalyzing, setAnalyzing] = useState<string | null>(null);
   const { user } = useAuth();
+  const { toast } = useToast();
 
-  const { data: projects = [], isLoading, error } = useQuery({
+  const { data: projects = [], isLoading, error, refetch } = useQuery({
     queryKey: ['projects', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -63,6 +85,85 @@ const Projects = () => {
     },
     enabled: !!user,
   });
+
+  const { data: generatedContent = [] } = useQuery({
+    queryKey: ['generated_content', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('generated_content')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching generated content:', error);
+        return [];
+      }
+      
+      return data as GeneratedContent[];
+    },
+    enabled: !!user,
+  });
+
+  const handleAnalyzeFinancialData = async (project: Project) => {
+    if (!project.pdf_url) {
+      toast({
+        title: "Fel",
+        description: "Ingen PDF-fil finns för detta projekt.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAnalyzing(project.id);
+    try {
+      // Here we would normally extract text from the PDF
+      // For now, we'll simulate with sample text
+      const samplePdfText = `
+        Quarterly Report Q3 2024
+        Company: TechCorp AB
+        Revenue: 125.5 MSEK (+15%)
+        EBITDA: 32.1 MSEK (+22%)
+        Growth: 15% YoY
+        Key highlights: Strong digital transformation, new product launches, increased market share
+      `;
+
+      const { data, error } = await supabase.functions.invoke('analyze-financial-data', {
+        body: { 
+          pdfText: samplePdfText,
+          projectId: project.id 
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Analys klar!",
+        description: "Finansiell data har extraherats och videomanus har genererats.",
+      });
+
+      refetch();
+    } catch (error) {
+      console.error('Error analyzing financial data:', error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte analysera finansiell data. Försök igen.",
+        variant: "destructive",
+      });
+    } finally {
+      setAnalyzing(null);
+    }
+  };
+
+  const openScriptEditor = (project: Project) => {
+    setSelectedProject(project);
+    setScriptEditorOpen(true);
+  };
+
+  const getProjectScript = (projectId: string) => {
+    return generatedContent.find(content => content.project_id === projectId)?.script_text || "";
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -196,6 +297,18 @@ const Projects = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {project.pdf_url && !project.financial_data && (
+                        <DropdownMenuItem onClick={() => handleAnalyzeFinancialData(project)}>
+                          <Brain className="mr-2 h-4 w-4" />
+                          Analysera finansiell data
+                        </DropdownMenuItem>
+                      )}
+                      {project.financial_data && (
+                        <DropdownMenuItem onClick={() => openScriptEditor(project)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Redigera manus
+                        </DropdownMenuItem>
+                      )}
                       {project.status === "completed" && (
                         <>
                           <DropdownMenuItem>
@@ -205,13 +318,9 @@ const Projects = () => {
                           <DropdownMenuItem>
                             <Download className="mr-2 h-4 w-4" />
                             Ladda ner
-                          </DropdownMenuItem>
+                          </DropdownDropdownMenuItem>
                         </>
                       )}
-                      <DropdownMenuItem>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Redigera
-                      </DropdownMenuItem>
                       <DropdownMenuItem className="text-red-600">
                         <Trash2 className="mr-2 h-4 w-4" />
                         Ta bort
@@ -227,9 +336,24 @@ const Projects = () => {
                   <div className="flex items-center justify-between">
                     {getStatusBadge(project.status)}
                     <span className="text-xs text-slate-500">
-                      {project.pdf_url ? "PDF uppladdad" : "Ingen PDF"}
+                      {project.financial_data ? "AI-analyserad" : project.pdf_url ? "PDF uppladdad" : "Ingen PDF"}
                     </span>
                   </div>
+
+                  {/* Financial Data Summary */}
+                  {project.financial_data && (
+                    <div className="text-xs bg-green-50 p-2 rounded">
+                      <div className="font-medium text-green-800">Finansiell data:</div>
+                      <div className="text-green-700">
+                        {project.financial_data.company_name && (
+                          <div>{project.financial_data.company_name}</div>
+                        )}
+                        {project.financial_data.revenue && (
+                          <div>Intäkter: {project.financial_data.revenue}</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Created date */}
                   <div className="text-xs text-slate-500">
@@ -241,25 +365,34 @@ const Projects = () => {
 
                   {/* Action buttons */}
                   <div className="flex gap-2 pt-2">
-                    {project.status === "completed" ? (
-                      <>
-                        <Button size="sm" className="flex-1">
-                          <Play className="w-3 h-3 mr-1" />
-                          Spela
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <Download className="w-3 h-3" />
-                        </Button>
-                      </>
-                    ) : project.status === "uploading" ? (
+                    {project.financial_data ? (
+                      <Button size="sm" onClick={() => openScriptEditor(project)} className="flex-1">
+                        <Edit className="w-3 h-3 mr-1" />
+                        Redigera manus
+                      </Button>
+                    ) : project.pdf_url ? (
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleAnalyzeFinancialData(project)}
+                        disabled={isAnalyzing === project.id}
+                        className="flex-1"
+                      >
+                        {isAnalyzing === project.id ? (
+                          <>
+                            <Wand2 className="w-3 h-3 mr-1 animate-spin" />
+                            Analyserar...
+                          </>
+                        ) : (
+                          <>
+                            <Brain className="w-3 h-3 mr-1" />
+                            Analysera med AI
+                          </>
+                        )}
+                      </Button>
+                    ) : (
                       <Button size="sm" variant="outline" className="flex-1">
                         <Edit className="w-3 h-3 mr-1" />
                         Fortsätt redigera
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="outline" className="flex-1" disabled>
-                        <Clock className="w-3 h-3 mr-1" />
-                        Bearbetas...
                       </Button>
                     )}
                   </div>
@@ -282,6 +415,32 @@ const Projects = () => {
           </div>
         )}
       </div>
+
+      {/* Script Editor Dialog */}
+      <Dialog open={isScriptEditorOpen} onOpenChange={setScriptEditorOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Videomanus - {selectedProject?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            {selectedProject?.financial_data && (
+              <FinancialDataDisplay data={selectedProject.financial_data} />
+            )}
+            {selectedProject && (
+              <ScriptEditor
+                projectId={selectedProject.id}
+                initialScript={getProjectScript(selectedProject.id)}
+                onScriptUpdate={() => {
+                  // Refresh data after script update
+                  refetch();
+                }}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
