@@ -36,6 +36,25 @@ interface ScriptAlternative {
   key_points: string[];
 }
 
+// Helper function to safely convert JSON to ScriptAlternative[]
+const parseScriptAlternatives = (data: any): ScriptAlternative[] => {
+  if (!Array.isArray(data)) return [];
+  
+  return data.filter((item): item is ScriptAlternative => {
+    return (
+      typeof item === 'object' &&
+      item !== null &&
+      typeof item.type === 'string' &&
+      ['executive', 'investor', 'social'].includes(item.type) &&
+      typeof item.title === 'string' &&
+      typeof item.duration === 'string' &&
+      typeof item.script === 'string' &&
+      typeof item.tone === 'string' &&
+      Array.isArray(item.key_points)
+    );
+  });
+};
+
 const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: ScriptEditorContentProps) => {
   const [script, setScript] = useState(initialScript);
   const [isSaving, setSaving] = useState(false);
@@ -140,10 +159,11 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
       });
 
       if (!contentError && contentData) {
-        // Handle script alternatives
-        if (contentData.script_alternatives && Array.isArray(contentData.script_alternatives)) {
-          console.log('Setting script alternatives:', contentData.script_alternatives.length, 'items');
-          setScriptAlternatives(contentData.script_alternatives as ScriptAlternative[]);
+        // Handle script alternatives with safe type conversion
+        if (contentData.script_alternatives) {
+          const parsedAlternatives = parseScriptAlternatives(contentData.script_alternatives);
+          console.log('Setting script alternatives:', parsedAlternatives.length, 'items');
+          setScriptAlternatives(parsedAlternatives);
         } else {
           console.log('No valid script alternatives found');
           setScriptAlternatives([]);
