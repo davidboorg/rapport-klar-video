@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAvatars } from '@/hooks/useAvatars';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,10 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Plus, User, Play, Trash2, Settings, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 import AvatarDebugPanel from './AvatarDebugPanel';
 
 const AvatarLibrary = () => {
   const { avatars, loading, deleteAvatar } = useAvatars();
+  const { toast } = useToast();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -38,6 +41,33 @@ const AvatarLibrary = () => {
       case 'creating': return <Clock className="h-4 w-4 animate-pulse" />;
       case 'failed': return <AlertCircle className="h-4 w-4" />;
       default: return <Clock className="h-4 w-4" />;
+    }
+  };
+
+  const handlePreview = (avatar: any) => {
+    console.log('Preview clicked for avatar:', avatar);
+    
+    if (avatar.preview_video_url) {
+      // Open video in new tab
+      window.open(avatar.preview_video_url, '_blank');
+      toast({
+        title: "Öppnar förhandsvisning",
+        description: "Avatar-videon öppnas i en ny flik",
+      });
+    } else if (avatar.thumbnail_url) {
+      // Show thumbnail in new tab if video not available
+      window.open(avatar.thumbnail_url, '_blank');
+      toast({
+        title: "Visar avatar-bild",
+        description: "Ingen video tillgänglig, visar thumbnail istället",
+      });
+    } else {
+      // No preview available
+      toast({
+        title: "Ingen förhandsvisning tillgänglig",
+        description: "Avatar har inte genererat en förhandsvisning än",
+        variant: "destructive",
+      });
     }
   };
 
@@ -155,7 +185,12 @@ const AvatarLibrary = () => {
 
                 <div className="flex gap-2">
                   {avatar.status === 'completed' && (
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handlePreview(avatar)}
+                    >
                       <Play className="h-4 w-4 mr-1" />
                       Preview
                     </Button>
