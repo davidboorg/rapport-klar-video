@@ -105,51 +105,18 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
         throw projectError;
       }
       
-      console.log('ScriptEditor: Project data fetched:', {
-        status: projectData.status,
-        hasFinancialData: !!projectData?.financial_data,
-        financialDataKeys: projectData?.financial_data ? Object.keys(projectData.financial_data) : [],
-        hasPdfUrl: !!projectData?.pdf_url
-      });
+      console.log('ScriptEditor: Raw project data from database:', projectData);
+      console.log('ScriptEditor: Financial data type:', typeof projectData?.financial_data);
+      console.log('ScriptEditor: Financial data content:', JSON.stringify(projectData?.financial_data, null, 2));
 
       setProjectStatus(projectData.status);
 
-      // Check if we have valid financial data with more robust validation
-      let hasValidFinancialData = false;
+      // Always set financial data if it exists, regardless of content
       if (projectData?.financial_data) {
-        const financialDataObj = projectData.financial_data as FinancialData;
-        console.log('ScriptEditor: Financial data content:', financialDataObj);
-        
-        // More comprehensive check for valid financial data
-        const hasRealData = Object.entries(financialDataObj).some(([key, value]) => {
-          if (typeof value === 'string') {
-            const isValidData = value !== 'Information saknas' && 
-                               value.trim() !== '' && 
-                               value !== 'N/A' &&
-                               value !== 'null' &&
-                               value !== 'undefined';
-            if (isValidData && ['revenue', 'ebitda', 'growth_percentage', 'period'].includes(key)) {
-              return true;
-            }
-          }
-          if (Array.isArray(value)) {
-            return value.length > 0 && !value.every(item => 
-              item === 'Information saknas' || item === '' || item === 'N/A'
-            );
-          }
-          return value !== null && value !== undefined;
-        });
-
-        // Even if some fields say "Information saknas", if we have period/revenue/ebitda we consider it valid
-        const hasKeyFinancials = financialDataObj.period || financialDataObj.revenue || financialDataObj.ebitda;
-
-        if (hasRealData || hasKeyFinancials) {
-          setFinancialData(financialDataObj);
-          hasValidFinancialData = true;
-          console.log('ScriptEditor: Valid financial data found and set');
-        } else {
-          console.log('ScriptEditor: Financial data exists but contains only placeholder values');
-        }
+        setFinancialData(projectData.financial_data as FinancialData);
+        console.log('ScriptEditor: Financial data set in state');
+      } else {
+        console.log('ScriptEditor: No financial data found in project');
       }
 
       // Fetch existing script alternatives and video
@@ -159,27 +126,15 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
         .eq('project_id', projectId)
         .maybeSingle();
 
-      let hasValidScriptAlternatives = false;
-      
-      if (!contentError && contentData) {
-        console.log('ScriptEditor: Content data fetched:', {
-          hasScriptAlternatives: !!contentData.script_alternatives,
-          scriptAlternativesLength: Array.isArray(contentData.script_alternatives) ? contentData.script_alternatives.length : 0,
-          hasVideoUrl: !!contentData.video_url,
-          hasScriptText: !!contentData.script_text
-        });
+      console.log('ScriptEditor: Generated content query result:', { contentData, contentError });
 
-        if (contentData.script_alternatives && Array.isArray(contentData.script_alternatives) && contentData.script_alternatives.length > 0) {
-          // Validate that script alternatives have actual content
-          const validAlternatives = contentData.script_alternatives.filter((alt: any) => 
-            alt && alt.script && alt.script.trim().length > 50
-          );
-          
-          if (validAlternatives.length > 0) {
-            setScriptAlternatives(validAlternatives as unknown as ScriptAlternative[]);
-            hasValidScriptAlternatives = true;
-            console.log('ScriptEditor: Valid script alternatives found and set:', validAlternatives.length, 'alternatives');
-          }
+      if (!contentError && contentData) {
+        console.log('ScriptEditor: Script alternatives type:', typeof contentData.script_alternatives);
+        console.log('ScriptEditor: Script alternatives content:', JSON.stringify(contentData.script_alternatives, null, 2));
+
+        if (contentData.script_alternatives && Array.isArray(contentData.script_alternatives)) {
+          setScriptAlternatives(contentData.script_alternatives as unknown as ScriptAlternative[]);
+          console.log('ScriptEditor: Script alternatives set in state:', contentData.script_alternatives.length, 'alternatives');
         }
 
         if (contentData.video_url) {
@@ -192,35 +147,37 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
           console.log('ScriptEditor: Script text loaded from database');
         }
       } else if (contentError) {
-        console.log('ScriptEditor: No content data found or error:', contentError);
+        console.log('ScriptEditor: Content data error:', contentError);
       }
 
-      // Determine if we have processed data and should show review interface
-      const hasProcessedData = hasValidFinancialData || hasValidScriptAlternatives;
+      // Determine if we have processed data
+      const hasFinancialData = !!(projectData?.financial_data);
+      const hasScriptAlternatives = !!(contentData?.script_alternatives && Array.isArray(contentData.script_alternatives) && contentData.script_alternatives.length > 0);
+      const hasProcessedData = hasFinancialData || hasScriptAlternatives;
+      
       setHasProcessedData(hasProcessedData);
       
-      console.log('ScriptEditor: Data processing assessment:', {
-        hasValidFinancialData,
-        hasValidScriptAlternatives,
+      console.log('ScriptEditor: Final state assessment:', {
+        hasFinancialData,
+        hasScriptAlternatives,
         hasProcessedData,
-        projectStatus: projectData.status
+        projectStatus: projectData.status,
+        financialDataKeys: projectData?.financial_data ? Object.keys(projectData.financial_data) : [],
+        scriptAlternativesCount: Array.isArray(contentData?.script_alternatives) ? contentData.script_alternatives.length : 0
       });
 
-      // Show processing workflow if:
-      // 1. We have a PDF but no processed data, OR
-      // 2. Project status is currently 'processing', OR
-      // 3. Project status is 'failed' but we want to retry
+      // Show processing workflow if we don't have processed data and have a PDF
       const shouldShowProcessing = (
         (projectData?.pdf_url && !hasProcessedData) ||
         projectData.status === 'processing' ||
         (projectData.status === 'failed' && !hasProcessedData)
       );
 
-      console.log('ScriptEditor: Processing workflow assessment:', {
-        hasPdfUrl: !!projectData?.pdf_url,
+      console.log('ScriptEditor: Processing workflow decision:', {
         shouldShowProcessing,
-        currentStatus: projectData.status,
-        hasProcessedData
+        hasPdfUrl: !!projectData?.pdf_url,
+        hasProcessedData,
+        status: projectData.status
       });
 
       if (shouldShowProcessing) {
@@ -268,7 +225,8 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
     hasFinancialData: !!financialData,
     scriptAlternativesCount: scriptAlternatives.length,
     hasProcessedData,
-    projectStatus
+    projectStatus,
+    financialDataContent: financialData
   });
 
   return (
