@@ -97,6 +97,7 @@ export type Database = {
           generation_status: Database["public"]["Enums"]["project_status"]
           id: string
           project_id: string
+          script_alternatives: Json | null
           script_text: string | null
           template_used: string | null
           updated_at: string
@@ -107,6 +108,7 @@ export type Database = {
           generation_status?: Database["public"]["Enums"]["project_status"]
           id?: string
           project_id: string
+          script_alternatives?: Json | null
           script_text?: string | null
           template_used?: string | null
           updated_at?: string
@@ -117,6 +119,7 @@ export type Database = {
           generation_status?: Database["public"]["Enums"]["project_status"]
           id?: string
           project_id?: string
+          script_alternatives?: Json | null
           script_text?: string | null
           template_used?: string | null
           updated_at?: string

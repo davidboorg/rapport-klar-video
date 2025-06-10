@@ -89,7 +89,7 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
         .from('generated_content')
         .select('script_text, script_alternatives, video_url')
         .eq('project_id', projectId)
-        .single();
+        .maybeSingle();
 
       if (!contentError && contentData) {
         if (contentData.script_alternatives) {
