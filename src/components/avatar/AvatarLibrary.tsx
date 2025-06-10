@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAvatars } from '@/hooks/useAvatars';
+import { useAvatars, Avatar } from '@/hooks/useAvatars';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
