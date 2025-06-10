@@ -226,12 +226,48 @@ export const useAvatars = () => {
     }
   };
 
+  const refreshAvatarData = async (avatarId: string) => {
+    try {
+      toast({
+        title: "Uppdaterar avatar-data",
+        description: "Hämtar senaste information från HeyGen...",
+      });
+
+      const { data, error } = await supabase.functions.invoke('refresh-avatar-data', {
+        body: { avatarId }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: "Avatar-data uppdaterad",
+          description: "Senaste information har hämtats från HeyGen",
+        });
+      } else {
+        toast({
+          title: "Ingen uppdatering tillgänglig",
+          description: "HeyGen har ingen ny information för denna avatar",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing avatar data:', error);
+      toast({
+        title: "Fel vid uppdatering",
+        description: "Kunde inte hämta uppdaterad avatar-data",
+        variant: "destructive",
+      });
+    }
+  };
+
   return {
     avatars,
     loading,
     createAvatar,
     deleteAvatar,
     updateAvatarStatus,
+    refreshAvatarData,
     refreshAvatars: fetchAvatars
   };
 };

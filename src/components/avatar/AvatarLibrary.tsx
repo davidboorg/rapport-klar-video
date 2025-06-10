@@ -1,17 +1,16 @@
-
 import React from 'react';
 import { useAvatars } from '@/hooks/useAvatars';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Plus, User, Play, Trash2, Settings, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Plus, User, Play, Trash2, Settings, Clock, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import AvatarDebugPanel from './AvatarDebugPanel';
 
 const AvatarLibrary = () => {
-  const { avatars, loading, deleteAvatar } = useAvatars();
+  const { avatars, loading, deleteAvatar, refreshAvatarData } = useAvatars();
   const { toast } = useToast();
 
   const getStatusColor = (status: string) => {
@@ -185,15 +184,28 @@ const AvatarLibrary = () => {
 
                 <div className="flex gap-2">
                   {avatar.status === 'completed' && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                      onClick={() => handlePreview(avatar)}
-                    >
-                      <Play className="h-4 w-4 mr-1" />
-                      Preview
-                    </Button>
+                    <>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handlePreview(avatar)}
+                      >
+                        <Play className="h-4 w-4 mr-1" />
+                        Preview
+                      </Button>
+                      
+                      {(!avatar.preview_video_url || !avatar.thumbnail_url) && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => refreshAvatarData(avatar.id)}
+                          title="Hämta senaste data från HeyGen"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </>
                   )}
                   
                   {avatar.status === 'creating' && (
