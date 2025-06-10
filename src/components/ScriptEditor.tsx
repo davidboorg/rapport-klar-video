@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,8 @@ import {
   Wand2,
   RefreshCw,
   Film,
-  Brain
+  Brain,
+  CheckCircle
 } from "lucide-react";
 
 interface ScriptEditorProps {
@@ -59,7 +59,7 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
   const [scriptAlternatives, setScriptAlternatives] = useState<ScriptAlternative[]>([]);
   const [existingVideoUrl, setExistingVideoUrl] = useState<string | null>(null);
   const [hasProcessedData, setHasProcessedData] = useState(false);
-  const [useAdvancedProcessing, setUseAdvancedProcessing] = useState(true);
+  const [showProcessingWorkflow, setShowProcessingWorkflow] = useState(false);
   const { toast } = useToast();
 
   // Calculate estimated video duration (150 words per minute speaking rate)
@@ -80,9 +80,12 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
 
       if (projectError) throw projectError;
       
+      console.log('Project data:', projectData);
+
       if (projectData?.financial_data) {
         setFinancialData(projectData.financial_data as FinancialData);
         setHasProcessedData(true);
+        console.log('Found existing financial data:', projectData.financial_data);
       }
 
       // Fetch existing script alternatives and video
@@ -96,6 +99,7 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
         if (contentData.script_alternatives) {
           setScriptAlternatives(contentData.script_alternatives as unknown as ScriptAlternative[]);
           setHasProcessedData(true);
+          console.log('Found existing script alternatives:', contentData.script_alternatives);
         }
         if (contentData.video_url) {
           setExistingVideoUrl(contentData.video_url);
@@ -105,79 +109,15 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
         }
       }
 
-      // Trigger processing if we have PDF but no processed data
-      if (projectData?.pdf_url && !projectData?.financial_data && projectData?.status !== 'processing') {
-        startIntelligentProcessing();
+      // Check if we need to show processing workflow
+      const needsProcessing = projectData?.pdf_url && !projectData?.financial_data && !contentData?.script_alternatives;
+      if (needsProcessing) {
+        console.log('Project needs processing, showing workflow');
+        setShowProcessingWorkflow(true);
       }
 
     } catch (error) {
       console.error('Error fetching project data:', error);
-    }
-  };
-
-  const startIntelligentProcessing = async () => {
-    if (useAdvancedProcessing) {
-      // Use the new advanced processing pipeline
-      setProcessing(true);
-      return;
-    }
-
-    setProcessing(true);
-    setProcessingStep(0);
-
-    try {
-      // Simulate processing steps with realistic timing
-      const steps = [
-        { step: 0, delay: 1000, message: 'Analyserar PDF-innehåll...' },
-        { step: 1, delay: 2000, message: 'Extraherar finansiella nyckeltal...' },
-        { step: 2, delay: 1500, message: 'Identifierar viktiga insights...' },
-        { step: 3, delay: 3000, message: 'Genererar script-alternativ...' },
-        { step: 4, delay: 1000, message: 'Utför kvalitetskontroll...' }
-      ];
-
-      for (const { step, delay, message } of steps) {
-        setProcessingStep(step);
-        toast({
-          title: "Bearbetar rapport",
-          description: message,
-        });
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-
-      // Call the enhanced edge function
-      const { data, error } = await supabase.functions.invoke('analyze-financial-data', {
-        body: { 
-          projectId,
-          pdfText: "Placeholder text - this would be the actual PDF content"
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.financial_data) {
-        setFinancialData(data.financial_data);
-        setHasProcessedData(true);
-      }
-
-      if (data?.script_alternatives) {
-        setScriptAlternatives(data.script_alternatives);
-        setScript(data.script_alternatives[0]?.script || '');
-      }
-
-      toast({
-        title: "Bearbetning klar!",
-        description: "Din rapport har analyserats och script-alternativ har genererats.",
-      });
-
-    } catch (error) {
-      console.error('Error in intelligent processing:', error);
-      toast({
-        title: "Fel",
-        description: "Kunde inte bearbeta rapporten. Försök igen.",
-        variant: "destructive",
-      });
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -244,47 +184,50 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
     }
   };
 
-  // Show advanced processing workflow if enabled and processing
-  if (useAdvancedProcessing && (isProcessing || (!hasProcessedData && !scriptAlternatives.length))) {
+  const handleProcessingComplete = (result: { success: boolean; data?: any; error?: string }) => {
+    setProcessing(false);
+    setShowProcessingWorkflow(false);
+    
+    if (result.success) {
+      // Refresh project data to get the new financial data and scripts
+      fetchProjectData();
+      toast({
+        title: "AI-bearbetning slutförd!",
+        description: "Din rapport har analyserats och manuscriptförslag är redo.",
+      });
+    } else {
+      toast({
+        title: "Bearbetning misslyckades",
+        description: result.error || "Något gick fel under bearbetningen.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Show processing workflow if we need to process data
+  if (showProcessingWorkflow || (!hasProcessedData && !scriptAlternatives.length)) {
     return (
       <div className="space-y-6">
         <ProcessingWorkflow 
           projectId={projectId}
           isProcessing={isProcessing}
           currentStep={processingStep}
-          autoStart={false}
-          onComplete={(result) => {
-            setProcessing(false);
-            if (result.success) {
-              fetchProjectData();
-              toast({
-                title: "Processing Complete!",
-                description: "Your report has been analyzed and scripts are ready.",
-              });
-            }
-          }}
+          autoStart={true}
+          onComplete={handleProcessingComplete}
         />
         
-        {!isProcessing && !hasProcessedData && (
+        {hasProcessedData && (
           <Card>
             <CardContent className="pt-6 text-center">
-              <Brain className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="font-medium mb-2">Ready for AI Processing</h3>
+              <CheckCircle className="w-12 h-12 mx-auto text-green-500 mb-4" />
+              <h3 className="font-medium mb-2">Bearbetning slutförd!</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Upload a PDF report to start our advanced processing pipeline with real-time feedback.
+                Din rapport har analyserats och manuscriptförslag är redo att granska.
               </p>
-              <div className="flex gap-2 justify-center">
-                <Button onClick={startIntelligentProcessing}>
-                  <Wand2 className="w-4 h-4 mr-2" />
-                  Start Advanced Processing
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setUseAdvancedProcessing(false)}
-                >
-                  Use Simple Mode
-                </Button>
-              </div>
+              <Button onClick={() => setShowProcessingWorkflow(false)}>
+                <FileText className="w-4 h-4 mr-2" />
+                Fortsätt till manuscriptgranskning
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -325,8 +268,12 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
                 <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                 <h3 className="font-medium mb-2">Ingen bearbetad data tillgänglig</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Ladda upp en PDF-rapport för att få AI-genererade script-alternativ.
+                  Starta bearbetningen för att få AI-genererade manuscriptförslag.
                 </p>
+                <Button onClick={() => setShowProcessingWorkflow(true)}>
+                  <Brain className="w-4 h-4 mr-2" />
+                  Starta AI-bearbetning
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -381,7 +328,7 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
                 
                 <Button 
                   variant="outline" 
-                  onClick={startIntelligentProcessing} 
+                  onClick={() => setShowProcessingWorkflow(true)} 
                   disabled={isProcessing}
                 >
                   {isProcessing ? (
