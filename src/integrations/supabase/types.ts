@@ -9,6 +9,88 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      avatar_customizations: {
+        Row: {
+          attire: Json | null
+          avatar_id: string
+          background: Json | null
+          brand_settings: Json | null
+          created_at: string
+          id: string
+          speaking_style: Json | null
+          updated_at: string
+        }
+        Insert: {
+          attire?: Json | null
+          avatar_id: string
+          background?: Json | null
+          brand_settings?: Json | null
+          created_at?: string
+          id?: string
+          speaking_style?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          attire?: Json | null
+          avatar_id?: string
+          background?: Json | null
+          brand_settings?: Json | null
+          created_at?: string
+          id?: string
+          speaking_style?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avatar_customizations_avatar_id_fkey"
+            columns: ["avatar_id"]
+            isOneToOne: false
+            referencedRelation: "user_avatars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      avatar_training_data: {
+        Row: {
+          avatar_id: string
+          created_at: string
+          feedback_notes: string | null
+          id: string
+          photos: Json | null
+          processing_status: string
+          quality_score: number | null
+          video_url: string | null
+        }
+        Insert: {
+          avatar_id: string
+          created_at?: string
+          feedback_notes?: string | null
+          id?: string
+          photos?: Json | null
+          processing_status?: string
+          quality_score?: number | null
+          video_url?: string | null
+        }
+        Update: {
+          avatar_id?: string
+          created_at?: string
+          feedback_notes?: string | null
+          id?: string
+          photos?: Json | null
+          processing_status?: string
+          quality_score?: number | null
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avatar_training_data_avatar_id_fkey"
+            columns: ["avatar_id"]
+            isOneToOne: false
+            referencedRelation: "user_avatars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generated_content: {
         Row: {
           created_at: string
@@ -119,6 +201,89 @@ export type Database = {
           style_config?: Json
         }
         Relationships: []
+      }
+      user_avatars: {
+        Row: {
+          created_at: string
+          heygen_avatar_id: string | null
+          id: string
+          name: string
+          preview_video_url: string | null
+          status: string
+          thumbnail_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          heygen_avatar_id?: string | null
+          id?: string
+          name: string
+          preview_video_url?: string | null
+          status?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          heygen_avatar_id?: string | null
+          id?: string
+          name?: string
+          preview_video_url?: string | null
+          status?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      voice_profiles: {
+        Row: {
+          avatar_id: string | null
+          created_at: string
+          elevenlabs_voice_id: string | null
+          id: string
+          language: string
+          name: string
+          sample_audio_url: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_id?: string | null
+          created_at?: string
+          elevenlabs_voice_id?: string | null
+          id?: string
+          language?: string
+          name: string
+          sample_audio_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_id?: string | null
+          created_at?: string
+          elevenlabs_voice_id?: string | null
+          id?: string
+          language?: string
+          name?: string
+          sample_audio_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_profiles_avatar_id_fkey"
+            columns: ["avatar_id"]
+            isOneToOne: false
+            referencedRelation: "user_avatars"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -5,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Play, FileText, Video, TrendingUp } from "lucide-react";
+import { Plus, Play, FileText, Video, TrendingUp, User } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 interface Project {
@@ -47,8 +48,6 @@ const Dashboard = () => {
   };
 
   const handleOpenProject = (projectId: string) => {
-    // For now, navigate to projects page with the specific project
-    // In the future, this could navigate to a project editor page
     navigate(`/projects?id=${projectId}`);
     toast({
       title: "Öppnar projekt",
@@ -70,10 +69,10 @@ const Dashboard = () => {
       icon: Video,
     },
     {
-      title: "Mallar Använda",
-      value: "3",
-      description: "Tillgängliga mallar",
-      icon: Play,
+      title: "Avatarer",
+      value: "0",
+      description: "Personliga AI-avatarer",
+      icon: User,
     },
     {
       title: "Månadsaktivitet",
@@ -133,7 +132,7 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid gap-6 mb-8 md:grid-cols-2">
+        <div className="grid gap-6 mb-8 md:grid-cols-3">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -154,6 +153,32 @@ const Dashboard = () => {
                 <Button variant="outline" asChild className="w-full">
                   <Link to="/templates">
                     Bläddra Mallar
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Hantera Avatarer
+              </CardTitle>
+              <CardDescription>
+                Skapa och hantera dina personliga AI-avatarer
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Button asChild className="w-full">
+                  <Link to="/avatars/create">
+                    Skapa Avatar
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild className="w-full">
+                  <Link to="/avatars">
+                    Mina Avatarer
                   </Link>
                 </Button>
               </div>
