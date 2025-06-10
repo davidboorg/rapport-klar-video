@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
@@ -14,6 +13,7 @@ export interface Avatar {
   preview_video_url: string | null;
   created_at: string;
   updated_at: string;
+  progress?: number; // Add progress tracking
 }
 
 export const useAvatars = () => {
@@ -21,6 +21,22 @@ export const useAvatars = () => {
   const { toast } = useToast();
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Simulate progress for avatars in creating/processing status
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAvatars(prev => prev.map(avatar => {
+        if (avatar.status === 'creating' || avatar.status === 'processing') {
+          const currentProgress = avatar.progress || 0;
+          const newProgress = Math.min(currentProgress + Math.random() * 15, 95);
+          return { ...avatar, progress: newProgress };
+        }
+        return avatar;
+      }));
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -41,7 +57,7 @@ export const useAvatars = () => {
             console.log('Real-time avatar update:', payload);
             
             if (payload.eventType === 'INSERT') {
-              const newAvatar = payload.new as Avatar;
+              const newAvatar = { ...payload.new as Avatar, progress: 5 };
               setAvatars(prev => [newAvatar, ...prev]);
               toast({
                 title: "Ny avatar",
@@ -50,7 +66,10 @@ export const useAvatars = () => {
             } else if (payload.eventType === 'UPDATE') {
               const updatedAvatar = payload.new as Avatar;
               setAvatars(prev => prev.map(avatar => 
-                avatar.id === updatedAvatar.id ? updatedAvatar : avatar
+                avatar.id === updatedAvatar.id ? { 
+                  ...updatedAvatar, 
+                  progress: updatedAvatar.status === 'completed' ? 100 : avatar.progress 
+                } : avatar
               ));
               
               // Show toast for status changes
@@ -88,7 +107,16 @@ export const useAvatars = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setAvatars(data || []);
+      
+      // Initialize progress for creating/processing avatars
+      const avatarsWithProgress = (data || []).map(avatar => ({
+        ...avatar,
+        progress: avatar.status === 'creating' ? Math.random() * 30 + 10 : 
+                 avatar.status === 'processing' ? Math.random() * 40 + 30 :
+                 avatar.status === 'completed' ? 100 : 0
+      }));
+      
+      setAvatars(avatarsWithProgress);
     } catch (error) {
       console.error('Error fetching avatars:', error);
       toast({

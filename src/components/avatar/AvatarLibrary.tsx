@@ -4,6 +4,7 @@ import { useAvatars } from '@/hooks/useAvatars';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { Plus, User, Play, Trash2, Settings, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -113,6 +114,20 @@ const AvatarLibrary = () => {
                   )}
                 </div>
 
+                {/* Progress bar for creating/processing avatars */}
+                {(avatar.status === 'creating' || avatar.status === 'processing') && avatar.progress !== undefined && (
+                  <div className="mb-4 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Framsteg</span>
+                      <span className="font-medium">{Math.round(avatar.progress)}%</span>
+                    </div>
+                    <Progress value={avatar.progress} className="h-2" />
+                    <div className="text-center text-xs text-muted-foreground">
+                      {avatar.status === 'creating' ? 'Initierar avatar...' : 'Bearbetar avatar...'}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   {avatar.status === 'completed' && (
                     <Button variant="outline" size="sm" className="flex-1">
@@ -122,14 +137,20 @@ const AvatarLibrary = () => {
                   )}
                   
                   {avatar.status === 'creating' && (
-                    <div className="flex-1 text-center text-sm text-muted-foreground py-2">
-                      Skapar avatar...
+                    <div className="flex-1 text-center text-sm text-yellow-600 py-2 font-medium">
+                      {avatar.progress !== undefined && avatar.progress > 0 ? 
+                        `${Math.round(avatar.progress)}% klart` : 
+                        'Skapar avatar...'
+                      }
                     </div>
                   )}
                   
                   {avatar.status === 'processing' && (
-                    <div className="flex-1 text-center text-sm text-blue-600 py-2">
-                      Bearbetar...
+                    <div className="flex-1 text-center text-sm text-blue-600 py-2 font-medium">
+                      {avatar.progress !== undefined ? 
+                        `${Math.round(avatar.progress)}% klart` : 
+                        'Bearbetar...'
+                      }
                     </div>
                   )}
                   
