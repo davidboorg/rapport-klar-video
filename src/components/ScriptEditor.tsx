@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import VideoGeneration from "./VideoGeneration";
 import ScriptReviewInterface from "./ScriptReviewInterface";
 import ProcessingWorkflow from "./ProcessingWorkflow";
+import { useScriptEditorActions } from "./ScriptEditorHelpers";
 import { 
   Save, 
   Play, 
@@ -60,12 +62,26 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
   const [hasProcessedData, setHasProcessedData] = useState(false);
   const [showProcessingWorkflow, setShowProcessingWorkflow] = useState(false);
   const [projectStatus, setProjectStatus] = useState<string>('');
+  const [dataLoadingState, setDataLoadingState] = useState<'loading' | 'loaded' | 'error'>('loading');
   const { toast } = useToast();
+
+  const {
+    handleSave: saveScript,
+    handleScriptSelect,
+    handleCustomizeScript,
+    handlePreview,
+    handleProcessingComplete: processComplete
+  } = useScriptEditorActions(projectId, script, setScript, onScriptUpdate);
 
   // Calculate estimated video duration (150 words per minute speaking rate)
   const estimatedDuration = Math.ceil(script.split(' ').filter(word => word.length > 0).length / 150);
 
+  const handleSave = () => saveScript(setSaving);
+  const handleProcessingComplete = (result: { success: boolean; data?: any; error?: string }) => 
+    processComplete(result, fetchProjectData, setProcessing, setShowProcessingWorkflow);
+
   useEffect(() => {
+    console.log('ScriptEditor: Initializing for project:', projectId);
     fetchProjectData();
     
     // Set up real-time subscription to monitor project changes
@@ -92,6 +108,9 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
   }, [projectId]);
 
   const fetchProjectData = async () => {
+    console.log('ScriptEditor: Starting fetchProjectData for project:', projectId);
+    setDataLoadingState('loading');
+    
     try {
       // Fetch project data including status
       const { data: projectData, error: projectError } = await supabase
@@ -100,15 +119,44 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
         .eq('id', projectId)
         .single();
 
-      if (projectError) throw projectError;
+      if (projectError) {
+        console.error('Error fetching project data:', projectError);
+        throw projectError;
+      }
       
-      console.log('Project data:', projectData);
+      console.log('ScriptEditor: Project data fetched:', {
+        status: projectData.status,
+        hasFinancialData: !!projectData?.financial_data,
+        financialDataKeys: projectData?.financial_data ? Object.keys(projectData.financial_data) : [],
+        hasPdfUrl: !!projectData?.pdf_url
+      });
+
       setProjectStatus(projectData.status);
 
+      // Check if we have valid financial data
+      let hasValidFinancialData = false;
       if (projectData?.financial_data) {
-        setFinancialData(projectData.financial_data as FinancialData);
-        setHasProcessedData(true);
-        console.log('Found existing financial data:', projectData.financial_data);
+        const financialDataObj = projectData.financial_data as FinancialData;
+        console.log('ScriptEditor: Financial data content:', financialDataObj);
+        
+        // Check if any of the key financial fields have real data (not "Information saknas")
+        const hasRealData = Object.values(financialDataObj).some(value => {
+          if (typeof value === 'string') {
+            return value !== 'Information saknas' && value.trim() !== '';
+          }
+          if (Array.isArray(value)) {
+            return value.length > 0 && !value.every(item => item === 'Information saknas');
+          }
+          return value !== null && value !== undefined;
+        });
+
+        if (hasRealData) {
+          setFinancialData(financialDataObj);
+          hasValidFinancialData = true;
+          console.log('ScriptEditor: Valid financial data found and set');
+        } else {
+          console.log('ScriptEditor: Financial data exists but contains only placeholder values');
+        }
       }
 
       // Fetch existing script alternatives and video
@@ -118,32 +166,59 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
         .eq('project_id', projectId)
         .maybeSingle();
 
+      let hasValidScriptAlternatives = false;
+      
       if (!contentError && contentData) {
-        if (contentData.script_alternatives) {
+        console.log('ScriptEditor: Content data fetched:', {
+          hasScriptAlternatives: !!contentData.script_alternatives,
+          scriptAlternativesLength: Array.isArray(contentData.script_alternatives) ? contentData.script_alternatives.length : 0,
+          hasVideoUrl: !!contentData.video_url,
+          hasScriptText: !!contentData.script_text
+        });
+
+        if (contentData.script_alternatives && Array.isArray(contentData.script_alternatives) && contentData.script_alternatives.length > 0) {
           setScriptAlternatives(contentData.script_alternatives as unknown as ScriptAlternative[]);
-          setHasProcessedData(true);
-          console.log('Found existing script alternatives:', contentData.script_alternatives);
+          hasValidScriptAlternatives = true;
+          console.log('ScriptEditor: Valid script alternatives found and set:', contentData.script_alternatives.length, 'alternatives');
         }
+
         if (contentData.video_url) {
           setExistingVideoUrl(contentData.video_url);
+          console.log('ScriptEditor: Video URL found:', contentData.video_url);
         }
+
         if (contentData.script_text && !initialScript) {
           setScript(contentData.script_text);
+          console.log('ScriptEditor: Script text loaded from database');
         }
+      } else if (contentError) {
+        console.log('ScriptEditor: No content data found or error:', contentError);
       }
+
+      // Determine if we have processed data and should show review interface
+      const hasProcessedData = hasValidFinancialData || hasValidScriptAlternatives;
+      setHasProcessedData(hasProcessedData);
+      
+      console.log('ScriptEditor: Data processing assessment:', {
+        hasValidFinancialData,
+        hasValidScriptAlternatives,
+        hasProcessedData,
+        projectStatus: projectData.status
+      });
 
       // Determine if we should show processing workflow
       const needsProcessing = projectData?.pdf_url && 
-                            (!projectData?.financial_data || 
-                             (projectData.financial_data && Object.values(projectData.financial_data).every(val => 
-                               val === 'Information saknas' || 
-                               (Array.isArray(val) && val.every(item => item === 'Information saknas'))
-                             ))) && 
-                            !contentData?.script_alternatives &&
+                            !hasProcessedData && 
                             projectData.status !== 'completed';
 
+      console.log('ScriptEditor: Processing workflow assessment:', {
+        hasPdfUrl: !!projectData?.pdf_url,
+        needsProcessing,
+        currentStatus: projectData.status,
+        willShowProcessingWorkflow: needsProcessing || projectData.status === 'processing'
+      });
+
       if (needsProcessing || projectData.status === 'processing') {
-        console.log('Project needs processing or is currently processing, showing workflow');
         setShowProcessingWorkflow(true);
         setProcessing(projectData.status === 'processing');
       } else {
@@ -151,100 +226,35 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
         setProcessing(false);
       }
 
+      setDataLoadingState('loaded');
+
     } catch (error) {
-      console.error('Error fetching project data:', error);
-    }
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('generated_content')
-        .upsert({
-          project_id: projectId,
-          script_text: script,
-          generation_status: 'completed',
-          updated_at: new Date().toISOString(),
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Manus sparat",
-        description: "Ditt videomanus har sparats framgångsrikt.",
-      });
-
-      onScriptUpdate?.(script);
-    } catch (error) {
-      console.error('Error saving script:', error);
+      console.error('ScriptEditor: Error in fetchProjectData:', error);
+      setDataLoadingState('error');
       toast({
         title: "Fel",
-        description: "Kunde inte spara manuset. Försök igen.",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleScriptSelect = (selectedScript: ScriptAlternative) => {
-    setScript(selectedScript.script);
-    toast({
-      title: "Script valt",
-      description: `${selectedScript.title} har valts som ditt videomanus.`,
-    });
-  };
-
-  const handleCustomizeScript = (customizedScript: string) => {
-    setScript(customizedScript);
-    toast({
-      title: "Script anpassat",
-      description: "Dina anpassningar har tillämpats.",
-    });
-  };
-
-  const handlePreview = () => {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(script);
-      utterance.lang = 'sv-SE';
-      utterance.rate = 0.9;
-      speechSynthesis.speak(utterance);
-    } else {
-      toast({
-        title: "Förhandsvisning ej tillgänglig",
-        description: "Din webbläsare stöder inte tal-förhandsvisning.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleProcessingComplete = (result: { success: boolean; data?: any; error?: string }) => {
-    setProcessing(false);
-    
-    if (result.success) {
-      // Give a small delay to ensure database is updated
-      setTimeout(() => {
-        fetchProjectData();
-        setShowProcessingWorkflow(false);
-      }, 1000);
-      
-      toast({
-        title: "AI-bearbetning slutförd!",
-        description: "Din rapport har analyserats och manuscriptförslag är redo.",
-      });
-    } else {
-      setShowProcessingWorkflow(false);
-      toast({
-        title: "Bearbetning misslyckades",
-        description: result.error || "Något gick fel under bearbetningen.",
+        description: "Kunde inte ladda projektdata. Försök igen.",
         variant: "destructive",
       });
     }
   };
 
   // Show processing workflow if needed
+  if (dataLoadingState === 'loading') {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-sm text-gray-600">Laddar projektdata...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (showProcessingWorkflow) {
+    console.log('ScriptEditor: Rendering ProcessingWorkflow component');
     return (
       <div className="space-y-6">
         <ProcessingWorkflow 
@@ -257,6 +267,12 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
       </div>
     );
   }
+
+  console.log('ScriptEditor: Rendering main tabs interface with data:', {
+    hasFinancialData: !!financialData,
+    scriptAlternativesCount: scriptAlternatives.length,
+    hasProcessedData
+  });
 
   return (
     <div className="space-y-6">
@@ -289,14 +305,27 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
             <Card>
               <CardContent className="pt-6 text-center">
                 <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="font-medium mb-2">Ingen bearbetad data tillgänglig</h3>
+                <h3 className="font-medium mb-2">
+                  {dataLoadingState === 'error' ? 'Fel vid laddning av data' : 'Ingen bearbetad data tillgänglig'}
+                </h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Starta bearbetningen för att få AI-genererade manuscriptförslag.
+                  {dataLoadingState === 'error' 
+                    ? 'Det uppstod ett problem vid laddning av projektdata.'
+                    : 'Starta bearbetningen för att få AI-genererade manuscriptförslag.'
+                  }
                 </p>
-                <Button onClick={() => setShowProcessingWorkflow(true)}>
-                  <Brain className="w-4 h-4 mr-2" />
-                  Starta AI-bearbetning
-                </Button>
+                <div className="space-y-2">
+                  <Button onClick={() => setShowProcessingWorkflow(true)}>
+                    <Brain className="w-4 h-4 mr-2" />
+                    Starta AI-bearbetning
+                  </Button>
+                  {dataLoadingState === 'error' && (
+                    <Button variant="outline" onClick={fetchProjectData}>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Försök igen
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}
