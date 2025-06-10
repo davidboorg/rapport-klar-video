@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Play, FileText, Video, TrendingUp, User, Star, Zap, Upload } from "lucide-react";
+import { Plus, Play, FileText, Video, TrendingUp, User, Star, Zap, Upload, CheckCircle, Home, Settings, HelpCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 interface Project {
@@ -59,19 +59,19 @@ const Dashboard = () => {
     {
       title: "Total Projects",
       value: projects.length.toString(),
-      description: "Active AI video projects",
+      description: "Active video projects",
       icon: FileText,
     },
     {
       title: "Videos Generated",
       value: "0",
-      description: "Completed AI videos",
+      description: "Completed presentations",
       icon: Video,
     },
     {
       title: "Avatars",
       value: "0",
-      description: "Personal AI avatars",
+      description: "Personal presenters",
       icon: User,
     },
     {
@@ -98,43 +98,151 @@ const Dashboard = () => {
       <Navbar />
       
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">
-            Welcome back, {user?.user_metadata?.first_name || 'User'}!
+        {/* New Hero Section */}
+        <div className="mb-12 text-center">
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6">
+            Transform Quarterly Reports into Professional Videos
           </h1>
-          <p className="text-slate-600 mt-2">
-            Transform your quarterly reports into professional video presentations with AI.
-          </p>
+          
+          {/* Feature Checkmarks */}
+          <div className="grid md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-8">
+            <div className="flex items-center gap-3 text-green-600">
+              <CheckCircle className="h-5 w-5 flex-shrink-0" />
+              <span className="text-sm font-medium">Upload your financial report</span>
+            </div>
+            <div className="flex items-center gap-3 text-green-600">
+              <CheckCircle className="h-5 w-5 flex-shrink-0" />
+              <span className="text-sm font-medium">AI generates professional script</span>
+            </div>
+            <div className="flex items-center gap-3 text-green-600">
+              <CheckCircle className="h-5 w-5 flex-shrink-0" />
+              <span className="text-sm font-medium">Your personal avatar presents</span>
+            </div>
+            <div className="flex items-center gap-3 text-green-600">
+              <CheckCircle className="h-5 w-5 flex-shrink-0" />
+              <span className="text-sm font-medium">Share engaging video content</span>
+            </div>
+          </div>
+
+          {/* Hero CTAs */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-4" asChild>
+              <Link to="/projects" className="flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                Upload Your Report
+              </Link>
+            </Button>
+            <Button size="lg" variant="outline" className="text-lg px-8 py-4">
+              <Play className="h-5 w-5 mr-2" />
+              Watch Demo Video
+            </Button>
+          </div>
         </div>
 
-        {/* Hero CTA for Report Upload */}
-        <Card className="mb-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0">
+        {/* Quick Navigation */}
+        <div className="grid gap-6 mb-8 md:grid-cols-3 lg:grid-cols-6">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" asChild>
+            <Link to="/dashboard">
+              <CardContent className="p-6 text-center">
+                <Home className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                <p className="font-medium">Dashboard</p>
+              </CardContent>
+            </Link>
+          </Card>
+          
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" asChild>
+            <Link to="/projects">
+              <CardContent className="p-6 text-center">
+                <FileText className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                <p className="font-medium">My Report Videos</p>
+              </CardContent>
+            </Link>
+          </Card>
+          
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" asChild>
+            <Link to="/projects">
+              <CardContent className="p-6 text-center">
+                <Plus className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                <p className="font-medium">Create New Video</p>
+              </CardContent>
+            </Link>
+          </Card>
+          
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" asChild>
+            <Link to="/avatars">
+              <CardContent className="p-6 text-center">
+                <User className="h-8 w-8 mx-auto mb-2 text-orange-600" />
+                <p className="font-medium">Avatar Library</p>
+              </CardContent>
+            </Link>
+          </Card>
+          
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" asChild>
+            <Link to="/profile">
+              <CardContent className="p-6 text-center">
+                <Settings className="h-8 w-8 mx-auto mb-2 text-slate-600" />
+                <p className="font-medium">Settings</p>
+              </CardContent>
+            </Link>
+          </Card>
+          
+          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+            <CardContent className="p-6 text-center">
+              <HelpCircle className="h-8 w-8 mx-auto mb-2 text-blue-500" />
+              <p className="font-medium">Help & Support</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* User Journey Steps */}
+        <Card className="mb-8 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl mb-2 text-white flex items-center gap-2">
-                  <Star className="h-6 w-6" />
-                  Transform Your Quarterly Reports into Professional Videos
-                </CardTitle>
-                <CardDescription className="text-blue-100 text-lg">
-                  Upload your report and let AI create engaging video presentations with your personal avatar
-                </CardDescription>
-              </div>
-              <Zap className="h-16 w-16 text-yellow-300" />
-            </div>
+            <CardTitle className="text-2xl text-center text-blue-900">Your Video Creation Journey</CardTitle>
+            <CardDescription className="text-center text-blue-700">
+              From quarterly report to professional video presentation in 5 simple steps
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-blue-100">
-                ✓ AI Script Generation ✓ Personal Avatar Creation ✓ HD Video Output
+            <div className="grid md:grid-cols-5 gap-6">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="text-white font-bold">1</span>
+                </div>
+                <h3 className="font-semibold mb-2">Upload Report</h3>
+                <p className="text-sm text-slate-600">PDF processing</p>
               </div>
-              <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 font-semibold">
-                <Link to="/projects" className="flex items-center gap-2">
-                  <Upload className="h-5 w-5" />
-                  Upload Quarterly Report
-                </Link>
-              </Button>
+              
+              <div className="text-center">
+                <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="text-white font-bold">2</span>
+                </div>
+                <h3 className="font-semibold mb-2">Review Script</h3>
+                <p className="text-sm text-slate-600">AI-generated content</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="text-white font-bold">3</span>
+                </div>
+                <h3 className="font-semibold mb-2">Select Avatar</h3>
+                <p className="text-sm text-slate-600">Presenter choice</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="text-white font-bold">4</span>
+                </div>
+                <h3 className="font-semibold mb-2">Generate Video</h3>
+                <p className="text-sm text-slate-600">HeyGen + ElevenLabs</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="text-white font-bold">5</span>
+                </div>
+                <h3 className="font-semibold mb-2">Download & Share</h3>
+                <p className="text-sm text-slate-600">Final output</p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -162,86 +270,6 @@ const Dashboard = () => {
           })}
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid gap-6 mb-8 md:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="h-5 w-5" />
-                Create New Video
-              </CardTitle>
-              <CardDescription>
-                Start a new AI video project from your quarterly report
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <Button asChild className="w-full">
-                  <Link to="/projects">
-                    Upload Report
-                  </Link>
-                </Button>
-                <Button variant="outline" asChild className="w-full">
-                  <Link to="/templates">
-                    Browse Templates
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-blue-200 bg-blue-50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-blue-900">
-                <User className="h-5 w-5" />
-                Your Professional Avatar
-              </CardTitle>
-              <CardDescription className="text-blue-700">
-                Create a personal AI avatar for your presentations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
-                  <Link to="/avatars/create">
-                    Create Avatar
-                  </Link>
-                </Button>
-                <Button variant="outline" asChild className="w-full border-blue-300 text-blue-700 hover:bg-blue-100">
-                  <Link to="/avatars">
-                    Manage Avatars
-                  </Link>
-                </Button>
-                <p className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
-                  <strong>Setup:</strong> $300-600 per avatar
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Play className="h-5 w-5" />
-                Get Started
-              </CardTitle>
-              <CardDescription>
-                Learn how to create amazing AI videos from reports
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <p className="text-sm text-slate-600">
-                  Follow our quick guide to create your first AI video from a quarterly report in minutes.
-                </p>
-                <Button variant="outline" className="w-full">
-                  Watch Tutorial
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Recent Projects */}
         <Card>
           <CardHeader>
@@ -265,7 +293,7 @@ const Dashboard = () => {
                   No report videos yet
                 </h3>
                 <p className="text-slate-600 mb-4">
-                  Upload your first quarterly report to create an AI video presentation.
+                  Upload your first quarterly report to create a professional video presentation.
                 </p>
                 <Button asChild>
                   <Link to="/projects">
