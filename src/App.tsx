@@ -14,6 +14,7 @@ import Projects from "./pages/Projects";
 import Templates from "./pages/Templates";
 import Profile from "./pages/Profile";
 import Avatars from "./pages/Avatars";
+import AvatarSetup from "./pages/AvatarSetup";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/templates" element={<Templates />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/avatars/*" element={<Avatars />} />
+            <Route path="/avatars/create" element={<AvatarSetup />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

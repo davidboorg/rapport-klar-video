@@ -22,6 +22,7 @@ const Navbar = () => {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", current: location.pathname === "/dashboard" },
     { name: "Projekt", href: "/projects", current: location.pathname === "/projects" },
+    { name: "Avatarer", href: "/avatars", current: location.pathname.startsWith("/avatars") },
     { name: "Mallar", href: "/templates", current: location.pathname === "/templates" },
   ];
 
@@ -106,6 +107,12 @@ const Navbar = () => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link to="/avatars" className="flex items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      Mina Avatarer
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link to="/profile" className="flex items-center">
                       <Settings className="mr-2 h-4 w-4" />
                       Inställningar
@@ -173,6 +180,13 @@ const Navbar = () => {
                   className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                 >
                   Profil
+                </Link>
+                <Link
+                  to="/avatars"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                >
+                  Mina Avatarer
                 </Link>
                 <button
                   onClick={handleLogout}

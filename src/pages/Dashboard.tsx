@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Play, FileText, Video, TrendingUp, User } from "lucide-react";
+import { Plus, Play, FileText, Video, TrendingUp, User, Star, Zap } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 interface Project {
@@ -104,9 +104,40 @@ const Dashboard = () => {
             Välkommen tillbaka, {user?.user_metadata?.first_name || 'Användare'}!
           </h1>
           <p className="text-slate-600 mt-2">
-            Här är en översikt över dina AI-videoprojekt och aktivitet.
+            Skapa din professionella AI-avatar och börja producera personliga videopresentationer.
           </p>
         </div>
+
+        {/* Hero CTA for Avatar Creation */}
+        <Card className="mb-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl mb-2 text-white flex items-center gap-2">
+                  <Star className="h-6 w-6" />
+                  Skapa Din Professionella Avatar
+                </CardTitle>
+                <CardDescription className="text-blue-100 text-lg">
+                  Få din egen AI-avatar som presenterar era rapporter med din röst och personlighet
+                </CardDescription>
+              </div>
+              <Zap className="h-16 w-16 text-yellow-300" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-blue-100">
+                ✓ Professionell video-avatar ✓ Röstkloning ✓ Anpassad till ert varumärke
+              </div>
+              <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 font-semibold">
+                <Link to="/avatars/create" className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Skapa Avatar Nu
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Stats Grid */}
         <div className="grid gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
@@ -159,28 +190,31 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-blue-200 bg-blue-50">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-blue-900">
                 <User className="h-5 w-5" />
-                Hantera Avatarer
+                Din Professionella Avatar
               </CardTitle>
-              <CardDescription>
-                Skapa och hantera dina personliga AI-avatarer
+              <CardDescription className="text-blue-700">
+                Skapa en personlig AI-avatar för era presentationer
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <Button asChild className="w-full">
+                <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
                   <Link to="/avatars/create">
                     Skapa Avatar
                   </Link>
                 </Button>
-                <Button variant="outline" asChild className="w-full">
+                <Button variant="outline" asChild className="w-full border-blue-300 text-blue-700 hover:bg-blue-100">
                   <Link to="/avatars">
-                    Mina Avatarer
+                    Hantera Avatarer
                   </Link>
                 </Button>
+                <p className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                  <strong>Setup:</strong> 2.500-5.000 SEK per avatar
+                </p>
               </div>
             </CardContent>
           </Card>
