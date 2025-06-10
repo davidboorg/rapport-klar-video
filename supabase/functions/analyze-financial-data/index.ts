@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.10';
@@ -53,11 +52,13 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
-    console.log('Starting financial analysis for project:', projectId);
+    console.log('Starting enhanced financial analysis for project:', projectId);
     console.log('PDF text received, length:', pdfText.length, 'characters');
-    console.log('PDF text preview:', pdfText.substring(0, 500));
+    
+    // Log first 1000 characters for debugging
+    console.log('PDF content preview:', pdfText.substring(0, 1000));
 
-    // STEP 1: Extract financial data with better prompting
+    // Enhanced financial data extraction with better prompting
     const extractionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -69,48 +70,60 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Du är en expert på finansiell analys som extraherar exakt information från svenska företagsrapporter. 
+            content: `Du är en expert på finansiell analys som extraherar EXAKT information från svenska företagsrapporter. 
 
-VIKTIGT: Svara med ENDAST giltig JSON, ingen förklarande text.
+KRITISKT: Du MÅSTE svara med ENDAST giltig JSON utan någon förklarande text före eller efter.
 
-Analysera den medföljande rapporten och extrahera EXAKT denna information:
-- Företagsnamn (sök efter logotyper, rubriker som "RAPPORT", företagsnamn)
-- Rapportperiod (Q1, Q2, Q3, Q4, H1, H2, År)
-- Nettoomsättning/intäkter med exakt belopp och valuta
-- EBITDA med exakt belopp
-- Tillväxt i procent jämfört med föregående period
-- 3-5 viktiga operationella höjdpunkter
-- VD-citat eller kommentarer
-- Framtidsutsikter eller prognoser
+Analysera den medföljande rapporten noggrant och extrahera följande information:
 
-Svara med denna EXAKTA JSON-struktur:
+1. Företagsnamn (sök efter företagslogotyper, rubriker, "AB", "ASA" etc.)
+2. Rapportperiod (Q1, Q2, Q3, Q4, H1, H2, År - leta efter "kvartal", "delårsrapport" etc.)
+3. Finansiella nyckeltal:
+   - Nettoomsättning/intäkter (leta efter "nettoomsättning", "intäkter", "revenue", siffror + "MSEK", "miljoner")
+   - EBITDA (leta efter "EBITDA", siffror + "MSEK")
+   - Rörelseresultat/EBIT (leta efter "rörelseresultat", "EBIT")
+   - Resultat efter skatt/nettoresultat
+   - Kassaflöde från rörelsen
+4. Tillväxttal (leta efter procentsatser, "tillväxt", "ökning", "minskning")
+5. Operationella höjdpunkter (3-5 viktiga händelser eller milstolpar)
+6. VD-kommentarer eller citat
+7. Framtidsutsikter eller prognoser
+
+Använd EXAKT denna JSON-struktur:
 {
-  "company_name": "företagsnamn som det står i rapporten",
+  "company_name": "företagsnamn exakt som det står",
   "period": "Q1 2025",
   "report_type": "Q1",
   "currency": "SEK",
   "revenue": "6 847 MSEK",
-  "ebitda": "2 458 MSEK", 
+  "ebitda": "2 458 MSEK",
+  "net_income": "892 MSEK",
+  "cash_flow": "1 987 MSEK",
   "growth_percentage": "9,8%",
-  "key_highlights": ["exakt text från rapport", "annan höjdpunkt"],
-  "ceo_quote": "exakt citat från VD",
+  "quarter_over_quarter": "8,2%",
+  "key_highlights": ["exakt text från rapport", "annan höjdpunkt", "tredje punkten"],
+  "ceo_quote": "exakt citat från VD om det finns",
   "forward_guidance": "framtidsutsikter som beskrivs"
-}`
+}
+
+Om information saknas, skriv "Information saknas" för det fältet.`
           },
           {
             role: 'user',
-            content: `Analysera denna svenska företagsrapport och extrahera EXAKT finansiell data. Använd de EXAKTA siffrorna från rapporten:\n\n${pdfText}`
+            content: `Analysera denna svenska företagsrapport och extrahera finansiell data. Använd EXAKTA siffror och citat från texten:
+
+${pdfText}`
           }
         ],
         temperature: 0.1,
-        max_tokens: 1500,
+        max_tokens: 2000,
       }),
     });
 
     if (!extractionResponse.ok) {
       const errorText = await extractionResponse.text();
       console.error('OpenAI extraction error:', extractionResponse.status, errorText);
-      throw new Error(`OpenAI extraction error: ${extractionResponse.status}`);
+      throw new Error(`OpenAI extraction failed: ${extractionResponse.status}`);
     }
 
     const extractionData = await extractionResponse.json();
@@ -121,42 +134,23 @@ Svara med denna EXAKTA JSON-struktur:
     let financialData: FinancialData;
     
     try {
-      // Parse the JSON response
+      // Clean and parse JSON response
       const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
       const jsonString = jsonMatch ? jsonMatch[0] : rawContent;
       const cleanedJson = jsonString.replace(/```json\n?|\n?```/g, '').trim();
       
       financialData = JSON.parse(cleanedJson);
-      console.log('Successfully parsed financial data:', financialData);
+      console.log('Successfully parsed financial data:', JSON.stringify(financialData, null, 2));
       
     } catch (parseError) {
       console.error('Failed to parse financial data JSON:', parseError);
       console.log('Raw content that failed to parse:', rawContent);
       
-      // Create fallback data with basic extraction attempt
-      financialData = {
-        company_name: extractCompanyName(pdfText),
-        period: extractPeriod(pdfText),
-        report_type: "Q1",
-        currency: "SEK",
-        revenue: extractRevenue(pdfText),
-        ebitda: extractEBITDA(pdfText),
-        net_income: "Information saknas",
-        cash_flow: "Information saknas",
-        growth_percentage: extractGrowth(pdfText),
-        quarter_over_quarter: "Information saknas",
-        key_highlights: extractHighlights(pdfText),
-        ceo_quote: extractCEOQuote(pdfText),
-        forward_guidance: extractGuidance(pdfText),
-        segment_performance: ["Information extraheras"],
-        geographic_breakdown: ["Information extraheras"],
-        concerns: ["Information extraheras"]
-      };
+      // Enhanced fallback parsing using the extracted text
+      financialData = performFallbackExtraction(pdfText);
     }
 
-    console.log('Final financial data:', JSON.stringify(financialData, null, 2));
-
-    // STEP 2: Generate script alternatives
+    // Generate enhanced script alternatives
     const scriptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -168,39 +162,57 @@ Svara med denna EXAKTA JSON-struktur:
         messages: [
           {
             role: 'system',
-            content: `Skapa tre professionella videomanus för svenska företagsrapporter baserat på verkliga finansiella data.
+            content: `Skapa tre professionella videomanus för svenska företagsrapporter.
 
-VIKTIGT: Svara med ENDAST giltig JSON.
+VIKTIGT: Svara med ENDAST giltig JSON utan förklarande text.
 
-Skapa TRE olika manus:
-1. EXECUTIVE (2 min) - Professionell sammanfattning för ledning
-2. INVESTOR (3 min) - Detaljerad analys för investerare  
-3. SOCIAL (1 min) - Kortfattad version för sociala medier
+Skapa TRE olika manus baserat på den finansiella datan:
 
-Använd EXAKTA siffror från den finansiella datan.
+1. EXECUTIVE (2-3 min) - Professionell sammanfattning för ledning och styrelse
+2. INVESTOR (3-4 min) - Detaljerad analys för investerare och analytiker
+3. SOCIAL (1-2 min) - Engagerande version för sociala medier och allmänheten
+
+Använd EXAKTA siffror från den finansiella datan och gör manusen engagerande.
 
 JSON-struktur:
 {
   "scripts": [
     {
       "type": "executive",
-      "title": "Executive Summary",
-      "duration": "2 minuter",
-      "script": "komplett manus text",
-      "tone": "Professional",
-      "key_points": ["punkt1", "punkt2", "punkt3"]
+      "title": "Executive Summary - Q1 Resultat",
+      "duration": "2-3 minuter",
+      "script": "Fullständigt manus med exakta siffror och professionell ton",
+      "tone": "Professional och auktoritär",
+      "key_points": ["huvudpunkt 1", "huvudpunkt 2", "huvudpunkt 3"]
+    },
+    {
+      "type": "investor", 
+      "title": "Investor Presentation",
+      "duration": "3-4 minuter",
+      "script": "Detaljerat manus med finansiell analys",
+      "tone": "Analytisk och datadrivne",
+      "key_points": ["finansiell punkt 1", "tillväxtanalys", "framtidsutsikter"]
+    },
+    {
+      "type": "social",
+      "title": "Social Media Highlight",
+      "duration": "1-2 minuter", 
+      "script": "Kort och engagerande manus",
+      "tone": "Dynamisk och tillgänglig",
+      "key_points": ["huvudresultat", "framgång", "framtid"]
     }
   ]
 }`
           },
           {
             role: 'user',
-            content: `Skapa tre manus baserat på denna finansiella data:
+            content: `Skapa tre videomanus baserat på denna finansiella data:
 
 Företag: ${financialData.company_name}
-Period: ${financialData.period}  
+Period: ${financialData.period}
 Intäkter: ${financialData.revenue}
 EBITDA: ${financialData.ebitda}
+Nettoresultat: ${financialData.net_income}
 Tillväxt: ${financialData.growth_percentage}
 Höjdpunkter: ${financialData.key_highlights?.join(', ')}
 VD-citat: ${financialData.ceo_quote}
@@ -208,25 +220,32 @@ Framtidsutsikter: ${financialData.forward_guidance}`
           }
         ],
         temperature: 0.3,
-        max_tokens: 2000,
+        max_tokens: 3000,
       }),
     });
 
     if (!scriptResponse.ok) {
-      throw new Error(`Script generation error: ${scriptResponse.status}`);
+      const errorText = await scriptResponse.text();
+      console.error('Script generation error:', scriptResponse.status, errorText);
+      throw new Error(`Script generation failed: ${scriptResponse.status}`);
     }
 
     const scriptData = await scriptResponse.json();
     const scriptContent = scriptData.choices[0].message.content.trim();
     
+    console.log('Script generation response:', scriptContent);
+    
     let scripts: ScriptAlternative[] = [];
     
     try {
-      const parsedScripts = JSON.parse(scriptContent);
+      const jsonMatch = scriptContent.match(/\{[\s\S]*\}/);
+      const jsonString = jsonMatch ? jsonMatch[0] : scriptContent;
+      const cleanedJson = jsonString.replace(/```json\n?|\n?```/g, '').trim();
+      const parsedScripts = JSON.parse(cleanedJson);
       scripts = parsedScripts.scripts || [];
+      console.log('Successfully parsed scripts:', scripts.length, 'alternatives');
     } catch (parseError) {
       console.error('Failed to parse scripts:', parseError);
-      // Create fallback scripts
       scripts = createFallbackScripts(financialData);
     }
 
@@ -235,7 +254,7 @@ Framtidsutsikter: ${financialData.forward_guidance}`
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Update project
+    // Update project with extracted data
     const { error: updateError } = await supabase
       .from('projects')
       .update({
@@ -250,12 +269,12 @@ Framtidsutsikter: ${financialData.forward_guidance}`
       throw new Error('Failed to save financial data');
     }
 
-    // Save scripts
+    // Save generated scripts
     const { error: contentError } = await supabase
       .from('generated_content')
       .upsert({
         project_id: projectId,
-        script_text: scripts[0]?.script || 'Manus genererat',
+        script_text: scripts[0]?.script || 'Manus genererat från rapport',
         script_alternatives: scripts,
         generation_status: 'completed',
         updated_at: new Date().toISOString(),
@@ -266,20 +285,25 @@ Framtidsutsikter: ${financialData.forward_guidance}`
       throw new Error('Failed to save generated scripts');
     }
 
-    console.log('Successfully processed and saved all data');
+    console.log('Successfully processed financial data and generated scripts');
 
     return new Response(JSON.stringify({
       success: true,
       financial_data: financialData,
-      script_alternatives: scripts
+      script_alternatives: scripts,
+      metadata: {
+        extractedContentLength: pdfText.length,
+        processedAt: new Date().toISOString()
+      }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in financial analysis:', error);
+    console.error('Error in enhanced financial analysis:', error);
     return new Response(JSON.stringify({ 
-      error: error.message || 'Internal server error' 
+      error: error.message || 'Financial analysis failed',
+      success: false
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -287,10 +311,40 @@ Framtidsutsikter: ${financialData.forward_guidance}`
   }
 });
 
+// Enhanced fallback extraction using regex patterns
+function performFallbackExtraction(text: string): FinancialData {
+  console.log('Performing enhanced fallback extraction');
+  
+  return {
+    company_name: extractCompanyName(text),
+    period: extractPeriod(text),
+    report_type: extractReportType(text),
+    currency: "SEK",
+    revenue: extractRevenue(text),
+    ebitda: extractEBITDA(text),
+    net_income: extractNetIncome(text),
+    cash_flow: extractCashFlow(text),
+    growth_percentage: extractGrowth(text),
+    quarter_over_quarter: extractQoQ(text),
+    key_highlights: extractHighlights(text),
+    ceo_quote: extractCEOQuote(text),
+    forward_guidance: extractGuidance(text)
+  };
+}
+
 // Helper functions for fallback parsing
 function extractCompanyName(text: string): string {
-  const matches = text.match(/([A-ZÅÄÖ][A-ZÅÄÖa-zåäö\s]+(?:AB|SVERIGE|GROUP|ASA))/i);
-  return matches ? matches[1].trim() : 'Företaget';
+  const patterns = [
+    /([A-ZÅÄÖ][A-ZÅÄÖa-zåäö\s]+(?:AB|ASA|GROUP|SVERIGE))/i,
+    /TELE2\s*AB/i,
+    /([A-ZÅÄÖ]{2,}[A-ZÅÄÖa-zåäö\s]*(?:DELÅRSRAPPORT|RAPPORT))/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return match[1].trim();
+  }
+  return 'Företaget';
 }
 
 function extractPeriod(text: string): string {
@@ -299,13 +353,29 @@ function extractPeriod(text: string): string {
 }
 
 function extractRevenue(text: string): string {
-  const matches = text.match(/(?:nettoomsättning|intäkter|revenue)[:\s]*([0-9\s,]+)\s*(msek|miljoner|mkr)/i);
-  return matches ? `${matches[1].trim()} ${matches[2].toUpperCase()}` : 'Information saknas';
+  const patterns = [
+    /(?:nettoomsättning|intäkter|revenue)[:\s]*([0-9\s,]+)\s*(msek|miljoner|mkr)/i,
+    /([0-9\s,]+)\s*(msek|miljoner|mkr)[^0-9]*(?:nettoomsättning|intäkter)/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return `${match[1].trim()} ${match[2].toUpperCase()}`;
+  }
+  return 'Information saknas';
 }
 
 function extractEBITDA(text: string): string {
-  const matches = text.match(/ebitda[:\s]*([0-9\s,]+)\s*(msek|miljoner|mkr)/i);
-  return matches ? `${matches[1].trim()} ${matches[2].toUpperCase()}` : 'Information saknas';
+  const patterns = [
+    /ebitda[:\s]*([0-9\s,]+)\s*(msek|miljoner|mkr)/i,
+    /([0-9\s,]+)\s*(msek|miljoner|mkr)[^0-9]*ebitda/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return `${match[1].trim()} ${match[2].toUpperCase()}`;
+  }
+  return 'Information saknas';
 }
 
 function extractGrowth(text: string): string {
@@ -343,26 +413,26 @@ function createFallbackScripts(data: FinancialData): ScriptAlternative[] {
   return [
     {
       type: 'executive',
-      title: 'Executive Summary',
-      duration: '2 minuter',
+      title: 'Executive Summary - Q1 Resultat',
+      duration: '2-3 minuter',
       script: `Jag presenterar ${company}s resultat för ${period}. Vi rapporterar ${revenue} och ${ebitda}, vilket representerar ${growth}. ${data.key_highlights?.[0] || 'Vi har uppnått viktiga milstolpar'} under perioden. ${data.forward_guidance || 'Vi ser positivt på framtiden'}.`,
-      tone: 'Professional',
+      tone: 'Professional och auktoritär',
       key_points: ['Stark finansiell prestation', 'Operationella framsteg', 'Positiva framtidsutsikter']
     },
     {
       type: 'investor',
-      title: 'Investor Focus',
-      duration: '3 minuter',
+      title: 'Investor Presentation',
+      duration: '3-4 minuter',
       script: `Välkomna till ${company}s investerarpresentation för ${period}. Intäkterna uppgick till ${revenue} med ${ebitda} i EBITDA, vilket ger en tillväxt på ${growth}. ${data.ceo_quote || 'Ledningen är nöjd med utvecklingen'}. ${data.forward_guidance || 'Vi fortsätter att fokusera på lönsam tillväxt'}.`,
-      tone: 'Analytical',
+      tone: 'Analytisk och datadrivne',
       key_points: ['Detaljerade finansiella resultat', 'Marknadsposition', 'Strategisk riktning']
     },
     {
       type: 'social',
-      title: 'Social Media',
-      duration: '1 minut',
+      title: 'Social Media Highlight',
+      duration: '1-2 minuter', 
       script: `Stolta över ${company}s resultat för ${period}! ${revenue} och ${growth} tillväxt visar på vår starka utveckling. ${data.key_highlights?.[0] || 'Spännande utveckling'} under kvartalet. Framtiden ser ljus ut!`,
-      tone: 'Dynamic',
+      tone: 'Dynamisk och tillgänglig',
       key_points: ['Starka resultat', 'Positiv utveckling', 'Framtidsoptimism']
     }
   ];
