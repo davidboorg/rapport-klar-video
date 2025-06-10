@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -250,7 +251,7 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
                           </p>
                         </div>
                       </div>
-                      <Button onClick={handleViewAvatar} variant="outline" className="border-green-300">
+                      <Button onClick={() => navigate('/avatars')} variant="outline" className="border-green-300">
                         Visa Avatar
                       </Button>
                     </div>
@@ -263,7 +264,7 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
                         <p>→ Ladda upp din kvartalsrapport för att skapa en personlig video</p>
                       </div>
                       <Button 
-                        onClick={handleCreateReport} 
+                        onClick={() => navigate('/projects')} 
                         className="mt-3 bg-green-600 hover:bg-green-700"
                         size="sm"
                       >
@@ -343,7 +344,7 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
         
         {currentPhase === 'completed' ? (
           <div className="space-x-2">
-            <Button onClick={handleCreateReport} variant="outline">
+            <Button onClick={() => navigate('/projects')} variant="outline">
               Skapa Rapport
             </Button>
             <Button onClick={onNext} size="lg">
