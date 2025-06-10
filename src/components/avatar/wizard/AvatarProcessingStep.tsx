@@ -167,6 +167,9 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
     return `${minutes} ${minutes === 1 ? 'minut' : 'minuter'} kvar`;
   };
 
+  const isCompleted = currentPhase === 'completed';
+  const isProcessing = currentPhase === 'processing';
+
   return (
     <div className="space-y-6">
       {/* Main Processing Card */}
@@ -226,7 +229,7 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
             )}
 
             {/* Completed Progress */}
-            {currentPhase === 'completed' && (
+            {isCompleted && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Avatar creation progress</span>
@@ -284,7 +287,7 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
             </div>
 
             {/* Completion Preview with Next Steps */}
-            {currentPhase === 'completed' && createdAvatar && (
+            {isCompleted && createdAvatar && (
               <Card className="bg-green-50 border-green-200">
                 <CardContent className="pt-4">
                   <div className="space-y-4">
@@ -386,12 +389,12 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
 
       {/* Navigation */}
       <div className="flex justify-between pt-4">
-        <Button variant="outline" onClick={onPrevious} disabled={currentPhase === 'processing'}>
+        <Button variant="outline" onClick={onPrevious} disabled={isProcessing}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Föregående
         </Button>
         
-        {currentPhase === 'completed' ? (
+        {isCompleted ? (
           <div className="space-x-2">
             <Button onClick={() => navigate('/projects')} variant="outline">
               Skapa Rapport
@@ -404,7 +407,7 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
         ) : (
           <Button 
             onClick={onNext}
-            disabled={currentPhase !== 'completed'}
+            disabled={!isCompleted}
             size="lg"
           >
             Fortsätt till Röst
