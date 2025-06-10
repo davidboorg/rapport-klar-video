@@ -1,9 +1,9 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Play, 
   Download, 
@@ -12,11 +12,13 @@ import {
   CheckCircle, 
   AlertCircle,
   Film,
-  Wand2
+  Wand2,
+  User
 } from "lucide-react";
 import VideoTemplateSelector from "./VideoTemplateSelector";
 import BrandCustomization from "./BrandCustomization";
 import { useVideoGeneration } from "../hooks/useVideoGeneration";
+import { useAvatars } from "../hooks/useAvatars";
 
 interface VideoGenerationProps {
   projectId: string;
@@ -27,6 +29,7 @@ interface VideoGenerationProps {
 
 const VideoGeneration = ({ projectId, scriptText, financialData, existingVideoUrl }: VideoGenerationProps) => {
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [selectedAvatarId, setSelectedAvatarId] = useState<string>('');
   const [brandConfig, setBrandConfig] = useState({
     company_name: financialData?.company_name || '',
     primary_color: '#2563eb',
@@ -36,10 +39,21 @@ const VideoGeneration = ({ projectId, scriptText, financialData, existingVideoUr
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState(existingVideoUrl);
 
   const { isGenerating, generateVideo, getJobProgress } = useVideoGeneration();
+  const { avatars, loading: avatarsLoading } = useAvatars();
   const jobProgress = getJobProgress(projectId);
 
+  // Filter for completed avatars only
+  const availableAvatars = avatars.filter(avatar => avatar.status === 'completed');
+
+  useEffect(() => {
+    // Auto-select the first available avatar if none selected
+    if (availableAvatars.length > 0 && !selectedAvatarId) {
+      setSelectedAvatarId(availableAvatars[0].id);
+    }
+  }, [availableAvatars, selectedAvatarId]);
+
   const handleGenerateVideo = async () => {
-    if (!selectedTemplate || !scriptText.trim()) {
+    if (!selectedTemplate || !scriptText.trim() || !selectedAvatarId) {
       return;
     }
 
@@ -48,7 +62,8 @@ const VideoGeneration = ({ projectId, scriptText, financialData, existingVideoUr
         projectId,
         selectedTemplate.id,
         brandConfig,
-        scriptText
+        scriptText,
+        selectedAvatarId // Pass the selected avatar
       );
       setGeneratedVideoUrl(videoUrl);
       setShowTemplateSelector(false);
@@ -78,7 +93,6 @@ const VideoGeneration = ({ projectId, scriptText, financialData, existingVideoUr
         console.log('Sharing failed:', error);
       }
     } else {
-      // Fallback: copy to clipboard
       navigator.clipboard.writeText(generatedVideoUrl || '');
     }
   };
@@ -187,8 +201,67 @@ const VideoGeneration = ({ projectId, scriptText, financialData, existingVideoUr
         </Card>
       )}
 
-      {/* Template Selection */}
+      {/* Avatar Selection */}
       {showTemplateSelector && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Välj Din Avatar
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {avatarsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-slate-600">
+                <Clock className="w-4 h-4 animate-spin" />
+                Laddar avatarer...
+              </div>
+            ) : availableAvatars.length === 0 ? (
+              <div className="text-center py-8">
+                <User className="w-12 h-12 mx-auto text-slate-400 mb-4" />
+                <h3 className="font-medium mb-2">Ingen avatar tillgänglig</h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  Du behöver skapa en avatar först för att generera personliga videos.
+                </p>
+                <Button onClick={() => window.location.href = '/avatars/create'}>
+                  Skapa Avatar
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Select value={selectedAvatarId} onValueChange={setSelectedAvatarId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Välj en avatar för videon" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableAvatars.map((avatar) => (
+                      <SelectItem key={avatar.id} value={avatar.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <User className="w-4 h-4 text-blue-600" />
+                          </div>
+                          {avatar.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {selectedAvatarId && (
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      ✓ Avatar vald: {availableAvatars.find(a => a.id === selectedAvatarId)?.name}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Template Selection */}
+      {showTemplateSelector && selectedAvatarId && (
         <VideoTemplateSelector
           selectedTemplate={selectedTemplate?.id || null}
           onTemplateSelect={setSelectedTemplate}
@@ -196,7 +269,7 @@ const VideoGeneration = ({ projectId, scriptText, financialData, existingVideoUr
       )}
 
       {/* Brand Customization */}
-      {selectedTemplate && showTemplateSelector && (
+      {selectedTemplate && showTemplateSelector && selectedAvatarId && (
         <BrandCustomization
           brandConfig={brandConfig}
           onBrandConfigChange={setBrandConfig}
@@ -204,7 +277,7 @@ const VideoGeneration = ({ projectId, scriptText, financialData, existingVideoUr
       )}
 
       {/* Generate Button */}
-      {selectedTemplate && showTemplateSelector && (
+      {selectedTemplate && showTemplateSelector && selectedAvatarId && (
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-4">
@@ -220,7 +293,7 @@ const VideoGeneration = ({ projectId, scriptText, financialData, existingVideoUr
 
               <Button 
                 onClick={handleGenerateVideo}
-                disabled={isGenerating || !scriptText.trim()}
+                disabled={isGenerating || !scriptText.trim() || !selectedAvatarId}
                 className="w-full"
                 size="lg"
               >
@@ -232,7 +305,7 @@ const VideoGeneration = ({ projectId, scriptText, financialData, existingVideoUr
                 ) : (
                   <>
                     <Play className="w-5 h-5 mr-2" />
-                    Generera AI-video
+                    Generera AI-video med {availableAvatars.find(a => a.id === selectedAvatarId)?.name}
                   </>
                 )}
               </Button>
@@ -241,6 +314,13 @@ const VideoGeneration = ({ projectId, scriptText, financialData, existingVideoUr
                 <div className="flex items-center gap-2 text-orange-600 text-sm">
                   <AlertCircle className="w-4 h-4" />
                   Du behöver ett videomanus för att generera video
+                </div>
+              )}
+
+              {!selectedAvatarId && (
+                <div className="flex items-center gap-2 text-orange-600 text-sm">
+                  <AlertCircle className="w-4 h-4" />
+                  Du behöver välja en avatar för att generera video
                 </div>
               )}
             </div>

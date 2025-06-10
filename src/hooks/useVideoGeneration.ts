@@ -7,6 +7,7 @@ export interface VideoGenerationJob {
   id: string;
   project_id: string;
   template_id: string;
+  avatar_id?: string;
   brand_config: {
     company_name: string;
     logo_url?: string;
@@ -29,7 +30,8 @@ export const useVideoGeneration = () => {
     projectId: string, 
     templateId: string, 
     brandConfig: VideoGenerationJob['brand_config'],
-    scriptText: string
+    scriptText: string,
+    avatarId?: string
   ): Promise<string> => {
     const jobId = `job_${Date.now()}`;
     
@@ -37,6 +39,7 @@ export const useVideoGeneration = () => {
       id: jobId,
       project_id: projectId,
       template_id: templateId,
+      avatar_id: avatarId,
       brand_config: brandConfig,
       status: 'queued',
       progress: 0,
@@ -45,11 +48,12 @@ export const useVideoGeneration = () => {
 
     setJobs(prev => [...prev, newJob]);
 
-    // Simulera progresssteg
+    // Enhanced progress steps with avatar processing
     const progressSteps = [
-      { status: 'processing' as const, progress: 25, message: 'Förbereder script...' },
-      { status: 'rendering' as const, progress: 50, message: 'Genererar AI-avatar...' },
-      { status: 'rendering' as const, progress: 75, message: 'Renderar video...' },
+      { status: 'processing' as const, progress: 15, message: 'Förbereder script...' },
+      { status: 'processing' as const, progress: 35, message: avatarId ? 'Laddar din avatar...' : 'Förbereder AI-avatar...' },
+      { status: 'rendering' as const, progress: 60, message: 'Genererar personlig video...' },
+      { status: 'rendering' as const, progress: 85, message: 'Renderar slutgiltig video...' },
       { status: 'completed' as const, progress: 100, message: 'Video klar!' }
     ];
 
@@ -68,7 +72,7 @@ export const useVideoGeneration = () => {
       });
     }
 
-    // Använd placeholder video URL
+    // Use placeholder video URL
     const videoUrl = `https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4`;
     
     setJobs(prev => prev.map(job => 
@@ -84,18 +88,20 @@ export const useVideoGeneration = () => {
     projectId: string,
     templateId: string,
     brandConfig: VideoGenerationJob['brand_config'],
-    scriptText: string
+    scriptText: string,
+    avatarId?: string
   ) => {
     setGenerating(true);
     try {
-      const videoUrl = await simulateVideoGeneration(projectId, templateId, brandConfig, scriptText);
+      const videoUrl = await simulateVideoGeneration(projectId, templateId, brandConfig, scriptText, avatarId);
       
-      // Uppdatera projektet med video URL
+      // Update the project with video URL and avatar reference
       const { error } = await supabase
         .from('generated_content')
         .upsert({
           project_id: projectId,
           video_url: videoUrl,
+          avatar_id: avatarId,
           generation_status: 'completed',
           updated_at: new Date().toISOString(),
         });
@@ -104,7 +110,9 @@ export const useVideoGeneration = () => {
 
       toast({
         title: "Video genererad!",
-        description: "Din AI-video är redo för visning och nedladdning.",
+        description: avatarId ? 
+          "Din personliga AI-video är redo för visning och nedladdning." :
+          "Din AI-video är redo för visning och nedladdning.",
       });
 
       return videoUrl;
