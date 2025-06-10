@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { Play, Upload, Settings, Download, CheckCircle, ArrowRight, Users, Shield, TrendingUp } from "lucide-react";
+import { Play, Upload, Settings, Download, CheckCircle, ArrowRight, Users, Shield, TrendingUp, UserCheck, Star, Crown } from "lucide-react";
 
 const Landing = () => {
   return (
@@ -37,25 +37,26 @@ const Landing = () => {
       <section className="py-20 px-6">
         <div className="container mx-auto text-center max-w-4xl">
           <Badge className="mb-6 bg-blue-100 text-blue-700 hover:bg-blue-100">
-            Ny teknologi för finansiell kommunikation
+            <UserCheck className="w-4 h-4 mr-2" />
+            NI presenterar era egna rapporter via AI
           </Badge>
           <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-6 leading-tight">
-            Förvandla finansiella rapporter till 
-            <span className="text-blue-600"> engagerande videor</span>
+            Skapa era egna 
+            <span className="text-blue-600"> AI-avatarer</span> för finansiell kommunikation
           </h1>
           <p className="text-xl text-slate-600 mb-8 leading-relaxed">
-            ReportFlow använder AI för att automatiskt skapa professionella videor från dina kvartalsnummer och årsredovisningar. 
-            Perfekt för svenska företag som vill kommunicera sina resultat på ett modernt sätt.
+            VD:ar och finanschefer skapar personliga AI-avatarer som presenterar kvartalsnummer och årsredovisningar. 
+            Bygg ert personal brand och kommunicera autentiskt med investerare och stakeholders.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/register">
               <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-4">
-                Starta gratis provperiod
+                Skapa din avatar
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
             <Button size="lg" variant="outline" className="text-lg px-8 py-4">
-              Se demo video
+              Se CEO demo
               <Play className="ml-2 w-5 h-5" />
             </Button>
           </div>
@@ -66,28 +67,28 @@ const Landing = () => {
       <section className="py-20 px-6 bg-white" id="features">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">Så här fungerar det</h2>
-            <p className="text-xl text-slate-600">Från PDF till professionell video på bara några minuter</p>
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">Så skapar ni era AI-avatarer</h2>
+            <p className="text-xl text-slate-600">Från personlig avatar till professionell presentation på några dagar</p>
           </div>
           
           <div className="grid md:grid-cols-4 gap-8">
             <Card className="border-2 hover:border-blue-200 transition-colors">
               <CardContent className="p-6 text-center">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Upload className="w-6 h-6 text-blue-600" />
+                  <UserCheck className="w-6 h-6 text-blue-600" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">1. Ladda upp rapport</h3>
-                <p className="text-slate-600">Dra och släpp din finansiella rapport i PDF-format</p>
+                <h3 className="text-lg font-semibold mb-2">1. Skapa avatar</h3>
+                <p className="text-slate-600">VD eller finanschef spelar in träningsdata för sin personliga AI-avatar</p>
               </CardContent>
             </Card>
             
             <Card className="border-2 hover:border-blue-200 transition-colors">
               <CardContent className="p-6 text-center">
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <TrendingUp className="w-6 h-6 text-green-600" />
+                  <Upload className="w-6 h-6 text-green-600" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">2. AI-analys</h3>
-                <p className="text-slate-600">Vårt AI extraherar nyckeltal och skapar manus</p>
+                <h3 className="text-lg font-semibold mb-2">2. Ladda upp rapport</h3>
+                <p className="text-slate-600">Dra och släpp finansiell rapport - AI extraherar nyckeltal automatiskt</p>
               </CardContent>
             </Card>
             
@@ -96,8 +97,8 @@ const Landing = () => {
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                   <Settings className="w-6 h-6 text-purple-600" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">3. Anpassa stil</h3>
-                <p className="text-slate-600">Välj mall och redigera manus efter dina önskemål</p>
+                <h3 className="text-lg font-semibold mb-2">3. Anpassa presentation</h3>
+                <p className="text-slate-600">Redigera manus och anpassa för olika målgrupper och kanaler</p>
               </CardContent>
             </Card>
             
@@ -106,8 +107,8 @@ const Landing = () => {
                 <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                   <Download className="w-6 h-6 text-orange-600" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">4. Ladda ner video</h3>
-                <p className="text-slate-600">Få din färdiga video redo för publicering</p>
+                <h3 className="text-lg font-semibold mb-2">4. Publicera överallt</h3>
+                <p className="text-slate-600">Er avatar presenterar på LinkedIn, hemsida, investerarmöten</p>
               </CardContent>
             </Card>
           </div>
@@ -119,34 +120,34 @@ const Landing = () => {
         <div className="container mx-auto max-w-6xl">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-4xl font-bold text-slate-900 mb-6">Professionella funktioner för svenska företag</h2>
+              <h2 className="text-4xl font-bold text-slate-900 mb-6">Personal brand building för executives</h2>
               <div className="space-y-4">
                 <div className="flex items-start space-x-3">
                   <CheckCircle className="w-6 h-6 text-green-600 mt-1 flex-shrink-0" />
                   <div>
-                    <h3 className="font-semibold text-slate-900">GDPR-kompatibel</h3>
-                    <p className="text-slate-600">Säker hantering av finansiell data enligt svenska bestämmelser</p>
+                    <h3 className="font-semibold text-slate-900">Autentisk representation</h3>
+                    <p className="text-slate-600">Verkliga personer från företaget - inte generisk AI</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <CheckCircle className="w-6 h-6 text-green-600 mt-1 flex-shrink-0" />
                   <div>
-                    <h3 className="font-semibold text-slate-900">AI på svenska</h3>
-                    <p className="text-slate-600">Optimerad för svenska finansiella termer och kommunikation</p>
+                    <h3 className="font-semibold text-slate-900">Obegränsad anpassning</h3>
+                    <p className="text-slate-600">Olika versioner för investerare, medier, anställda</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <CheckCircle className="w-6 h-6 text-green-600 mt-1 flex-shrink-0" />
                   <div>
-                    <h3 className="font-semibold text-slate-900">Varumärkesanpassning</h3>
-                    <p className="text-slate-600">Anpassa videor med era färger, logotyp och företagsprofil</p>
+                    <h3 className="font-semibold text-slate-900">Flera presentatörer</h3>
+                    <p className="text-slate-600">VD, CFO, IR-chef - hela ledningsgruppen kan ha avatarer</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <CheckCircle className="w-6 h-6 text-green-600 mt-1 flex-shrink-0" />
                   <div>
-                    <h3 className="font-semibold text-slate-900">Flera videoformat</h3>
-                    <p className="text-slate-600">Optimerade för LinkedIn, hemsida, presentationer och mer</p>
+                    <h3 className="font-semibold text-slate-900">Högre engagement</h3>
+                    <p className="text-slate-600">Personal touch skapar förtroende och starkare koppling</p>
                   </div>
                 </div>
               </div>
@@ -156,22 +157,22 @@ const Landing = () => {
                 <div className="flex items-center space-x-4">
                   <Users className="w-8 h-8 text-blue-600" />
                   <div>
-                    <h3 className="text-2xl font-bold text-slate-900">500+</h3>
-                    <p className="text-slate-600">Svenska företag litar på oss</p>
+                    <h3 className="text-2xl font-bold text-slate-900">50+</h3>
+                    <p className="text-slate-600">Ledare har skapat sina avatarer</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <Shield className="w-8 h-8 text-green-600" />
+                  <TrendingUp className="w-8 h-8 text-green-600" />
                   <div>
-                    <h3 className="text-2xl font-bold text-slate-900">100%</h3>
-                    <p className="text-slate-600">GDPR-kompatibel datahantering</p>
+                    <h3 className="text-2xl font-bold text-slate-900">3x</h3>
+                    <p className="text-slate-600">Högre engagement vs traditionella rapporter</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <TrendingUp className="w-8 h-8 text-purple-600" />
+                  <Star className="w-8 h-8 text-purple-600" />
                   <div>
-                    <h3 className="text-2xl font-bold text-slate-900">85%</h3>
-                    <p className="text-slate-600">Ökning av engagement</p>
+                    <h3 className="text-2xl font-bold text-slate-900">95%</h3>
+                    <p className="text-slate-600">Av användare föredrar personliga avatarer</p>
                   </div>
                 </div>
               </div>
@@ -180,24 +181,113 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* Pricing */}
+      <section className="py-20 px-6 bg-white" id="pricing">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">Investering för er organisation</h2>
+            <p className="text-xl text-slate-600">Professionell avatar-skapande och rapportgenerering</p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <Card className="border-2 hover:border-blue-200 transition-colors relative">
+              <CardContent className="p-8">
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-bold text-slate-900 mb-2">Professional</h3>
+                  <div className="text-4xl font-bold text-blue-600 mb-2">5-15k SEK</div>
+                  <p className="text-slate-600">per månad + setup</p>
+                </div>
+                <ul className="space-y-3 mb-8">
+                  <li className="flex items-start space-x-3">
+                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-slate-700">1-2 avatarer per organisation</span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-slate-700">Obegränsade rapportgenerationer</span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-slate-700">Varumärkesanpassning</span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-slate-700">Standard support</span>
+                  </li>
+                </ul>
+                <div className="bg-slate-50 p-4 rounded-lg mb-6">
+                  <p className="text-sm text-slate-600 mb-2"><strong>Setup:</strong></p>
+                  <p className="text-sm text-slate-600">Avatar-skapande: 2-3k SEK per avatar</p>
+                </div>
+                <Button className="w-full bg-blue-600 hover:bg-blue-700">Välj Professional</Button>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-blue-500 hover:border-blue-600 transition-colors relative">
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                <Badge className="bg-blue-600 text-white px-4 py-1">
+                  <Crown className="w-4 h-4 mr-1" />
+                  Populärast
+                </Badge>
+              </div>
+              <CardContent className="p-8">
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-bold text-slate-900 mb-2">Enterprise</h3>
+                  <div className="text-4xl font-bold text-blue-600 mb-2">15-25k SEK</div>
+                  <p className="text-slate-600">per månad + premium setup</p>
+                </div>
+                <ul className="space-y-3 mb-8">
+                  <li className="flex items-start space-x-3">
+                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-slate-700">Obegränsade avatarer</span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-slate-700">Premium anpassning & mallar</span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-slate-700">Avancerad varumärkesintegration</span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-slate-700">Dedikerad success manager</span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-slate-700">Prioriterad support & träning</span>
+                  </li>
+                </ul>
+                <div className="bg-blue-50 p-4 rounded-lg mb-6">
+                  <p className="text-sm text-blue-800 mb-2"><strong>Premium Setup:</strong></p>
+                  <p className="text-sm text-blue-800">Avatar-skapande: 3-5k SEK per avatar</p>
+                  <p className="text-sm text-blue-800">+50% anpassningsmöjligheter</p>
+                </div>
+                <Button className="w-full bg-blue-600 hover:bg-blue-700">Välj Enterprise</Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-20 px-6 bg-blue-600">
         <div className="container mx-auto text-center max-w-4xl">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Redo att revolutionera din finansiella kommunikation?
+            Redo att bygga ert personal brand inom finans?
           </h2>
           <p className="text-xl text-blue-100 mb-8">
-            Gå med i hundratals svenska företag som redan använder ReportFlow för att skapa engagerande finansiella videor.
+            Gå med i svenska ledare som redan använder sina AI-avatarer för att kommunicera finansiella resultat autentiskt och professionellt.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/register">
               <Button size="lg" className="bg-white text-blue-600 hover:bg-slate-100 text-lg px-8 py-4">
-                Starta gratis idag
+                Skapa din avatar idag
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
             <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600 text-lg px-8 py-4">
-              Boka demo
+              Boka strategisamtal
             </Button>
           </div>
         </div>
@@ -214,13 +304,13 @@ const Landing = () => {
                 </div>
                 <h3 className="text-xl font-bold">ReportFlow</h3>
               </div>
-              <p className="text-slate-400">Förvandla finansiella rapporter till engagerande videor med AI.</p>
+              <p className="text-slate-400">Skapa personliga AI-avatarer för autentisk finansiell kommunikation.</p>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Produkt</h4>
               <ul className="space-y-2 text-slate-400">
-                <li><a href="#" className="hover:text-white transition-colors">Funktioner</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Priser</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Avatar-skapande</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Rapportgenerering</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">API</a></li>
               </ul>
             </div>
