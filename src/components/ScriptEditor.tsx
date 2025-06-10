@@ -54,12 +54,12 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
   const [script, setScript] = useState(initialScript);
   const [isSaving, setSaving] = useState(false);
   const [isProcessing, setProcessing] = useState(false);
-  const [processingStep, setProcessingStep] = useState(0);
   const [financialData, setFinancialData] = useState<FinancialData | null>(null);
   const [scriptAlternatives, setScriptAlternatives] = useState<ScriptAlternative[]>([]);
   const [existingVideoUrl, setExistingVideoUrl] = useState<string | null>(null);
   const [hasProcessedData, setHasProcessedData] = useState(false);
   const [showProcessingWorkflow, setShowProcessingWorkflow] = useState(false);
+  const [projectStatus, setProjectStatus] = useState<string>('');
   const { toast } = useToast();
 
   // Calculate estimated video duration (150 words per minute speaking rate)
@@ -67,11 +67,33 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
 
   useEffect(() => {
     fetchProjectData();
+    
+    // Set up real-time subscription to monitor project changes
+    const subscription = supabase
+      .channel('project_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'projects',
+          filter: `id=eq.${projectId}`
+        },
+        () => {
+          console.log('Project updated, refreshing data...');
+          fetchProjectData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [projectId]);
 
   const fetchProjectData = async () => {
     try {
-      // Fetch project financial data
+      // Fetch project data including status
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
         .select('financial_data, status, pdf_url')
@@ -81,6 +103,7 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
       if (projectError) throw projectError;
       
       console.log('Project data:', projectData);
+      setProjectStatus(projectData.status);
 
       if (projectData?.financial_data) {
         setFinancialData(projectData.financial_data as FinancialData);
@@ -109,11 +132,23 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
         }
       }
 
-      // Check if we need to show processing workflow
-      const needsProcessing = projectData?.pdf_url && !projectData?.financial_data && !contentData?.script_alternatives;
-      if (needsProcessing) {
-        console.log('Project needs processing, showing workflow');
+      // Determine if we should show processing workflow
+      const needsProcessing = projectData?.pdf_url && 
+                            (!projectData?.financial_data || 
+                             (projectData.financial_data && Object.values(projectData.financial_data).every(val => 
+                               val === 'Information saknas' || 
+                               (Array.isArray(val) && val.every(item => item === 'Information saknas'))
+                             ))) && 
+                            !contentData?.script_alternatives &&
+                            projectData.status !== 'completed';
+
+      if (needsProcessing || projectData.status === 'processing') {
+        console.log('Project needs processing or is currently processing, showing workflow');
         setShowProcessingWorkflow(true);
+        setProcessing(projectData.status === 'processing');
+      } else {
+        setShowProcessingWorkflow(false);
+        setProcessing(false);
       }
 
     } catch (error) {
@@ -186,16 +221,20 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
 
   const handleProcessingComplete = (result: { success: boolean; data?: any; error?: string }) => {
     setProcessing(false);
-    setShowProcessingWorkflow(false);
     
     if (result.success) {
-      // Refresh project data to get the new financial data and scripts
-      fetchProjectData();
+      // Give a small delay to ensure database is updated
+      setTimeout(() => {
+        fetchProjectData();
+        setShowProcessingWorkflow(false);
+      }, 1000);
+      
       toast({
         title: "AI-bearbetning slutförd!",
         description: "Din rapport har analyserats och manuscriptförslag är redo.",
       });
     } else {
+      setShowProcessingWorkflow(false);
       toast({
         title: "Bearbetning misslyckades",
         description: result.error || "Något gick fel under bearbetningen.",
@@ -204,33 +243,17 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
     }
   };
 
-  // Show processing workflow if we need to process data
-  if (showProcessingWorkflow || (!hasProcessedData && !scriptAlternatives.length)) {
+  // Show processing workflow if needed
+  if (showProcessingWorkflow) {
     return (
       <div className="space-y-6">
         <ProcessingWorkflow 
           projectId={projectId}
           isProcessing={isProcessing}
-          currentStep={processingStep}
-          autoStart={true}
+          currentStep={0}
+          autoStart={!isProcessing && projectStatus !== 'completed'}
           onComplete={handleProcessingComplete}
         />
-        
-        {hasProcessedData && (
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <CheckCircle className="w-12 h-12 mx-auto text-green-500 mb-4" />
-              <h3 className="font-medium mb-2">Bearbetning slutförd!</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Din rapport har analyserats och manuscriptförslag är redo att granska.
-              </p>
-              <Button onClick={() => setShowProcessingWorkflow(false)}>
-                <FileText className="w-4 h-4 mr-2" />
-                Fortsätt till manuscriptgranskning
-              </Button>
-            </CardContent>
-          </Card>
-        )}
       </div>
     );
   }

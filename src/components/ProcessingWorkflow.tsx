@@ -41,6 +41,7 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
   const [internalProcessing, setInternalProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [pdfContent, setPdfContent] = useState<string>('');
+  const [hasStarted, setHasStarted] = useState(false);
   const [steps, setSteps] = useState<ProcessingStep[]>([
     {
       id: 'pdf-fetch',
@@ -83,10 +84,11 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
   const isProcessing = externalProcessing || internalProcessing;
 
   useEffect(() => {
-    if (autoStart && !isProcessing && !pdfContent) {
+    if (autoStart && !isProcessing && !pdfContent && !hasStarted) {
+      setHasStarted(true);
       startProcessing();
     }
-  }, [autoStart, projectId]);
+  }, [autoStart, projectId, hasStarted]);
 
   const fetchPdfContent = async (): Promise<string> => {
     try {
@@ -105,31 +107,8 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
 
       console.log('Fetching PDF from URL:', projectData.pdf_url);
 
-      // Try to fetch the PDF file directly
-      try {
-        const response = await fetch(projectData.pdf_url);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch PDF: ${response.status}`);
-        }
-        
-        // For now, we'll use a simple text extraction approach
-        // In a production environment, you'd want to use a proper PDF parsing library
-        const text = await response.text();
-        
-        // If the response looks like binary data, we need to handle it differently
-        if (text.includes('%PDF') || response.headers.get('content-type')?.includes('application/pdf')) {
-          console.log('PDF file detected, but text extraction requires specialized library');
-          // For now, we'll indicate that we have the PDF but can't extract text directly
-          return `PDF-fil hämtad från: ${projectData.pdf_url}\nStorlek: ${response.headers.get('content-length') || 'okänd'} bytes\nTyp: ${response.headers.get('content-type') || 'okänd'}\n\nOBS: För att extrahera text från PDF:en behövs specialiserad PDF-parser. Skickar PDF-URL till AI för bearbetning.`;
-        }
-        
-        return text;
-      } catch (fetchError) {
-        console.error('Error fetching PDF directly:', fetchError);
-        
-        // If direct fetch fails, we'll send the URL to the AI function to handle
-        return `PDF-URL: ${projectData.pdf_url}\nFil kommer att bearbetas av AI-funktionen.`;
-      }
+      // For now, we'll send the PDF URL to the AI function to handle
+      return `PDF-URL: ${projectData.pdf_url}`;
     } catch (error) {
       console.error('Error fetching PDF content:', error);
       throw new Error(`Kunde inte hämta PDF-innehåll: ${error instanceof Error ? error.message : 'Okänt fel'}`);
@@ -181,7 +160,7 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
       await new Promise(resolve => setTimeout(resolve, 1000));
       updateStepStatus(2, 'completed', 100);
 
-      // Step 4: Script Creation (the main AI call with PDF URL instead of content)
+      // Step 4: Script Creation (the main AI call)
       setCurrentStep(3);
       updateStepStatus(3, 'processing', 10);
       
@@ -202,8 +181,8 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
       const { data, error } = await supabase.functions.invoke('analyze-financial-data', {
         body: { 
           projectId,
-          pdfUrl: projectData?.pdf_url, // Send PDF URL instead of extracted text
-          pdfText: content // Also send whatever content we managed to extract
+          pdfUrl: projectData?.pdf_url,
+          pdfText: content
         }
       });
 
@@ -350,15 +329,21 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-4 border-t">
-            {!isProcessing && (
-              <Button onClick={startProcessing} className="flex items-center gap-2">
+            {!isProcessing && !hasStarted && (
+              <Button onClick={() => {
+                setHasStarted(true);
+                startProcessing();
+              }} className="flex items-center gap-2">
                 <Play className="w-4 h-4" />
                 Starta bearbetning
               </Button>
             )}
             
             {!isProcessing && steps.some(step => step.status === 'completed') && (
-              <Button variant="outline" onClick={startProcessing} className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => {
+                setHasStarted(true);
+                startProcessing();
+              }} className="flex items-center gap-2">
                 <RefreshCw className="w-4 h-4" />
                 Kör om bearbetning
               </Button>
