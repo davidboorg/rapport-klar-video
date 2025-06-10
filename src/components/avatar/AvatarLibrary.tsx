@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAvatars, Avatar } from '@/hooks/useAvatars';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,11 +26,11 @@ const AvatarLibrary = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'completed': return 'Färdig';
-      case 'processing': return 'Bearbetas';
-      case 'creating': return 'Skapas';
-      case 'failed': return 'Misslyckades';
-      default: return 'Okänd';
+      case 'completed': return 'Ready';
+      case 'processing': return 'Processing';
+      case 'creating': return 'Creating';
+      case 'failed': return 'Failed';
+      default: return 'Unknown';
     }
   };
 
@@ -50,21 +51,21 @@ const AvatarLibrary = () => {
       // Open video in new tab
       window.open(avatar.preview_video_url, '_blank');
       toast({
-        title: "Öppnar förhandsvisning",
-        description: "Avatar-videon öppnas i en ny flik",
+        title: "Opening preview",
+        description: "Avatar video opens in a new tab",
       });
     } else if (avatar.thumbnail_url) {
       // Show thumbnail in new tab if video not available
       window.open(avatar.thumbnail_url, '_blank');
       toast({
-        title: "Visar avatar-bild",
-        description: "Ingen video tillgänglig, visar thumbnail istället",
+        title: "Showing avatar image",
+        description: "No video available, showing thumbnail instead",
       });
     } else {
       // No preview available
       toast({
-        title: "Ingen förhandsvisning tillgänglig",
-        description: "Avatar har inte genererat en förhandsvisning än",
+        title: "No preview available",
+        description: "Avatar hasn't generated a preview yet",
         variant: "destructive",
       });
     }
@@ -90,15 +91,15 @@ const AvatarLibrary = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Mina Avatarer</h2>
+          <h2 className="text-2xl font-bold">My Avatars</h2>
           <p className="text-muted-foreground">
-            Hantera dina AI-avatarer för videopresentationer
+            Manage your AI avatars for video presentations
           </p>
         </div>
         <Button asChild>
           <Link to="/avatars/create">
             <Plus className="h-4 w-4 mr-2" />
-            Skapa Avatar
+            Create Avatar
           </Link>
         </Button>
       </div>
@@ -106,7 +107,7 @@ const AvatarLibrary = () => {
       {/* Show debug panel if there are stuck avatars */}
       {stuckAvatars.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-yellow-600">⚠️ Avatarer som verkar ha fastnat</h3>
+          <h3 className="text-lg font-semibold text-yellow-600">⚠️ Avatars that seem to be stuck</h3>
           {stuckAvatars.map(avatar => (
             <AvatarDebugPanel key={avatar.id} avatarId={avatar.id} />
           ))}
@@ -117,14 +118,14 @@ const AvatarLibrary = () => {
         <Card className="text-center py-12">
           <CardContent>
             <User className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Inga avatarer ännu</h3>
+            <h3 className="text-xl font-semibold mb-2">No avatars yet</h3>
             <p className="text-muted-foreground mb-6">
-              Skapa din första AI-avatar för att börja göra personliga videopresentationer.
+              Create your first AI avatar to start making personal video presentations.
             </p>
             <Button asChild>
               <Link to="/avatars/create">
                 <Plus className="h-4 w-4 mr-2" />
-                Skapa Din Första Avatar
+                Create Your First Avatar
               </Link>
             </Button>
           </CardContent>
@@ -138,7 +139,7 @@ const AvatarLibrary = () => {
                   <div className="flex-1">
                     <CardTitle className="text-lg">{avatar.name}</CardTitle>
                     <CardDescription className="mt-2">
-                      Skapad {new Date(avatar.created_at).toLocaleDateString('sv-SE')}
+                      Created {new Date(avatar.created_at).toLocaleDateString('en-US')}
                     </CardDescription>
                   </div>
                   <Badge className={`${getStatusColor(avatar.status)} flex items-center gap-1`}>
@@ -166,7 +167,7 @@ const AvatarLibrary = () => {
                   <div className="mb-4 space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground font-medium">
-                        {avatar.status === 'creating' ? 'Skapar avatar...' : 'Bearbetar avatar...'}
+                        {avatar.status === 'creating' ? 'Creating avatar...' : 'Processing avatar...'}
                       </span>
                       <span className="font-bold text-primary">
                         {Math.round(avatar.progress)}%
@@ -175,8 +176,8 @@ const AvatarLibrary = () => {
                     <Progress value={avatar.progress} className="h-3" />
                     <div className="text-center text-xs text-muted-foreground">
                       {avatar.status === 'creating' ? 
-                        'Analyserar och förbereder din avatar...' : 
-                        'Tränar AI-modellen med dina data...'
+                        'Analyzing and preparing your avatar...' : 
+                        'Training AI model with your data...'
                       }
                     </div>
                   </div>
@@ -200,7 +201,7 @@ const AvatarLibrary = () => {
                           variant="outline" 
                           size="sm"
                           onClick={() => refreshAvatarData(avatar.id)}
-                          title="Hämta senaste data från HeyGen"
+                          title="Fetch latest data from HeyGen"
                         >
                           <RefreshCw className="h-4 w-4" />
                         </Button>
@@ -211,8 +212,8 @@ const AvatarLibrary = () => {
                   {avatar.status === 'creating' && (
                     <div className="flex-1 text-center text-sm bg-yellow-50 text-yellow-700 py-2 px-3 rounded font-medium border border-yellow-200">
                       {avatar.progress !== undefined && avatar.progress > 0 ? 
-                        `${Math.round(avatar.progress)}% färdig` : 
-                        'Startar...'
+                        `${Math.round(avatar.progress)}% complete` : 
+                        'Starting...'
                       }
                     </div>
                   )}
@@ -220,8 +221,8 @@ const AvatarLibrary = () => {
                   {avatar.status === 'processing' && (
                     <div className="flex-1 text-center text-sm bg-blue-50 text-blue-700 py-2 px-3 rounded font-medium border border-blue-200">
                       {avatar.progress !== undefined ? 
-                        `${Math.round(avatar.progress)}% färdig` : 
-                        'Bearbetar...'
+                        `${Math.round(avatar.progress)}% complete` : 
+                        'Processing...'
                       }
                     </div>
                   )}

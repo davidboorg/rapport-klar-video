@@ -21,32 +21,32 @@ const AvatarWelcomeStep: React.FC<AvatarWelcomeStepProps> = ({
   const guidelines = [
     {
       icon: <Camera className="h-5 w-5 text-blue-600" />,
-      title: "Professionell Framtoning",
+      title: "Professional Appearance",
       items: [
-        "Använd affärsklädsel eller business casual",
-        "Välj en neutral, professionell bakgrund",
-        "Se till att du är väl synlig i bild",
-        "Titta direkt in i kameran"
+        "Wear business attire or business casual",
+        "Choose a neutral, professional background",
+        "Ensure you are clearly visible in frame",
+        "Look directly into the camera"
       ]
     },
     {
       icon: <Lightbulb className="h-5 w-5 text-yellow-600" />,
-      title: "Belysning & Miljö",
+      title: "Lighting & Environment",
       items: [
-        "Använd naturligt ljus eller professionell belysning",
-        "Undvik motljus och starka skuggor",
-        "Välj en tyst miljö utan störande ljud",
-        "Säkerställ stabil internetanslutning"
+        "Use natural light or professional lighting",
+        "Avoid backlighting and harsh shadows",
+        "Choose a quiet environment without noise",
+        "Ensure stable internet connection"
       ]
     },
     {
       icon: <Monitor className="h-5 w-5 text-green-600" />,
-      title: "Tekniska Krav",
+      title: "Technical Requirements",
       items: [
-        "HD-kamera (minst 720p, rekommenderat 1080p)",
-        "Stabil internetanslutning (minst 10 Mbps)",
-        "Chrome eller Safari webbläsare",
-        "Mikrofon för röstinspelning"
+        "HD camera (minimum 720p, recommended 1080p)",
+        "Stable internet connection (minimum 10 Mbps)",
+        "Chrome or Safari web browser",
+        "Microphone for voice recording"
       ]
     }
   ];
@@ -55,16 +55,16 @@ const AvatarWelcomeStep: React.FC<AvatarWelcomeStepProps> = ({
     <div className="space-y-6">
       {/* Avatar Name Input */}
       <div className="space-y-2">
-        <Label htmlFor="avatarName">Avatar Namn</Label>
+        <Label htmlFor="avatarName">Avatar Name</Label>
         <Input
           id="avatarName"
-          placeholder="T.ex. VD Presentation Avatar"
+          placeholder="e.g. CEO Presentation Avatar"
           value={wizardData.avatarName || ''}
           onChange={(e) => updateWizardData({ avatarName: e.target.value })}
           className="text-lg"
         />
         <p className="text-sm text-muted-foreground">
-          Välj ett beskrivande namn för din professionella avatar
+          Choose a descriptive name for your professional avatar
         </p>
       </div>
 
@@ -95,24 +95,24 @@ const AvatarWelcomeStep: React.FC<AvatarWelcomeStepProps> = ({
       {/* Pricing Information */}
       <Card className="bg-blue-50 border-blue-200">
         <CardHeader>
-          <CardTitle className="text-blue-900">Avatar Setup Kostnad</CardTitle>
+          <CardTitle className="text-blue-900">Avatar Setup Cost</CardTitle>
           <CardDescription className="text-blue-700">
-            Professionell avatar-skapande med röstkloning
+            Professional avatar creation with voice cloning
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="font-medium">Avatar Setup Fee:</span>
-              <span className="text-lg font-bold text-blue-900">2.500 - 5.000 SEK</span>
+              <span className="text-lg font-bold text-blue-900">$300 - 600</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="font-medium">Premium Customization:</span>
-              <span className="text-sm text-blue-700">+1.000 - 3.000 SEK (valfritt)</span>
+              <span className="text-sm text-blue-700">+$100 - 300 (optional)</span>
             </div>
             <div className="pt-2 border-t border-blue-200">
               <p className="text-xs text-blue-600">
-                Inkluderar professionell avatar-skapande, röstkloning och grundläggande anpassningar
+                Includes professional avatar creation, voice cloning and basic customizations
               </p>
             </div>
           </div>
@@ -127,7 +127,7 @@ const AvatarWelcomeStep: React.FC<AvatarWelcomeStepProps> = ({
           size="lg"
           className="min-w-[120px]"
         >
-          Nästa Steg
+          Next Step
           <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
       </div>

@@ -1,17 +1,16 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { Avatar } from '@/types/avatar';
 import { useAvatarProgress } from './useAvatarProgress';
 import { useAvatarRealtime } from './useAvatarRealtime';
 import { useAvatarOperations } from './useAvatarOperations';
 import { useAvatarFetch } from './useAvatarFetch';
 
-export { Avatar } from '@/types/avatar';
+export type { Avatar } from '@/types/avatar';
 
 export const useAvatars = () => {
   const { user } = useAuth();
-  const [avatars, setAvatars] = useState<Avatar[]>([]);
+  const [avatars, setAvatars] = useState<any[]>([]);
   
   const { fetchAvatars, loading, setLoading } = useAvatarFetch();
   const { createAvatar, deleteAvatar, updateAvatarStatus, refreshAvatarData } = useAvatarOperations();

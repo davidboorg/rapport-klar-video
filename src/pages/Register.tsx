@@ -31,8 +31,8 @@ const Register = () => {
     
     if (!firstName || !lastName || !email || !company || !password || !confirmPassword) {
       toast({
-        title: "Fel",
-        description: "Vänligen fyll i alla fält",
+        title: "Error",
+        description: "Please fill in all fields",
         variant: "destructive",
       });
       return;
@@ -40,8 +40,8 @@ const Register = () => {
 
     if (password !== confirmPassword) {
       toast({
-        title: "Lösenord matchar inte",
-        description: "Kontrollera att lösenorden är identiska",
+        title: "Passwords don't match",
+        description: "Please make sure passwords are identical",
         variant: "destructive",
       });
       return;
@@ -49,8 +49,8 @@ const Register = () => {
 
     if (password.length < 8) {
       toast({
-        title: "Svagt lösenord",
-        description: "Lösenordet måste vara minst 8 tecken långt",
+        title: "Weak password",
+        description: "Password must be at least 8 characters long",
         variant: "destructive",
       });
       return;
@@ -61,21 +61,21 @@ const Register = () => {
     if (error) {
       if (error.message === "User already registered") {
         toast({
-          title: "E-postadressen används redan",
-          description: "Det finns redan ett konto med denna e-postadress",
+          title: "Email already in use",
+          description: "An account with this email already exists",
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Registrering misslyckades",
-          description: error.message || "Ett fel uppstod. Försök igen.",
+          title: "Registration failed",
+          description: error.message || "An error occurred. Please try again.",
           variant: "destructive",
         });
       }
     } else {
       toast({
-        title: "Kontot skapat!",
-        description: "Kontrollera din e-post för att bekräfta ditt konto",
+        title: "Account created!",
+        description: "Check your email to confirm your account",
       });
       navigate("/login");
     }
@@ -95,21 +95,21 @@ const Register = () => {
             </div>
             <h1 className="text-2xl font-bold text-slate-900">ReportFlow</h1>
           </Link>
-          <h2 className="text-3xl font-bold text-slate-900 mb-2">Skapa ditt konto</h2>
-          <p className="text-slate-600">Börja skapa professionella videor av dina finansiella rapporter</p>
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">Create your account</h2>
+          <p className="text-slate-600">Start creating professional videos from your financial reports</p>
         </div>
 
         <Card className="border-0 shadow-lg">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Registrera dig</CardTitle>
+            <CardTitle className="text-2xl text-center">Sign up</CardTitle>
             <div className="flex items-center justify-center space-x-4 text-sm text-slate-600">
               <div className="flex items-center space-x-1">
                 <CheckCircle className="w-4 h-4 text-green-600" />
-                <span>14 dagars gratis provperiod</span>
+                <span>14-day free trial</span>
               </div>
               <div className="flex items-center space-x-1">
                 <CheckCircle className="w-4 h-4 text-green-600" />
-                <span>Ingen bindningstid</span>
+                <span>No commitment</span>
               </div>
             </div>
           </CardHeader>
@@ -117,11 +117,11 @@ const Register = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">Förnamn</Label>
+                  <Label htmlFor="firstName">First name</Label>
                   <Input
                     id="firstName"
                     type="text"
-                    placeholder="Anders"
+                    placeholder="John"
                     value={formData.firstName}
                     onChange={(e) => handleInputChange("firstName", e.target.value)}
                     className="h-11"
@@ -129,11 +129,11 @@ const Register = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Efternamn</Label>
+                  <Label htmlFor="lastName">Last name</Label>
                   <Input
                     id="lastName"
                     type="text"
-                    placeholder="Svensson"
+                    placeholder="Smith"
                     value={formData.lastName}
                     onChange={(e) => handleInputChange("lastName", e.target.value)}
                     className="h-11"
@@ -142,11 +142,11 @@ const Register = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">E-postadress</Label>
+                <Label htmlFor="email">Email address</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="anders@företag.se"
+                  placeholder="john@company.com"
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
                   className="h-11"
@@ -154,11 +154,11 @@ const Register = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="company">Företag</Label>
+                <Label htmlFor="company">Company</Label>
                 <Input
                   id="company"
                   type="text"
-                  placeholder="Nordiska AB"
+                  placeholder="Nordic Inc"
                   value={formData.company}
                   onChange={(e) => handleInputChange("company", e.target.value)}
                   className="h-11"
@@ -166,12 +166,12 @@ const Register = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="password">Lösenord</Label>
+                <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Minst 8 tecken"
+                    placeholder="At least 8 characters"
                     value={formData.password}
                     onChange={(e) => handleInputChange("password", e.target.value)}
                     className="h-11 pr-10"
@@ -193,12 +193,12 @@ const Register = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Bekräfta lösenord</Label>
+                <Label htmlFor="confirmPassword">Confirm password</Label>
                 <div className="relative">
                   <Input
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Upprepa lösenordet"
+                    placeholder="Repeat the password"
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                     className="h-11 pr-10"
@@ -227,13 +227,13 @@ const Register = () => {
                   className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
                 <label htmlFor="terms" className="text-sm text-slate-600">
-                  Jag godkänner{" "}
+                  I agree to the{" "}
                   <Link to="#" className="text-blue-600 hover:text-blue-700">
-                    användarvillkoren
+                    terms of service
                   </Link>{" "}
-                  och{" "}
+                  and{" "}
                   <Link to="#" className="text-blue-600 hover:text-blue-700">
-                    integritetspolicyn
+                    privacy policy
                   </Link>
                 </label>
               </div>
@@ -243,15 +243,15 @@ const Register = () => {
                 className="w-full h-11 bg-blue-600 hover:bg-blue-700"
                 disabled={loading}
               >
-                {loading ? "Skapar konto..." : "Skapa konto"}
+                {loading ? "Creating account..." : "Create account"}
               </Button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-slate-600">
-                Har du redan ett konto?{" "}
+                Already have an account?{" "}
                 <Link to="/login" className="text-blue-600 hover:text-blue-700 font-medium">
-                  Logga in här
+                  Sign in here
                 </Link>
               </p>
             </div>

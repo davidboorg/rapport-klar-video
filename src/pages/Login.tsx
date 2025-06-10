@@ -22,8 +22,8 @@ const Login = () => {
     
     if (!email || !password) {
       toast({
-        title: "Fel",
-        description: "Vänligen fyll i alla fält",
+        title: "Error",
+        description: "Please fill in all fields",
         variant: "destructive",
       });
       return;
@@ -34,21 +34,21 @@ const Login = () => {
     if (error) {
       if (error.message === "Invalid login credentials") {
         toast({
-          title: "Felaktiga uppgifter",
-          description: "E-postadressen eller lösenordet är felaktigt",
+          title: "Invalid credentials",
+          description: "The email or password is incorrect",
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Inloggning misslyckades",
-          description: error.message || "Ett fel uppstod. Försök igen.",
+          title: "Login failed",
+          description: error.message || "An error occurred. Please try again.",
           variant: "destructive",
         });
       }
     } else {
       toast({
-        title: "Välkommen tillbaka!",
-        description: "Du har loggats in framgångsrikt",
+        title: "Welcome back!",
+        description: "You have been logged in successfully",
       });
       navigate("/dashboard");
     }
@@ -64,22 +64,22 @@ const Login = () => {
             </div>
             <h1 className="text-2xl font-bold text-slate-900">ReportFlow</h1>
           </Link>
-          <h2 className="text-3xl font-bold text-slate-900 mb-2">Välkommen tillbaka</h2>
-          <p className="text-slate-600">Logga in på ditt konto för att fortsätta</p>
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">Welcome back</h2>
+          <p className="text-slate-600">Sign in to your account to continue</p>
         </div>
 
         <Card className="border-0 shadow-lg">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Logga in</CardTitle>
+            <CardTitle className="text-2xl text-center">Sign in</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">E-postadress</Label>
+                <Label htmlFor="email">Email address</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="din@epost.se"
+                  placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="h-11"
@@ -87,12 +87,12 @@ const Login = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="password">Lösenord</Label>
+                <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Ditt lösenord"
+                    placeholder="Your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="h-11 pr-10"
@@ -121,11 +121,11 @@ const Login = () => {
                     className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
                   <label htmlFor="remember" className="text-sm text-slate-600">
-                    Kom ihåg mig
+                    Remember me
                   </label>
                 </div>
                 <Link to="#" className="text-sm text-blue-600 hover:text-blue-700">
-                  Glömt lösenord?
+                  Forgot password?
                 </Link>
               </div>
 
@@ -134,15 +134,15 @@ const Login = () => {
                 className="w-full h-11 bg-blue-600 hover:bg-blue-700"
                 disabled={loading}
               >
-                {loading ? "Loggar in..." : "Logga in"}
+                {loading ? "Signing in..." : "Sign in"}
               </Button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-slate-600">
-                Har du inget konto?{" "}
+                Don't have an account?{" "}
                 <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium">
-                  Registrera dig här
+                  Sign up here
                 </Link>
               </p>
             </div>
@@ -150,13 +150,13 @@ const Login = () => {
         </Card>
 
         <div className="mt-8 text-center text-sm text-slate-500">
-          Genom att logga in godkänner du våra{" "}
+          By signing in you agree to our{" "}
           <Link to="#" className="text-blue-600 hover:text-blue-700">
-            Användarvillkor
+            Terms of Service
           </Link>{" "}
-          och{" "}
+          and{" "}
           <Link to="#" className="text-blue-600 hover:text-blue-700">
-            Integritetspolicy
+            Privacy Policy
           </Link>
         </div>
       </div>

@@ -50,11 +50,11 @@ export const useVideoGeneration = () => {
 
     // Enhanced progress steps with avatar processing
     const progressSteps = [
-      { status: 'processing' as const, progress: 15, message: 'Förbereder script...' },
-      { status: 'processing' as const, progress: 35, message: avatarId ? 'Laddar din avatar...' : 'Förbereder AI-avatar...' },
-      { status: 'rendering' as const, progress: 60, message: 'Genererar personlig video...' },
-      { status: 'rendering' as const, progress: 85, message: 'Renderar slutgiltig video...' },
-      { status: 'completed' as const, progress: 100, message: 'Video klar!' }
+      { status: 'processing' as const, progress: 15, message: 'Preparing script...' },
+      { status: 'processing' as const, progress: 35, message: avatarId ? 'Loading your avatar...' : 'Preparing AI avatar...' },
+      { status: 'rendering' as const, progress: 60, message: 'Generating personal video...' },
+      { status: 'rendering' as const, progress: 85, message: 'Rendering final video...' },
+      { status: 'completed' as const, progress: 100, message: 'Video ready!' }
     ];
 
     for (const step of progressSteps) {
@@ -68,7 +68,7 @@ export const useVideoGeneration = () => {
 
       toast({
         title: step.message,
-        description: `${step.progress}% klart`,
+        description: `${step.progress}% complete`,
       });
     }
 
@@ -109,18 +109,18 @@ export const useVideoGeneration = () => {
       if (error) throw error;
 
       toast({
-        title: "Video genererad!",
+        title: "Video generated!",
         description: avatarId ? 
-          "Din personliga AI-video är redo för visning och nedladdning." :
-          "Din AI-video är redo för visning och nedladdning.",
+          "Your personal AI video is ready for viewing and download." :
+          "Your AI video is ready for viewing and download.",
       });
 
       return videoUrl;
     } catch (error) {
       console.error('Video generation error:', error);
       toast({
-        title: "Fel",
-        description: "Kunde inte generera video. Försök igen.",
+        title: "Error",
+        description: "Could not generate video. Please try again.",
         variant: "destructive",
       });
       throw error;

@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Play, FileText, Video, TrendingUp, User, Star, Zap } from "lucide-react";
+import { Plus, Play, FileText, Video, TrendingUp, User, Star, Zap, Upload } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 interface Project {
@@ -50,34 +50,34 @@ const Dashboard = () => {
   const handleOpenProject = (projectId: string) => {
     navigate(`/projects?id=${projectId}`);
     toast({
-      title: "Öppnar projekt",
-      description: "Navigerar till projektvy...",
+      title: "Opening project",
+      description: "Navigating to project view...",
     });
   };
 
   const stats = [
     {
-      title: "Totala Projekt",
+      title: "Total Projects",
       value: projects.length.toString(),
-      description: "Aktiva AI-videoprojekt",
+      description: "Active AI video projects",
       icon: FileText,
     },
     {
-      title: "Videos Genererade",
+      title: "Videos Generated",
       value: "0",
-      description: "Färdiga AI-videos",
+      description: "Completed AI videos",
       icon: Video,
     },
     {
-      title: "Avatarer",
+      title: "Avatars",
       value: "0",
-      description: "Personliga AI-avatarer",
+      description: "Personal AI avatars",
       icon: User,
     },
     {
-      title: "Månadsaktivitet",
+      title: "Monthly Activity",
       value: "↗ 12%",
-      description: "Ökning senaste månaden",
+      description: "Growth this month",
       icon: TrendingUp,
     },
   ];
@@ -101,24 +101,24 @@ const Dashboard = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900">
-            Välkommen tillbaka, {user?.user_metadata?.first_name || 'Användare'}!
+            Welcome back, {user?.user_metadata?.first_name || 'User'}!
           </h1>
           <p className="text-slate-600 mt-2">
-            Skapa din professionella AI-avatar och börja producera personliga videopresentationer.
+            Transform your quarterly reports into professional video presentations with AI.
           </p>
         </div>
 
-        {/* Hero CTA for Avatar Creation */}
+        {/* Hero CTA for Report Upload */}
         <Card className="mb-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-2xl mb-2 text-white flex items-center gap-2">
                   <Star className="h-6 w-6" />
-                  Skapa Din Professionella Avatar
+                  Transform Your Quarterly Reports into Professional Videos
                 </CardTitle>
                 <CardDescription className="text-blue-100 text-lg">
-                  Få din egen AI-avatar som presenterar era rapporter med din röst och personlighet
+                  Upload your report and let AI create engaging video presentations with your personal avatar
                 </CardDescription>
               </div>
               <Zap className="h-16 w-16 text-yellow-300" />
@@ -127,12 +127,12 @@ const Dashboard = () => {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-sm text-blue-100">
-                ✓ Professionell video-avatar ✓ Röstkloning ✓ Anpassad till ert varumärke
+                ✓ AI Script Generation ✓ Personal Avatar Creation ✓ HD Video Output
               </div>
               <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 font-semibold">
-                <Link to="/avatars/create" className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Skapa Avatar Nu
+                <Link to="/projects" className="flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  Upload Quarterly Report
                 </Link>
               </Button>
             </div>
@@ -168,22 +168,22 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plus className="h-5 w-5" />
-                Skapa Nytt Projekt
+                Create New Video
               </CardTitle>
               <CardDescription>
-                Starta ett nytt AI-videoprojekt med våra mallar
+                Start a new AI video project from your quarterly report
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <Button asChild className="w-full">
                   <Link to="/projects">
-                    Nytt Projekt
+                    Upload Report
                   </Link>
                 </Button>
                 <Button variant="outline" asChild className="w-full">
                   <Link to="/templates">
-                    Bläddra Mallar
+                    Browse Templates
                   </Link>
                 </Button>
               </div>
@@ -194,26 +194,26 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-blue-900">
                 <User className="h-5 w-5" />
-                Din Professionella Avatar
+                Your Professional Avatar
               </CardTitle>
               <CardDescription className="text-blue-700">
-                Skapa en personlig AI-avatar för era presentationer
+                Create a personal AI avatar for your presentations
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
                   <Link to="/avatars/create">
-                    Skapa Avatar
+                    Create Avatar
                   </Link>
                 </Button>
                 <Button variant="outline" asChild className="w-full border-blue-300 text-blue-700 hover:bg-blue-100">
                   <Link to="/avatars">
-                    Hantera Avatarer
+                    Manage Avatars
                   </Link>
                 </Button>
                 <p className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
-                  <strong>Setup:</strong> 2.500-5.000 SEK per avatar
+                  <strong>Setup:</strong> $300-600 per avatar
                 </p>
               </div>
             </CardContent>
@@ -223,19 +223,19 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Play className="h-5 w-5" />
-                Kom Igång
+                Get Started
               </CardTitle>
               <CardDescription>
-                Lär dig hur du skapar fantastiska AI-videos
+                Learn how to create amazing AI videos from reports
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <p className="text-sm text-slate-600">
-                  Följ vår snabbguide för att skapa din första AI-video på bara några minuter.
+                  Follow our quick guide to create your first AI video from a quarterly report in minutes.
                 </p>
                 <Button variant="outline" className="w-full">
-                  Se Handledning
+                  Watch Tutorial
                 </Button>
               </div>
             </CardContent>
@@ -247,13 +247,13 @@ const Dashboard = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Senaste Projekt</CardTitle>
+                <CardTitle>Recent Report Videos</CardTitle>
                 <CardDescription>
-                  Dina nyligen skapade eller uppdaterade projekt
+                  Your recently created or updated video projects
                 </CardDescription>
               </div>
               <Button variant="outline" asChild>
-                <Link to="/projects">Se Alla</Link>
+                <Link to="/projects">View All</Link>
               </Button>
             </div>
           </CardHeader>
@@ -262,14 +262,14 @@ const Dashboard = () => {
               <div className="text-center py-8">
                 <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-slate-900 mb-2">
-                  Inga projekt än
+                  No report videos yet
                 </h3>
                 <p className="text-slate-600 mb-4">
-                  Skapa ditt första AI-videoprojekt för att komma igång.
+                  Upload your first quarterly report to create an AI video presentation.
                 </p>
                 <Button asChild>
                   <Link to="/projects">
-                    Skapa Projekt
+                    Upload Report
                   </Link>
                 </Button>
               </div>
@@ -282,9 +282,9 @@ const Dashboard = () => {
                   >
                     <div>
                       <h4 className="font-medium text-slate-900">{project.name}</h4>
-                      <p className="text-sm text-slate-600">{project.description || "Ingen beskrivning"}</p>
+                      <p className="text-sm text-slate-600">{project.description || "No description"}</p>
                       <p className="text-xs text-slate-500 mt-1">
-                        Uppdaterad {new Date(project.updated_at).toLocaleDateString('sv-SE')}
+                        Updated {new Date(project.updated_at).toLocaleDateString('en-US')}
                       </p>
                     </div>
                     <Button 
@@ -292,7 +292,7 @@ const Dashboard = () => {
                       size="sm"
                       onClick={() => handleOpenProject(project.id)}
                     >
-                      Öppna
+                      Open
                     </Button>
                   </div>
                 ))}
