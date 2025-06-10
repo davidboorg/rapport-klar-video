@@ -1,33 +1,20 @@
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { Upload, CheckCircle, Clock, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAvatars, Avatar } from '@/hooks/useAvatars';
-import { useNavigate } from 'react-router-dom';
+import { useAvatars } from '@/hooks/useAvatars';
+import { WizardStepProps, ProcessingPhase, Avatar } from './types';
+import { getPhaseIcon, getPhaseTitle, getPhaseDescription } from './processingUtils';
+import { UploadProgress } from './processing/UploadProgress';
+import { ProcessingProgress } from './processing/ProcessingProgress';
+import { CompletedProgress } from './processing/CompletedProgress';
+import { ProcessingSteps } from './processing/ProcessingSteps';
+import { CompletionPreview } from './processing/CompletionPreview';
+import { ErrorState } from './processing/ErrorState';
+import { TechnicalDetails } from './processing/TechnicalDetails';
+import { Navigation } from './processing/Navigation';
 
-// Type definitions
-interface WizardData {
-  avatarName?: string;
-  avatarId?: string;
-  videoFile?: File;
-  voiceSettings?: object;
-  customizations?: object;
-}
-
-interface AvatarProcessingStepProps {
-  onNext: () => void;
-  onPrevious: () => void;
-  wizardData: WizardData;
-  updateWizardData: (data: Partial<WizardData>) => void;
-}
-
-type ProcessingPhase = 'uploading' | 'processing' | 'completed' | 'error';
-
-const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
+const AvatarProcessingStep: React.FC<WizardStepProps> = ({
   onNext,
   onPrevious,
   wizardData,
@@ -35,7 +22,6 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
 }) => {
   const { toast } = useToast();
   const { createAvatar, updateAvatarStatus } = useAvatars();
-  const navigate = useNavigate();
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [currentPhase, setCurrentPhase] = useState<ProcessingPhase>('uploading');
@@ -122,49 +108,11 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
     }
   };
 
-  const getPhaseIcon = () => {
-    switch (currentPhase) {
-      case 'uploading':
-        return <Upload className="h-6 w-6 text-blue-600 animate-pulse" />;
-      case 'processing':
-        return <Clock className="h-6 w-6 text-orange-600 animate-spin" />;
-      case 'completed':
-        return <CheckCircle className="h-6 w-6 text-green-600" />;
-      case 'error':
-        return <AlertCircle className="h-6 w-6 text-red-600" />;
-    }
-  };
-
-  const getPhaseTitle = () => {
-    switch (currentPhase) {
-      case 'uploading':
-        return 'Laddar upp video...';
-      case 'processing':
-        return 'Skapar din avatar...';
-      case 'completed':
-        return 'Avatar skapad!';
-      case 'error':
-        return 'Ett fel uppstod';
-    }
-  };
-
-  const getPhaseDescription = () => {
-    switch (currentPhase) {
-      case 'uploading':
-        return 'Din video laddas upp säkert till våra servrar';
-      case 'processing':
-        return `AI-modellen analyserar och skapar din avatar. Beräknad tid kvar: ${estimatedTimeRemaining} ${estimatedTimeRemaining === 1 ? 'minut' : 'minuter'}`;
-      case 'completed':
-        return 'Din professionella avatar är nu redo och sparad i ditt avatar-bibliotek';
-      case 'error':
-        return 'Kontakta support om problemet kvarstår';
-    }
-  };
-
-  const formatTimeRemaining = (minutes: number) => {
-    if (minutes === 0) return 'Färdig!';
-    if (minutes < 1) return 'Mindre än 1 minut kvar';
-    return `${minutes} ${minutes === 1 ? 'minut' : 'minuter'} kvar`;
+  const handleRetry = () => {
+    setCurrentPhase('uploading');
+    setUploadProgress(0);
+    setProcessingProgress(0);
+    setEstimatedTimeRemaining(25);
   };
 
   const isCompleted = currentPhase === 'completed';
@@ -176,245 +124,58 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
       <Card>
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            {getPhaseIcon()}
+            {getPhaseIcon(currentPhase)}
           </div>
-          <CardTitle className="text-xl">{getPhaseTitle()}</CardTitle>
+          <CardTitle className="text-xl">{getPhaseTitle(currentPhase)}</CardTitle>
           <CardDescription className="text-base">
-            {getPhaseDescription()}
+            {getPhaseDescription(currentPhase, estimatedTimeRemaining)}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
             {/* Upload Progress */}
             {currentPhase === 'uploading' && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Upload progress</span>
-                  <span>{Math.round(uploadProgress)}%</span>
-                </div>
-                <Progress value={uploadProgress} className="h-3" />
-                <div className="text-center text-sm text-muted-foreground">
-                  Laddar upp video säkert...
-                </div>
-              </div>
+              <UploadProgress progress={uploadProgress} />
             )}
 
             {/* Processing Progress */}
             {currentPhase === 'processing' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Avatar creation progress</span>
-                    <span>{Math.round(processingProgress)}%</span>
-                  </div>
-                  <Progress value={processingProgress} className="h-3" />
-                </div>
-                
-                {/* Time Remaining Display */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-5 w-5 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-900">Tid kvar:</span>
-                    </div>
-                    <div className="text-lg font-bold text-blue-900">
-                      {formatTimeRemaining(estimatedTimeRemaining)}
-                    </div>
-                  </div>
-                  <div className="mt-2 text-xs text-blue-700">
-                    Avatar-skapandet pågår. Processen kan inte avbrytas eller pausas.
-                  </div>
-                </div>
-              </div>
+              <ProcessingProgress 
+                progress={processingProgress} 
+                estimatedTimeRemaining={estimatedTimeRemaining}
+              />
             )}
 
             {/* Completed Progress */}
-            {isCompleted && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Avatar creation progress</span>
-                  <span>100%</span>
-                </div>
-                <Progress value={100} className="h-3" />
-                <div className="text-center text-sm text-green-600 font-medium">
-                  Avatar skapad framgångsrikt!
-                </div>
-              </div>
-            )}
+            {isCompleted && <CompletedProgress />}
 
             {/* Processing Steps */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-3">
-                <h4 className="font-medium">Bearbetningssteg:</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Video analys</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {processingProgress > 30 ? 
-                      <CheckCircle className="h-4 w-4 text-green-500" /> :
-                      <div className="h-4 w-4 border-2 border-muted rounded-full" />
-                    }
-                    <span>Ansiktsigenkänning</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {processingProgress > 60 ? 
-                      <CheckCircle className="h-4 w-4 text-green-500" /> :
-                      <div className="h-4 w-4 border-2 border-muted rounded-full" />
-                    }
-                    <span>3D-modellering</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {processingProgress > 85 ? 
-                      <CheckCircle className="h-4 w-4 text-green-500" /> :
-                      <div className="h-4 w-4 border-2 border-muted rounded-full" />
-                    }
-                    <span>Kvalitetskontroll</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <h4 className="font-medium">Teknisk Information:</h4>
-                <div className="text-sm space-y-1 text-muted-foreground">
-                  <p>• HD video processing</p>
-                  <p>• AI facial mapping</p>
-                  <p>• Gesture analysis</p>
-                  <p>• Quality optimization</p>
-                </div>
-              </div>
-            </div>
+            <ProcessingSteps processingProgress={processingProgress} />
 
             {/* Completion Preview with Next Steps */}
             {isCompleted && createdAvatar && (
-              <Card className="bg-green-50 border-green-200">
-                <CardContent className="pt-4">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                          <CheckCircle className="h-8 w-8 text-green-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-green-900">Avatar Skapad!</h4>
-                          <p className="text-sm text-green-700">
-                            "{wizardData.avatarName}" är nu tillgänglig i ditt avatar-bibliotek
-                          </p>
-                        </div>
-                      </div>
-                      <Button onClick={() => navigate('/avatars')} variant="outline" className="border-green-300">
-                        Visa Avatar
-                      </Button>
-                    </div>
-
-                    {/* Next Steps */}
-                    <div className="border-t border-green-200 pt-4">
-                      <h5 className="font-medium text-green-900 mb-2">Nästa steg:</h5>
-                      <div className="text-sm text-green-700 space-y-1">
-                        <p>✓ Avatar skapad och sparad</p>
-                        <p>→ Ladda upp din kvartalsrapport för att skapa en personlig video</p>
-                      </div>
-                      <Button 
-                        onClick={() => navigate('/projects')} 
-                        className="mt-3 bg-green-600 hover:bg-green-700"
-                        size="sm"
-                      >
-                        Skapa Kvartalsrapport
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <CompletionPreview 
+                avatar={createdAvatar} 
+                avatarName={wizardData.avatarName || 'Min Avatar'} 
+              />
             )}
 
             {/* Error State */}
-            {currentPhase === 'error' && (
-              <Card className="bg-red-50 border-red-200">
-                <CardContent className="pt-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
-                      <AlertCircle className="h-8 w-8 text-red-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-red-900">Något gick fel</h4>
-                      <p className="text-sm text-red-700">
-                        Din avatar kunde inte skapas. Försök igen eller kontakta support.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <Button onClick={() => setCurrentPhase('uploading')} variant="outline" className="border-red-300">
-                      Försök igen
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {currentPhase === 'error' && <ErrorState onRetry={handleRetry} />}
           </div>
         </CardContent>
       </Card>
 
       {/* Technical Details */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Vad händer bakom kulisserna?</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="text-center space-y-2">
-              <Upload className="h-8 w-8 text-blue-600 mx-auto" />
-              <h4 className="font-medium">Säker Upload</h4>
-              <p className="text-xs text-muted-foreground">
-                Din video krypteras och laddas upp säkert till våra servrar
-              </p>
-            </div>
-            <div className="text-center space-y-2">
-              <Clock className="h-8 w-8 text-orange-600 mx-auto" />
-              <h4 className="font-medium">AI-bearbetning</h4>
-              <p className="text-xs text-muted-foreground">
-                Avancerad AI analyserar ditt utseende och rörelser
-              </p>
-            </div>
-            <div className="text-center space-y-2">
-              <CheckCircle className="h-8 w-8 text-green-600 mx-auto" />
-              <h4 className="font-medium">Kvalitetskontroll</h4>
-              <p className="text-xs text-muted-foreground">
-                Automatisk kvalitetskontroll för professionella resultat
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <TechnicalDetails />
 
       {/* Navigation */}
-      <div className="flex justify-between pt-4">
-        <Button variant="outline" onClick={onPrevious} disabled={isProcessing}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Föregående
-        </Button>
-        
-        {isCompleted ? (
-          <div className="space-x-2">
-            <Button onClick={() => navigate('/projects')} variant="outline">
-              Skapa Rapport
-            </Button>
-            <Button onClick={onNext} size="lg">
-              Fortsätt till Röst
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          </div>
-        ) : (
-          <Button 
-            onClick={onNext}
-            disabled={!isCompleted}
-            size="lg"
-          >
-            Fortsätt till Röst
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        )}
-      </div>
+      <Navigation 
+        onNext={onNext}
+        onPrevious={onPrevious}
+        isCompleted={isCompleted}
+        isProcessing={isProcessing}
+      />
     </div>
   );
 };
