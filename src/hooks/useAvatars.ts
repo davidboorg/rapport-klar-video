@@ -9,7 +9,7 @@ export interface Avatar {
   user_id: string;
   heygen_avatar_id: string | null;
   name: string;
-  status: 'creating' | 'processing' | 'completed' | 'failed';
+  status: string; // Changed from union type to string to match database
   thumbnail_url: string | null;
   preview_video_url: string | null;
   created_at: string;
@@ -107,7 +107,7 @@ export const useAvatars = () => {
     }
   };
 
-  const updateAvatarStatus = async (avatarId: string, status: Avatar['status']) => {
+  const updateAvatarStatus = async (avatarId: string, status: string) => {
     try {
       const { error } = await supabase
         .from('user_avatars')
