@@ -203,8 +203,12 @@ export const useProjectManagement = () => {
   // Update project analytics
   const incrementViews = async (projectId: string) => {
     try {
-      const { error } = await supabase.rpc('increment_project_views', {
-        project_id: projectId
+      // Use the edge function to increment analytics
+      const { error } = await supabase.functions.invoke('increment-analytics', {
+        body: { 
+          project_id: projectId,
+          metric: 'views'
+        }
       });
 
       if (error) throw error;
@@ -216,8 +220,12 @@ export const useProjectManagement = () => {
 
   const incrementShares = async (projectId: string) => {
     try {
-      const { error } = await supabase.rpc('increment_project_shares', {
-        project_id: projectId
+      // Use the edge function to increment analytics
+      const { error } = await supabase.functions.invoke('increment-analytics', {
+        body: { 
+          project_id: projectId,
+          metric: 'shares'
+        }
       });
 
       if (error) throw error;
