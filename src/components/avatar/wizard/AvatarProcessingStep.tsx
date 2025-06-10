@@ -23,7 +23,7 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
   updateWizardData
 }) => {
   const { toast } = useToast();
-  const { createAvatar } = useAvatars();
+  const { createAvatar, updateAvatarStatus } = useAvatars();
   const navigate = useNavigate();
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processingProgress, setProcessingProgress] = useState(0);
@@ -87,6 +87,8 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
       const avatar = await createAvatar(avatarName);
       
       if (avatar) {
+        // Update avatar status to completed
+        await updateAvatarStatus(avatar.id, 'completed');
         setCreatedAvatar(avatar);
         setCurrentPhase('completed');
         setEstimatedTimeRemaining(0);
