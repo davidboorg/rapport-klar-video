@@ -4,12 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Camera, Mic, Settings, ArrowRight, ArrowLeft } from 'lucide-react';
+import { CheckCircle, Camera, Mic, Settings, ArrowRight, ArrowLeft, Home } from 'lucide-react';
 import { AvatarWelcomeStep } from './wizard/AvatarWelcomeStep';
 import { AvatarRecordingStep } from './wizard/AvatarRecordingStep';
 import { AvatarProcessingStep } from './wizard/AvatarProcessingStep';
 import { VoiceSetupStep } from './wizard/VoiceSetupStep';
 import { AvatarCustomizationStep } from './wizard/AvatarCustomizationStep';
+import { useNavigate } from 'react-router-dom';
 
 interface WizardStep {
   id: number;
@@ -65,6 +66,7 @@ const steps: WizardStep[] = [
 ];
 
 const AvatarSetupWizard = () => {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [wizardData, setWizardData] = useState({
     avatarName: '',
@@ -80,6 +82,9 @@ const AvatarSetupWizard = () => {
   const handleNext = () => {
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
+    } else {
+      // Wizard completed, go to avatars
+      navigate('/avatars');
     }
   };
 
@@ -93,16 +98,28 @@ const AvatarSetupWizard = () => {
     setWizardData(prev => ({ ...prev, ...newData }));
   };
 
+  const handleBackToAvatars = () => {
+    navigate('/avatars');
+  };
+
   const CurrentStepComponent = currentStepData?.component;
 
   return (
     <div className="max-w-4xl mx-auto p-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Skapa Din Professionella Avatar</h1>
-        <p className="text-muted-foreground">
-          Följ vår guide för att skapa en högkvalitativ AI-avatar som representerar dig professionellt
-        </p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Skapa Din Professionella Avatar</h1>
+            <p className="text-muted-foreground">
+              Följ vår guide för att skapa en högkvalitativ AI-avatar som representerar dig professionellt
+            </p>
+          </div>
+          <Button variant="outline" onClick={handleBackToAvatars}>
+            <Home className="h-4 w-4 mr-2" />
+            Tillbaka till Avatarer
+          </Button>
+        </div>
       </div>
 
       {/* Progress Bar */}

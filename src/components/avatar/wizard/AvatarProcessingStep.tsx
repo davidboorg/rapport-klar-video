@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +5,8 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Upload, CheckCircle, Clock, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAvatars } from '@/hooks/useAvatars';
+import { useNavigate } from 'react-router-dom';
 
 interface AvatarProcessingStepProps {
   onNext: () => void;
@@ -21,10 +22,13 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
   updateWizardData
 }) => {
   const { toast } = useToast();
+  const { createAvatar } = useAvatars();
+  const navigate = useNavigate();
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [currentPhase, setCurrentPhase] = useState<'uploading' | 'processing' | 'completed' | 'error'>('uploading');
   const [estimatedTime, setEstimatedTime] = useState(25);
+  const [createdAvatar, setCreatedAvatar] = useState(null);
 
   useEffect(() => {
     // Simulate upload process
@@ -49,20 +53,16 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
   }, [currentPhase, toast]);
 
   useEffect(() => {
-    // Simulate processing
+    // Simulate processing and create actual avatar
     if (currentPhase === 'processing') {
-      const processingInterval = setInterval(() => {
+      const processingInterval = setInterval(async () => {
         setProcessingProgress(prev => {
           const newProgress = prev + Math.random() * 8;
           
           if (newProgress >= 100) {
             clearInterval(processingInterval);
-            setCurrentPhase('completed');
-            updateWizardData({ avatarId: 'avatar_' + Date.now() });
-            toast({
-              title: "Avatar skapad!",
-              description: "Din professionella avatar är nu klar för användning.",
-            });
+            // Create actual avatar in database
+            createActualAvatar();
             return 100;
           }
           
@@ -76,7 +76,38 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
 
       return () => clearInterval(processingInterval);
     }
-  }, [currentPhase, updateWizardData, toast]);
+  }, [currentPhase]);
+
+  const createActualAvatar = async () => {
+    try {
+      const avatarName = wizardData.avatarName || 'Min Avatar';
+      const avatar = await createAvatar(avatarName);
+      
+      if (avatar) {
+        setCreatedAvatar(avatar);
+        setCurrentPhase('completed');
+        updateWizardData({ avatarId: avatar.id });
+        toast({
+          title: "Avatar skapad!",
+          description: `${avatarName} har skapats och är redo för användning.`,
+        });
+      } else {
+        throw new Error('Kunde inte skapa avatar');
+      }
+    } catch (error) {
+      console.error('Error creating avatar:', error);
+      setCurrentPhase('error');
+      toast({
+        title: "Fel vid skapande",
+        description: "Kunde inte skapa din avatar. Försök igen.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewAvatar = () => {
+    navigate('/avatars');
+  };
 
   const getPhaseIcon = () => {
     switch (currentPhase) {
@@ -111,7 +142,7 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
       case 'processing':
         return `AI-modellen analyserar och skapar din avatar. Beräknad tid: ${estimatedTime} minuter`;
       case 'completed':
-        return 'Din professionella avatar är nu redo för röstintegration';
+        return 'Din professionella avatar är nu redo och sparad i ditt avatar-bibliotek';
       case 'error':
         return 'Kontakta support om problemet kvarstår';
     }
@@ -199,20 +230,48 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
             </div>
 
             {/* Completion Preview */}
-            {currentPhase === 'completed' && (
+            {currentPhase === 'completed' && createdAvatar && (
               <Card className="bg-green-50 border-green-200">
                 <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                        <CheckCircle className="h-8 w-8 text-green-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-green-900">Avatar Skapad!</h4>
+                        <p className="text-sm text-green-700">
+                          "{wizardData.avatarName}" är nu tillgänglig i ditt avatar-bibliotek
+                        </p>
+                      </div>
+                    </div>
+                    <Button onClick={handleViewAvatar} variant="outline" className="border-green-300">
+                      Visa Avatar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Error State */}
+            {currentPhase === 'error' && (
+              <Card className="bg-red-50 border-red-200">
+                <CardContent className="pt-4">
                   <div className="flex items-center space-x-3">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                      <CheckCircle className="h-8 w-8 text-green-600" />
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                      <AlertCircle className="h-8 w-8 text-red-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-green-900">Avatar Skapad!</h4>
-                      <p className="text-sm text-green-700">
-                        Din professionella avatar "{wizardData.avatarName}" är nu redo.
-                        Nästa steg är att integrera din röst för komplett funktionalitet.
+                      <h4 className="font-medium text-red-900">Något gick fel</h4>
+                      <p className="text-sm text-red-700">
+                        Din avatar kunde inte skapas. Försök igen eller kontakta support.
                       </p>
                     </div>
+                  </div>
+                  <div className="mt-4">
+                    <Button onClick={() => setCurrentPhase('uploading')} variant="outline" className="border-red-300">
+                      Försök igen
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -255,19 +314,31 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
 
       {/* Navigation */}
       <div className="flex justify-between pt-4">
-        <Button variant="outline" onClick={onPrevious} disabled={currentPhase !== 'completed'}>
+        <Button variant="outline" onClick={onPrevious} disabled={currentPhase === 'processing'}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Föregående
         </Button>
         
-        <Button 
-          onClick={onNext}
-          disabled={currentPhase !== 'completed'}
-          size="lg"
-        >
-          Fortsätt till Röst
-          <ArrowRight className="h-4 w-4 ml-2" />
-        </Button>
+        {currentPhase === 'completed' ? (
+          <div className="space-x-2">
+            <Button onClick={handleViewAvatar} variant="outline">
+              Visa Avatar
+            </Button>
+            <Button onClick={onNext} size="lg">
+              Fortsätt till Röst
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
+        ) : (
+          <Button 
+            onClick={onNext}
+            disabled={currentPhase !== 'completed'}
+            size="lg"
+          >
+            Fortsätt till Röst
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        )}
       </div>
     </div>
   );
