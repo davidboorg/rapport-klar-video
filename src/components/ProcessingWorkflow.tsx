@@ -105,58 +105,31 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
 
       console.log('Fetching PDF from URL:', projectData.pdf_url);
 
-      // For now, we'll simulate PDF content extraction since we need a proper PDF parser
-      // In a real implementation, you'd use a PDF parsing library or service
-      const mockPdfContent = `
-DELÅRSRAPPORT Q1 2025
-VO2 Cap AB
-
-FINANSIELLA HÖJDPUNKTER
-- Nettoomsättning: 45,2 MSEK (Q1 2024: 38,1 MSEK)
-- EBITDA: 12,8 MSEK (Q1 2024: 9,4 MSEK)
-- Rörelseresultat: 8,3 MSEK (Q1 2024: 5,7 MSEK)
-- Resultat efter skatt: 6,1 MSEK (Q1 2024: 4,2 MSEK)
-- Tillväxt: 18,6% jämfört med Q1 2024
-- Kassaflöde från rörelsen: 10,5 MSEK
-
-VERKSAMHETSOMRÅDEN
-VO2 Cap fokuserar på hållbara investeringar inom teknik och innovation.
-Våra huvudsegment inkluderar:
-- Teknologiinvesteringar: 65% av portföljen
-- Hållbarhetsprojekt: 25% av portföljen  
-- Infrastruktur: 10% av portföljen
-
-KVARTALSÖVERSIKT
-Under det första kvartalet 2025 har VO2 Cap levererat starka finansiella resultat.
-Tillväxten på 18,6% är driven av våra teknologiinvesteringar och ökad efterfrågan
-på hållbara lösningar.
-
-VD HAR ORDET
-"Vi är mycket nöjda med resultatet för Q1 2025. Vår strategi att fokusera på
-teknologi och hållbarhet ger fortsatt utdelning. Vi ser ljust på framtiden och
-förväntar oss fortsatt stark utveckling under resten av året."
-- Anna Svensson, VD
-
-FRAMTIDSUTSIKTER
-För resten av 2025 förväntar vi oss:
-- Fortsatt tillväxt inom teknologisegmentet
-- Nya strategiska partnerskap
-- Utökade investeringar i hållbarhetsprojekt
-- Målsättning om 20% tillväxt för helåret 2025
-
-VIKTIGA HÄNDELSER
-- Förvärvade teknologiföretaget InnoTech AB i mars
-- Lanserade ny hållbarhetsfond på 100 MSEK
-- Ingick strategiskt partnerskap med GreenEnergy Solutions
-- Öppnade nytt kontor i Göteborg
-
-RISKER OCH UTMANINGAR
-- Marknadsvolatilitet inom teknologisektorn
-- Regulatoriska förändringar inom hållbarhet
-- Konkurrens om kvalificerade investeringsmöjligheter
-      `.trim();
-
-      return mockPdfContent;
+      // Try to fetch the PDF file directly
+      try {
+        const response = await fetch(projectData.pdf_url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch PDF: ${response.status}`);
+        }
+        
+        // For now, we'll use a simple text extraction approach
+        // In a production environment, you'd want to use a proper PDF parsing library
+        const text = await response.text();
+        
+        // If the response looks like binary data, we need to handle it differently
+        if (text.includes('%PDF') || response.headers.get('content-type')?.includes('application/pdf')) {
+          console.log('PDF file detected, but text extraction requires specialized library');
+          // For now, we'll indicate that we have the PDF but can't extract text directly
+          return `PDF-fil hämtad från: ${projectData.pdf_url}\nStorlek: ${response.headers.get('content-length') || 'okänd'} bytes\nTyp: ${response.headers.get('content-type') || 'okänd'}\n\nOBS: För att extrahera text från PDF:en behövs specialiserad PDF-parser. Skickar PDF-URL till AI för bearbetning.`;
+        }
+        
+        return text;
+      } catch (fetchError) {
+        console.error('Error fetching PDF directly:', fetchError);
+        
+        // If direct fetch fails, we'll send the URL to the AI function to handle
+        return `PDF-URL: ${projectData.pdf_url}\nFil kommer att bearbetas av AI-funktionen.`;
+      }
     } catch (error) {
       console.error('Error fetching PDF content:', error);
       throw new Error(`Kunde inte hämta PDF-innehåll: ${error instanceof Error ? error.message : 'Okänt fel'}`);
@@ -208,21 +181,29 @@ RISKER OCH UTMANINGAR
       await new Promise(resolve => setTimeout(resolve, 1000));
       updateStepStatus(2, 'completed', 100);
 
-      // Step 4: Script Creation (the main AI call with real PDF content)
+      // Step 4: Script Creation (the main AI call with PDF URL instead of content)
       setCurrentStep(3);
       updateStepStatus(3, 'processing', 10);
       
       toast({
         title: "Startar AI-analys",
-        description: "Skickar PDF-innehåll till OpenAI för analys...",
+        description: "Skickar PDF för analys till OpenAI...",
       });
 
-      console.log('Calling AI function with PDF content length:', content.length);
+      console.log('Calling AI function with PDF URL for project:', projectId);
+
+      // Get the PDF URL again to send to the AI function
+      const { data: projectData } = await supabase
+        .from('projects')
+        .select('pdf_url')
+        .eq('id', projectId)
+        .single();
 
       const { data, error } = await supabase.functions.invoke('analyze-financial-data', {
         body: { 
           projectId,
-          pdfText: content // Send the actual PDF content
+          pdfUrl: projectData?.pdf_url, // Send PDF URL instead of extracted text
+          pdfText: content // Also send whatever content we managed to extract
         }
       });
 
@@ -415,9 +396,9 @@ RISKER OCH UTMANINGAR
 
           {pdfContent && (
             <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <h5 className="text-sm font-medium mb-2">PDF-innehåll extraherat:</h5>
+              <h5 className="text-sm font-medium mb-2">PDF-information:</h5>
               <p className="text-xs text-gray-600">
-                {pdfContent.length} tecken från PDF-filen har lästs och förberetts för AI-analys.
+                {pdfContent.length > 200 ? `${pdfContent.substring(0, 200)}...` : pdfContent}
               </p>
             </div>
           )}
