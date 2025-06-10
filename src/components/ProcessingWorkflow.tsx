@@ -107,8 +107,22 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
 
       console.log('Fetching PDF from URL:', projectData.pdf_url);
 
-      // For now, we'll send the PDF URL to the AI function to handle
-      return `PDF-URL: ${projectData.pdf_url}`;
+      // Call edge function to extract PDF content
+      const { data: pdfData, error: pdfError } = await supabase.functions.invoke('extract-pdf-content', {
+        body: { 
+          pdfUrl: projectData.pdf_url,
+          projectId: projectId
+        }
+      });
+
+      if (pdfError) throw pdfError;
+
+      if (!pdfData?.content) {
+        throw new Error('Kunde inte extrahera innehåll från PDF:en');
+      }
+
+      console.log('PDF content extracted, length:', pdfData.content.length, 'characters');
+      return pdfData.content;
     } catch (error) {
       console.error('Error fetching PDF content:', error);
       throw new Error(`Kunde inte hämta PDF-innehåll: ${error instanceof Error ? error.message : 'Okänt fel'}`);
@@ -142,7 +156,7 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
       await new Promise(resolve => setTimeout(resolve, 500));
       updateStepStatus(0, 'completed', 100);
 
-      console.log('PDF content fetched, length:', content.length, 'characters');
+      console.log('PDF content fetched successfully, length:', content.length, 'characters');
 
       // Step 2: PDF Analysis
       setCurrentStep(1);
@@ -166,23 +180,15 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
       
       toast({
         title: "Startar AI-analys",
-        description: "Skickar PDF för analys till OpenAI...",
+        description: "Skickar PDF-innehåll för analys till OpenAI...",
       });
 
-      console.log('Calling AI function with PDF URL for project:', projectId);
-
-      // Get the PDF URL again to send to the AI function
-      const { data: projectData } = await supabase
-        .from('projects')
-        .select('pdf_url')
-        .eq('id', projectId)
-        .single();
+      console.log('Calling AI function with actual PDF content, length:', content.length);
 
       const { data, error } = await supabase.functions.invoke('analyze-financial-data', {
         body: { 
           projectId,
-          pdfUrl: projectData?.pdf_url,
-          pdfText: content
+          pdfText: content  // Send the actual extracted content
         }
       });
 
@@ -381,9 +387,12 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
 
           {pdfContent && (
             <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <h5 className="text-sm font-medium mb-2">PDF-information:</h5>
+              <h5 className="text-sm font-medium mb-2">PDF-innehåll extraherat:</h5>
               <p className="text-xs text-gray-600">
-                {pdfContent.length > 200 ? `${pdfContent.substring(0, 200)}...` : pdfContent}
+                {pdfContent.length} tecken extraherade från rapporten
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {pdfContent.length > 200 ? `Preview: ${pdfContent.substring(0, 200)}...` : pdfContent}
               </p>
             </div>
           )}
