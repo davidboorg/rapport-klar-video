@@ -32,10 +32,17 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Extract the file path from the URL
+    // Try multiple approaches to get the file path
     let filePath = pdfUrl;
-    if (pdfUrl.includes('storage/v1/object/public/pdf-uploads/')) {
-      const urlParts = pdfUrl.split('storage/v1/object/public/pdf-uploads/');
+    let extractedText = '';
+    let method = 'unknown';
+    
+    // Clean up the file path
+    if (pdfUrl.includes('/storage/v1/object/public/pdf-uploads/')) {
+      const urlParts = pdfUrl.split('/storage/v1/object/public/pdf-uploads/');
+      filePath = urlParts[1];
+    } else if (pdfUrl.includes('pdf-uploads/')) {
+      const urlParts = pdfUrl.split('pdf-uploads/');
       filePath = urlParts[1];
     } else if (pdfUrl.startsWith('uploaded/')) {
       filePath = pdfUrl;
@@ -45,49 +52,52 @@ serve(async (req) => {
       filePath = filePath.substring(1);
     }
 
-    console.log('Using file path for storage download:', filePath);
+    console.log('Attempting to download file from path:', filePath);
 
-    // Download the file from Supabase storage
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from('pdf-uploads')
-      .download(filePath);
-
-    if (downloadError) {
-      console.error('Storage download error:', downloadError);
-      throw new Error(`Could not download PDF from storage: ${downloadError.message}`);
-    }
-
-    if (!fileData) {
-      throw new Error('No file data received from storage');
-    }
-
-    const pdfBuffer = await fileData.arrayBuffer();
-    console.log(`PDF downloaded successfully, size: ${pdfBuffer.byteLength} bytes`);
-
-    // Enhanced PDF text extraction
-    let extractedText = '';
-    
     try {
-      extractedText = await extractTextFromPDF(pdfBuffer);
-      console.log(`Text extraction completed, length: ${extractedText.length} characters`);
-      
-      if (extractedText.length > 200) {
-        console.log('Sample extracted text:', extractedText.substring(0, 500));
+      // Try to download from storage
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('pdf-uploads')
+        .download(filePath);
+
+      if (downloadError) {
+        console.error('Storage download error:', downloadError);
+        
+        // Try alternative bucket name
+        const { data: altFileData, error: altDownloadError } = await supabase.storage
+          .from('pdfs')
+          .download(filePath);
+          
+        if (altDownloadError) {
+          console.error('Alternative storage download also failed:', altDownloadError);
+          throw new Error('Could not find PDF file in storage');
+        } else {
+          console.log('Successfully downloaded from alternative bucket');
+          const pdfBuffer = await altFileData.arrayBuffer();
+          extractedText = await extractTextFromPDF(pdfBuffer);
+          method = 'extraction_alt_bucket';
+        }
+      } else {
+        console.log('Successfully downloaded from main bucket');
+        const pdfBuffer = await fileData.arrayBuffer();
+        extractedText = await extractTextFromPDF(pdfBuffer);
+        method = 'extraction_main_bucket';
       }
-    } catch (error) {
-      console.error('PDF text extraction failed:', error);
-      // Use enhanced mock content as fallback
-      extractedText = generateEnhancedMockContent(filePath);
-      console.log('Using enhanced mock content due to extraction failure');
+    } catch (storageError) {
+      console.error('All storage download attempts failed:', storageError);
+      console.log('Falling back to enhanced mock content');
+      extractedText = generateEnhancedMockContent(filePath || 'financial-report.pdf');
+      method = 'enhanced_mock_fallback';
     }
 
-    // Validate and enhance content
+    // Validate content length
     if (!extractedText || extractedText.length < 200) {
       console.warn('Extracted text too short, using enhanced mock content');
-      extractedText = generateEnhancedMockContent(filePath);
+      extractedText = generateEnhancedMockContent(filePath || 'financial-report.pdf');
+      method = 'enhanced_mock_short_content';
     }
 
-    console.log(`Final extracted text length: ${extractedText.length} characters`);
+    console.log(`Final extracted text length: ${extractedText.length} characters using method: ${method}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -97,7 +107,7 @@ serve(async (req) => {
         contentLength: extractedText.length,
         sourceUrl: pdfUrl,
         filePath: filePath,
-        method: extractedText.includes('DELÅRSRAPPORT') ? 'enhanced_mock' : 'extraction'
+        method: method
       }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -115,7 +125,7 @@ serve(async (req) => {
       metadata: {
         extractedAt: new Date().toISOString(),
         contentLength: mockContent.length,
-        method: 'fallback_enhanced_mock',
+        method: 'final_fallback_mock',
         originalError: error.message
       }
     }), {
