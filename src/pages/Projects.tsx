@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -181,12 +182,7 @@ const Projects = () => {
 
   const handleOpenProject = (projectId: string) => {
     incrementViews(projectId);
-    toast({
-      title: "Opening Project",
-      description: `Opening project...`,
-    });
-    // TODO: Navigate to project editor when implemented
-    console.log('Opening project:', projectId);
+    navigate(`/projects/${projectId}`);
   };
 
   const handleEditProject = (projectId: string) => {
@@ -405,5 +401,3 @@ const Projects = () => {
 };
 
 export default Projects;
-
-}
