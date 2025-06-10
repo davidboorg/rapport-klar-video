@@ -111,11 +111,7 @@ const ProcessingNotifications: React.FC<ProcessingNotificationsProps> = ({
       sendNotification('Processing Update', 'Almost done! 75% complete');
     } else if (progress === 100) {
       sendNotification('Processing Complete!', 'Your video is ready for viewing', {
-        requireInteraction: true,
-        actions: [
-          { action: 'view', title: 'View Video' },
-          { action: 'dismiss', title: 'Dismiss' }
-        ]
+        requireInteraction: true
       });
     }
   }, [progress, isProcessing, notificationsEnabled, projectId]);
