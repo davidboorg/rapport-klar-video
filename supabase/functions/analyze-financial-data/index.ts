@@ -11,10 +11,29 @@ const corsHeaders = {
 interface FinancialData {
   revenue?: string;
   ebitda?: string;
+  net_income?: string;
+  cash_flow?: string;
   growth_percentage?: string;
+  quarter_over_quarter?: string;
   key_highlights?: string[];
   period?: string;
   company_name?: string;
+  currency?: string;
+  report_type?: string;
+  ceo_quote?: string;
+  forward_guidance?: string;
+  segment_performance?: string[];
+  geographic_breakdown?: string[];
+  concerns?: string[];
+}
+
+interface ScriptAlternative {
+  type: 'executive' | 'investor' | 'social';
+  title: string;
+  duration: string;
+  script: string;
+  tone: string;
+  key_points: string[];
 }
 
 serve(async (req) => {
@@ -34,9 +53,9 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
-    console.log('Analyzing financial data for project:', projectId);
+    console.log('Starting intelligent financial analysis for project:', projectId);
 
-    // Extract financial data using GPT-4
+    // STEP 1: Extract comprehensive financial data
     const extractionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -48,38 +67,53 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Du är en expert på finansiell analys. Extrahera följande information från finansiella rapporter på svenska:
-            - Företagsnamn
-            - Rapportperiod (kvartal/år)
-            - Intäkter/omsättning
-            - EBITDA
-            - Tillväxtprocent
-            - 3-5 viktiga höjdpunkter/prestationer
+            content: `Du är en expert på finansiell analys. Extrahera följande information från finansiella rapporter:
             
-            Svara endast med valid JSON i detta format:
+            NYCKELDATA:
+            - Företagsnamn och rapportperiod (Q1, Q2, Q3, Q4, H1, Helår)
+            - Intäkter/omsättning med valuta
+            - EBITDA, nettovinst, kassaflöde
+            - Tillväxtprocent (år-över-år och kvartal-över-kvartal)
+            - Segmentprestanda och geografisk fördelning
+            
+            KVALITATIV ANALYS:
+            - 5-7 viktiga höjdpunkter/prestationer
+            - VD-citat eller framåtblickande uttalanden
+            - Framtidsutsikter och guidning
+            - Potentiella problem eller utmaningar
+            
+            Svara med valid JSON i detta format:
             {
               "company_name": "string",
-              "period": "string", 
-              "revenue": "string",
+              "period": "string",
+              "report_type": "Q1|Q2|Q3|Q4|H1|Annual",
+              "currency": "SEK|USD|EUR",
+              "revenue": "string med siffror och valuta",
               "ebitda": "string",
+              "net_income": "string", 
+              "cash_flow": "string",
               "growth_percentage": "string",
-              "key_highlights": ["string", "string", "string"]
+              "quarter_over_quarter": "string",
+              "key_highlights": ["string", "string", "string"],
+              "ceo_quote": "string",
+              "forward_guidance": "string",
+              "segment_performance": ["string", "string"],
+              "geographic_breakdown": ["string", "string"],
+              "concerns": ["string", "string"]
             }`
           },
           {
             role: 'user',
-            content: `Analysera denna finansiella rapport och extrahera nyckelinformation:\n\n${pdfText.substring(0, 4000)}`
+            content: `Analysera denna finansiella rapport och extrahera all nyckelinformation:\n\n${pdfText.substring(0, 6000)}`
           }
         ],
-        temperature: 0.3,
-        max_tokens: 1000,
+        temperature: 0.2,
+        max_tokens: 1500,
       }),
     });
 
     if (!extractionResponse.ok) {
-      const error = await extractionResponse.text();
-      console.error('OpenAI extraction error:', error);
-      throw new Error(`OpenAI API error: ${extractionResponse.status}`);
+      throw new Error(`OpenAI extraction error: ${extractionResponse.status}`);
     }
 
     const extractionData = await extractionResponse.json();
@@ -92,10 +126,10 @@ serve(async (req) => {
       throw new Error('Failed to extract structured financial data');
     }
 
-    console.log('Extracted financial data:', financialData);
+    console.log('Extracted comprehensive financial data:', financialData);
 
-    // Generate video script using GPT-4
-    const scriptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    // STEP 2: Generate three script alternatives
+    const scriptGenerationResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openAIApiKey}`,
@@ -106,52 +140,102 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Du är en expert på att skriva engagerande videomanus för företagsrapporter på svenska. 
-            Skapa ett 2-3 minuters videomanus med denna struktur:
+            content: `Du är expert på att skriva engagerande videomanus för företagsrapporter. 
+            Skapa TRE olika script-alternativ baserat på finansiell data:
+
+            1. EXECUTIVE SUMMARY (2 minuter, ~300 ord):
+            - Professionell ton, högnivå-höjdpunkter
+            - Fokus på övergripande prestanda
+            - Struktur: Välkomst → Nyckelresultat → Framtidsutsikter
+
+            2. INVESTOR FOCUS (3 minuter, ~450 ord):
+            - Detaljerad finansiell analys
+            - Djupare diskussion av segment och tillväxt
+            - Struktur: Intro → Finansiella höjdpunkter → Segmentanalys → Guidning
+
+            3. SOCIAL MEDIA VERSION (60 sekunder, ~150 ord):
+            - Dynamisk, engagerande ton
+            - Fokus på de mest imponerande siffrorna
+            - Struktur: Hook → Nyckelresultat → Framåtblick
+
+            Alla script ska:
+            - Börja med: "Jag är [Namn] och presenterar [Företag]s [Period] resultat"
+            - Inkludera konkreta siffror och procentsatser
+            - Avsluta professionellt
+            - Vara på svenska
             
-            1. INTRO (30 sekunder): Välkomnande och presentation av rapporten
-            2. HÖJDPUNKTER (90 sekunder): Viktiga finansiella prestationer och nyckeltal
-            3. FRAMTIDSUTSIKTER (30 sekunder): Framåtblickande uttalanden och mål
-            
-            Använd ett professionellt men tillgängligt språk. Inkludera konkreta siffror och procentsatser.
-            Gör manuset engagerande och lätt att följa.`
+            Svara med valid JSON:
+            {
+              "scripts": [
+                {
+                  "type": "executive",
+                  "title": "Executive Summary",
+                  "duration": "2 minuter",
+                  "script": "fullständigt manus",
+                  "tone": "Professionell",
+                  "key_points": ["punkt1", "punkt2", "punkt3"]
+                },
+                {
+                  "type": "investor", 
+                  "title": "Investor Focus",
+                  "duration": "3 minuter",
+                  "script": "fullständigt manus",
+                  "tone": "Analytisk",
+                  "key_points": ["punkt1", "punkt2", "punkt3"]
+                },
+                {
+                  "type": "social",
+                  "title": "Social Media",
+                  "duration": "60 sekunder", 
+                  "script": "fullständigt manus",
+                  "tone": "Dynamisk",
+                  "key_points": ["punkt1", "punkt2", "punkt3"]
+                }
+              ]
+            }`
           },
           {
             role: 'user',
-            content: `Skapa ett videomanus baserat på denna finansiella data:
+            content: `Skapa tre script-alternativ baserat på denna finansiella data:
             
             Företag: ${financialData.company_name || 'Företaget'}
             Period: ${financialData.period || 'senaste perioden'}
+            Typ: ${financialData.report_type || 'rapport'}
             Intäkter: ${financialData.revenue || 'N/A'}
             EBITDA: ${financialData.ebitda || 'N/A'}
             Tillväxt: ${financialData.growth_percentage || 'N/A'}
             Höjdpunkter: ${financialData.key_highlights?.join(', ') || 'N/A'}
-            
-            Gör manuset cirka 250-300 ord för 2-3 minuters video.`
+            VD-citat: ${financialData.ceo_quote || 'N/A'}
+            Framtidsutsikter: ${financialData.forward_guidance || 'N/A'}`
           }
         ],
         temperature: 0.7,
-        max_tokens: 1500,
+        max_tokens: 2000,
       }),
     });
 
-    if (!scriptResponse.ok) {
-      const error = await scriptResponse.text();
-      console.error('OpenAI script generation error:', error);
-      throw new Error(`OpenAI API error: ${scriptResponse.status}`);
+    if (!scriptGenerationResponse.ok) {
+      throw new Error(`Script generation error: ${scriptGenerationResponse.status}`);
     }
 
-    const scriptData = await scriptResponse.json();
-    const generatedScript = scriptData.choices[0].message.content;
+    const scriptData = await scriptGenerationResponse.json();
+    let scriptAlternatives: { scripts: ScriptAlternative[] };
+    
+    try {
+      scriptAlternatives = JSON.parse(scriptData.choices[0].message.content);
+    } catch (parseError) {
+      console.error('Failed to parse script alternatives:', parseError);
+      throw new Error('Failed to generate script alternatives');
+    }
 
-    console.log('Generated script length:', generatedScript.length);
+    console.log('Generated script alternatives:', scriptAlternatives.scripts.length);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Update project with financial data and generated script
+    // Update project with comprehensive financial data
     const { error: updateError } = await supabase
       .from('projects')
       .update({
@@ -166,33 +250,40 @@ serve(async (req) => {
       throw new Error('Failed to save financial data');
     }
 
-    // Create generated content record
+    // Save all script alternatives
     const { error: contentError } = await supabase
       .from('generated_content')
-      .insert({
+      .upsert({
         project_id: projectId,
-        script_text: generatedScript,
+        script_text: scriptAlternatives.scripts[0].script, // Default to executive
+        script_alternatives: scriptAlternatives.scripts,
         generation_status: 'completed',
+        updated_at: new Date().toISOString(),
       });
 
     if (contentError) {
       console.error('Content creation error:', contentError);
-      throw new Error('Failed to save generated script');
+      throw new Error('Failed to save generated scripts');
     }
 
-    console.log('Successfully processed financial data and generated script');
+    console.log('Successfully processed financial data and generated script alternatives');
 
     return new Response(JSON.stringify({
       success: true,
       financial_data: financialData,
-      script: generatedScript,
-      estimated_duration: Math.ceil(generatedScript.split(' ').length / 150) // ~150 words per minute
+      script_alternatives: scriptAlternatives.scripts,
+      processing_steps: [
+        'PDF analyserad och nyckeldata extraherad',
+        'Finansiella mätvärden identifierade',
+        'Tre script-alternativ genererade',
+        'Innehåll sparat och redo för anpassning'
+      ]
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in analyze-financial-data function:', error);
+    console.error('Error in intelligent financial analysis:', error);
     return new Response(JSON.stringify({ 
       error: error.message || 'Internal server error' 
     }), {
