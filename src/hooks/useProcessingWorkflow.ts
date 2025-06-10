@@ -24,21 +24,21 @@ export const useProcessingWorkflow = (
     {
       id: 'ai-analysis',
       title: 'AI-analys av rapporten',
-      description: 'Extraherar finansiella nyckeltal och skapar manuscriptförslag',
+      description: 'Extraherar finansiella nyckeltal och skapar högkvalitativa manuscriptförslag',
       status: 'pending',
       progress: 0
     },
     {
       id: 'data-processing',
-      title: 'Bearbetar data',
-      description: 'Strukturerar och sparar den extraherade informationen',
+      title: 'Bearbetar och strukturerar data',
+      description: 'Organiserar finansiell information och script-alternativ',
       status: 'pending',
       progress: 0
     },
     {
       id: 'finalization',
       title: 'Slutför bearbetning',
-      description: 'Förbereder resultatet för visning',
+      description: 'Förbereder allt för presentation och videogenerering',
       status: 'pending',
       progress: 0
     }
@@ -70,19 +70,25 @@ export const useProcessingWorkflow = (
 
   const fetchPdfContent = async (): Promise<string> => {
     try {
+      console.log('Fetching PDF content for project:', projectId);
+      
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
         .select('pdf_url')
         .eq('id', projectId)
         .single();
 
-      if (projectError) throw projectError;
+      if (projectError) {
+        console.error('Project fetch error:', projectError);
+        throw projectError;
+      }
       
       if (!projectData?.pdf_url) {
         throw new Error('Ingen PDF-fil hittades för detta projekt');
       }
 
-      console.log('Fetching PDF from URL:', projectData.pdf_url);
+      console.log('Found PDF URL:', projectData.pdf_url);
+      updateStepProgress(0, 30);
 
       const { data: pdfData, error: pdfError } = await supabase.functions.invoke('extract-pdf-content', {
         body: { 
@@ -91,54 +97,34 @@ export const useProcessingWorkflow = (
         }
       });
 
-      if (pdfError) throw pdfError;
+      if (pdfError) {
+        console.error('PDF extraction error:', pdfError);
+        throw pdfError;
+      }
 
       if (!pdfData?.content) {
         throw new Error('Kunde inte extrahera innehåll från PDF:en');
       }
 
-      console.log('PDF content extracted, length:', pdfData.content.length, 'characters');
+      console.log('PDF content extracted successfully. Length:', pdfData.content.length, 'characters');
+      updateStepProgress(0, 90);
+      
       return pdfData.content;
     } catch (error) {
-      console.error('Error fetching PDF content:', error);
-      throw new Error(`Kunde inte hämta PDF-innehåll: ${error instanceof Error ? error.message : 'Okänt fel'}`);
+      console.error('Error in fetchPdfContent:', error);
+      throw new Error(`PDF-extraktion misslyckades: ${error instanceof Error ? error.message : 'Okänt fel'}`);
     }
   };
 
-  const startProcessing = async () => {
-    setInternalProcessing(true);
-    setCurrentStep(0);
-
+  const performAIAnalysis = async (content: string) => {
     try {
-      // Reset all steps
-      setSteps(prev => prev.map(step => ({ ...step, status: 'pending', progress: 0 })));
+      console.log('Starting AI analysis with content length:', content.length);
+      updateStepProgress(1, 10);
 
-      // Step 1: Fetch PDF content
-      console.log('Starting Step 1: PDF Extraction');
-      setCurrentStep(0);
-      updateStepStatus(0, 'processing', 10);
-      
-      updateStepProgress(0, 30);
-      const content = await fetchPdfContent();
-      setPdfContent(content);
-      
-      updateStepProgress(0, 90);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      updateStepStatus(0, 'completed', 100);
-
-      console.log('Step 1 completed, PDF content length:', content.length);
-
-      // Step 2: AI Analysis
-      console.log('Starting Step 2: AI Analysis - This will take some time...');
-      setCurrentStep(1);
-      updateStepStatus(1, 'processing', 5);
-      
       toast({
-        title: "Startar AI-analys",
-        description: "Detta kan ta 30-60 sekunder. Vänligen vänta...",
+        title: "Startar djupgående AI-analys",
+        description: "Extraherar finansiella nyckeltal och genererar professionella script-alternativ...",
       });
-
-      console.log('Calling AI function with PDF content, length:', content.length);
 
       const { data: aiData, error: aiError } = await supabase.functions.invoke('analyze-financial-data', {
         body: { 
@@ -148,35 +134,73 @@ export const useProcessingWorkflow = (
       });
 
       if (aiError) {
-        console.error('AI processing error:', aiError);
-        updateStepStatus(1, 'error', 0);
-        throw new Error(aiError.message || 'AI-bearbetning misslyckades');
+        console.error('AI analysis error:', aiError);
+        throw new Error(`AI-analys misslyckades: ${aiError.message || 'Okänt fel'}`);
       }
 
-      console.log('AI processing successful:', aiData);
+      if (!aiData?.success) {
+        console.error('AI analysis failed:', aiData);
+        throw new Error(`AI-analys misslyckades: ${aiData?.error || 'Okänt fel från AI-tjänsten'}`);
+      }
+
+      console.log('AI analysis completed successfully');
+      console.log('Financial data extracted:', aiData.financial_data ? 'Yes' : 'No');
+      
+      updateStepProgress(1, 100);
+      return aiData;
+    } catch (error) {
+      console.error('Error in performAIAnalysis:', error);
+      throw error;
+    }
+  };
+
+  const startProcessing = async () => {
+    console.log('Starting processing workflow for project:', projectId);
+    setInternalProcessing(true);
+    setCurrentStep(0);
+
+    try {
+      // Reset all steps
+      setSteps(prev => prev.map(step => ({ ...step, status: 'pending', progress: 0 })));
+
+      // Step 1: PDF Content Extraction
+      console.log('=== STEP 1: PDF EXTRACTION ===');
+      setCurrentStep(0);
+      updateStepStatus(0, 'processing', 10);
+      
+      const content = await fetchPdfContent();
+      setPdfContent(content);
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      updateStepStatus(0, 'completed', 100);
+
+      console.log('Step 1 completed. PDF content length:', content.length);
+
+      // Step 2: AI Analysis (The critical step)
+      console.log('=== STEP 2: AI ANALYSIS ===');
+      setCurrentStep(1);
+      updateStepStatus(1, 'processing', 5);
+      
+      const aiData = await performAIAnalysis(content);
       updateStepStatus(1, 'completed', 100);
 
       // Step 3: Data Processing
-      console.log('Starting Step 3: Data Processing');
+      console.log('=== STEP 3: DATA PROCESSING ===');
       setCurrentStep(2);
       updateStepStatus(2, 'processing', 30);
       
+      // Simulate data organization
       await new Promise(resolve => setTimeout(resolve, 1500));
       updateStepProgress(2, 80);
       await new Promise(resolve => setTimeout(resolve, 800));
       updateStepStatus(2, 'completed', 100);
 
       // Step 4: Finalization
-      console.log('Starting Step 4: Finalization');
+      console.log('=== STEP 4: FINALIZATION ===');
       setCurrentStep(3);
       updateStepStatus(3, 'processing', 40);
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      updateStepProgress(3, 90);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      updateStepStatus(3, 'completed', 100);
-
-      // Update project status to completed
+      // Update project status
       const { error: projectUpdateError } = await supabase
         .from('projects')
         .update({ 
@@ -189,21 +213,29 @@ export const useProcessingWorkflow = (
         console.error('Error updating project status:', projectUpdateError);
       }
 
-      console.log('All processing steps completed successfully');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      updateStepProgress(3, 90);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      updateStepStatus(3, 'completed', 100);
+
+      console.log('=== PROCESSING COMPLETED SUCCESSFULLY ===');
 
       toast({
-        title: "Bearbetning klar!",
-        description: "Din rapport har analyserats och manuscriptförslag är redo.",
+        title: "Bearbetning slutförd!",
+        description: "Finansiella nyckeltal extraherade och professionella script-alternativ genererade.",
       });
 
       onComplete({ success: true, data: aiData });
 
     } catch (error) {
-      console.error('Processing error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Okänt fel uppstod';
+      console.error('=== PROCESSING FAILED ===');
+      console.error('Error details:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Okänt fel uppstod under bearbetningen';
       
       updateStepStatus(currentStep, 'error', 0);
       
+      // Update project status to failed
       await supabase
         .from('projects')
         .update({ 

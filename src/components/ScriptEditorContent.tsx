@@ -62,10 +62,11 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
     processComplete(result, fetchProjectData, setProcessing, setShowProcessingWorkflow);
 
   useEffect(() => {
-    console.log('ScriptEditor: Initializing for project:', projectId);
+    console.log('=== ScriptEditorContent: Initializing ===');
+    console.log('Project ID:', projectId);
     fetchProjectData();
     
-    // Set up real-time subscription to monitor project changes
+    // Set up real-time subscription for project changes
     const subscription = supabase
       .channel('project_changes')
       .on(
@@ -76,8 +77,8 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
           table: 'projects',
           filter: `id=eq.${projectId}`
         },
-        () => {
-          console.log('Project updated, refreshing data...');
+        (payload) => {
+          console.log('Project updated via realtime:', payload);
           fetchProjectData();
         }
       )
@@ -89,11 +90,12 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
   }, [projectId]);
 
   const fetchProjectData = async () => {
-    console.log('ScriptEditor: Starting fetchProjectData for project:', projectId);
+    console.log('=== Fetching Project Data ===');
+    console.log('Project ID:', projectId);
     setDataLoadingState('loading');
     
     try {
-      // Fetch project data including status
+      // Fetch project data
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
         .select('financial_data, status, pdf_url')
@@ -101,83 +103,99 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
         .single();
 
       if (projectError) {
-        console.error('Error fetching project data:', projectError);
+        console.error('Project fetch error:', projectError);
         throw projectError;
       }
       
-      console.log('ScriptEditor: Raw project data from database:', projectData);
-      console.log('ScriptEditor: Financial data type:', typeof projectData?.financial_data);
-      console.log('ScriptEditor: Financial data content:', JSON.stringify(projectData?.financial_data, null, 2));
+      console.log('Project data fetched:', {
+        status: projectData.status,
+        hasPdfUrl: !!projectData.pdf_url,
+        hasFinancialData: !!projectData.financial_data,
+        financialDataKeys: projectData.financial_data ? Object.keys(projectData.financial_data) : []
+      });
 
       setProjectStatus(projectData.status);
 
-      // Always set financial data if it exists, regardless of content
-      if (projectData?.financial_data) {
+      // Process financial data
+      if (projectData?.financial_data && typeof projectData.financial_data === 'object') {
+        console.log('Setting financial data:', projectData.financial_data);
         setFinancialData(projectData.financial_data as FinancialData);
-        console.log('ScriptEditor: Financial data set in state');
       } else {
-        console.log('ScriptEditor: No financial data found in project');
+        console.log('No valid financial data found');
+        setFinancialData(null);
       }
 
-      // Fetch existing script alternatives and video
+      // Fetch generated content
       const { data: contentData, error: contentError } = await supabase
         .from('generated_content')
         .select('script_text, script_alternatives, video_url')
         .eq('project_id', projectId)
         .maybeSingle();
 
-      console.log('ScriptEditor: Generated content query result:', { contentData, contentError });
-
-      if (!contentError && contentData) {
-        console.log('ScriptEditor: Script alternatives type:', typeof contentData.script_alternatives);
-        console.log('ScriptEditor: Script alternatives content:', JSON.stringify(contentData.script_alternatives, null, 2));
-
-        if (contentData.script_alternatives && Array.isArray(contentData.script_alternatives)) {
-          setScriptAlternatives(contentData.script_alternatives as unknown as ScriptAlternative[]);
-          console.log('ScriptEditor: Script alternatives set in state:', contentData.script_alternatives.length, 'alternatives');
-        }
-
-        if (contentData.video_url) {
-          setExistingVideoUrl(contentData.video_url);
-          console.log('ScriptEditor: Video URL found:', contentData.video_url);
-        }
-
-        if (contentData.script_text && !initialScript) {
-          setScript(contentData.script_text);
-          console.log('ScriptEditor: Script text loaded from database');
-        }
-      } else if (contentError) {
-        console.log('ScriptEditor: Content data error:', contentError);
-      }
-
-      // Determine if we have processed data
-      const hasFinancialData = !!(projectData?.financial_data);
-      const hasScriptAlternatives = !!(contentData?.script_alternatives && Array.isArray(contentData.script_alternatives) && contentData.script_alternatives.length > 0);
-      const hasProcessedData = hasFinancialData || hasScriptAlternatives;
-      
-      setHasProcessedData(hasProcessedData);
-      
-      console.log('ScriptEditor: Final state assessment:', {
-        hasFinancialData,
-        hasScriptAlternatives,
-        hasProcessedData,
-        projectStatus: projectData.status,
-        financialDataKeys: projectData?.financial_data ? Object.keys(projectData.financial_data) : [],
-        scriptAlternativesCount: Array.isArray(contentData?.script_alternatives) ? contentData.script_alternatives.length : 0
+      console.log('Generated content query result:', {
+        hasData: !!contentData,
+        hasScriptAlternatives: !!(contentData?.script_alternatives),
+        scriptAlternativesType: typeof contentData?.script_alternatives,
+        error: contentError
       });
 
-      // Show processing workflow if we don't have processed data and have a PDF
+      if (!contentError && contentData) {
+        // Handle script alternatives
+        if (contentData.script_alternatives && Array.isArray(contentData.script_alternatives)) {
+          console.log('Setting script alternatives:', contentData.script_alternatives.length, 'items');
+          setScriptAlternatives(contentData.script_alternatives as ScriptAlternative[]);
+        } else {
+          console.log('No valid script alternatives found');
+          setScriptAlternatives([]);
+        }
+
+        // Handle video URL
+        if (contentData.video_url) {
+          setExistingVideoUrl(contentData.video_url);
+        }
+
+        // Handle script text
+        if (contentData.script_text && !initialScript) {
+          setScript(contentData.script_text);
+        }
+      } else {
+        console.log('No generated content found or error:', contentError);
+        setScriptAlternatives([]);
+      }
+
+      // Determine processing state
+      const hasValidFinancialData = !!(projectData?.financial_data && 
+        typeof projectData.financial_data === 'object' &&
+        Object.keys(projectData.financial_data).length > 0);
+      
+      const hasValidScriptAlternatives = !!(contentData?.script_alternatives && 
+        Array.isArray(contentData.script_alternatives) && 
+        contentData.script_alternatives.length > 0);
+      
+      const hasProcessedData = hasValidFinancialData || hasValidScriptAlternatives;
+      
+      console.log('Processing state assessment:', {
+        hasValidFinancialData,
+        hasValidScriptAlternatives,
+        hasProcessedData,
+        projectStatus: projectData.status
+      });
+
+      setHasProcessedData(hasProcessedData);
+
+      // Determine if we should show processing workflow
       const shouldShowProcessing = (
         (projectData?.pdf_url && !hasProcessedData) ||
         projectData.status === 'processing' ||
         (projectData.status === 'failed' && !hasProcessedData)
       );
 
-      console.log('ScriptEditor: Processing workflow decision:', {
+      console.log('Processing workflow decision:', {
         shouldShowProcessing,
-        hasPdfUrl: !!projectData?.pdf_url,
-        hasProcessedData,
-        status: projectData.status
+        reason: projectData?.pdf_url && !hasProcessedData ? 'Has PDF but no processed data' :
+                projectData.status === 'processing' ? 'Currently processing' :
+                projectData.status === 'failed' && !hasProcessedData ? 'Failed and no processed data' :
+                'Should not show processing'
       });
 
       if (shouldShowProcessing) {
@@ -191,23 +209,25 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
       setDataLoadingState('loaded');
 
     } catch (error) {
-      console.error('ScriptEditor: Error in fetchProjectData:', error);
+      console.error('=== Error in fetchProjectData ===');
+      console.error('Error details:', error);
       setDataLoadingState('error');
       toast({
-        title: "Fel",
+        title: "Fel vid laddning",
         description: "Kunde inte ladda projektdata. Försök igen.",
         variant: "destructive",
       });
     }
   };
 
-  // Show processing workflow if needed
+  // Show loading state
   if (dataLoadingState === 'loading') {
     return <ScriptEditorLoading />;
   }
 
+  // Show processing workflow if needed
   if (showProcessingWorkflow) {
-    console.log('ScriptEditor: Rendering ProcessingWorkflow component');
+    console.log('=== Rendering ProcessingWorkflow ===');
     return (
       <div className="space-y-6">
         <ProcessingWorkflow 
@@ -221,12 +241,18 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
     );
   }
 
-  console.log('ScriptEditor: Rendering main tabs interface with data:', {
+  // Show main tabs interface
+  console.log('=== Rendering Main Interface ===');
+  console.log('State summary:', {
     hasFinancialData: !!financialData,
     scriptAlternativesCount: scriptAlternatives.length,
     hasProcessedData,
     projectStatus,
-    financialDataContent: financialData
+    financialDataPreview: financialData ? {
+      company_name: financialData.company_name,
+      revenue: financialData.revenue,
+      period: financialData.period
+    } : null
   });
 
   return (
