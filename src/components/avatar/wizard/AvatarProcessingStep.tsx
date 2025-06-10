@@ -6,15 +6,26 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Upload, CheckCircle, Clock, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAvatars } from '@/hooks/useAvatars';
+import { useAvatars, Avatar } from '@/hooks/useAvatars';
 import { useNavigate } from 'react-router-dom';
+
+// Type definitions
+interface WizardData {
+  avatarName?: string;
+  avatarId?: string;
+  videoFile?: File;
+  voiceSettings?: object;
+  customizations?: object;
+}
 
 interface AvatarProcessingStepProps {
   onNext: () => void;
   onPrevious: () => void;
-  wizardData: any;
-  updateWizardData: (data: any) => void;
+  wizardData: WizardData;
+  updateWizardData: (data: Partial<WizardData>) => void;
 }
+
+type ProcessingPhase = 'uploading' | 'processing' | 'completed' | 'error';
 
 const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
   onNext,
@@ -27,10 +38,10 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
   const navigate = useNavigate();
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processingProgress, setProcessingProgress] = useState(0);
-  const [currentPhase, setCurrentPhase] = useState<'uploading' | 'processing' | 'completed' | 'error'>('uploading');
+  const [currentPhase, setCurrentPhase] = useState<ProcessingPhase>('uploading');
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState(25);
   const [totalEstimatedTime] = useState(25);
-  const [createdAvatar, setCreatedAvatar] = useState(null);
+  const [createdAvatar, setCreatedAvatar] = useState<Avatar | null>(null);
 
   useEffect(() => {
     // Simulate upload process
