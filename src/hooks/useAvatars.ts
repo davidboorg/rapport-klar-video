@@ -25,8 +25,60 @@ export const useAvatars = () => {
   useEffect(() => {
     if (user) {
       fetchAvatars();
+      
+      // Set up real-time subscription for avatar updates
+      const channel = supabase
+        .channel('schema-db-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'user_avatars',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('Real-time avatar update:', payload);
+            
+            if (payload.eventType === 'INSERT') {
+              const newAvatar = payload.new as Avatar;
+              setAvatars(prev => [newAvatar, ...prev]);
+              toast({
+                title: "Ny avatar",
+                description: `${newAvatar.name} har lagts till`,
+              });
+            } else if (payload.eventType === 'UPDATE') {
+              const updatedAvatar = payload.new as Avatar;
+              setAvatars(prev => prev.map(avatar => 
+                avatar.id === updatedAvatar.id ? updatedAvatar : avatar
+              ));
+              
+              // Show toast for status changes
+              if (updatedAvatar.status === 'completed') {
+                toast({
+                  title: "Avatar färdig!",
+                  description: `${updatedAvatar.name} är nu redo för användning`,
+                });
+              } else if (updatedAvatar.status === 'failed') {
+                toast({
+                  title: "Avatar misslyckades",
+                  description: `Ett fel uppstod när ${updatedAvatar.name} skapades`,
+                  variant: "destructive",
+                });
+              }
+            } else if (payload.eventType === 'DELETE') {
+              const deletedAvatar = payload.old as Avatar;
+              setAvatars(prev => prev.filter(avatar => avatar.id !== deletedAvatar.id));
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
-  }, [user]);
+  }, [user, toast]);
 
   const fetchAvatars = async () => {
     try {
@@ -65,7 +117,7 @@ export const useAvatars = () => {
 
       if (error) throw error;
 
-      await fetchAvatars();
+      // No need to manually fetchAvatars() since real-time will handle it
       toast({
         title: "Avatar skapad",
         description: `${name} har skapats och är redo för träning`,
@@ -92,7 +144,7 @@ export const useAvatars = () => {
 
       if (error) throw error;
 
-      await fetchAvatars();
+      // No need to manually fetchAvatars() since real-time will handle it
       toast({
         title: "Avatar borttagen",
         description: "Avataren har tagits bort",
@@ -115,7 +167,7 @@ export const useAvatars = () => {
         .eq('id', avatarId);
 
       if (error) throw error;
-      await fetchAvatars();
+      // No need to manually fetchAvatars() since real-time will handle it
     } catch (error) {
       console.error('Error updating avatar status:', error);
     }

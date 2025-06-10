@@ -4,7 +4,7 @@ import { useAvatars } from '@/hooks/useAvatars';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, User, Play, Trash2, Settings } from 'lucide-react';
+import { Plus, User, Play, Trash2, Settings, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const AvatarLibrary = () => {
@@ -13,7 +13,8 @@ const AvatarLibrary = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'bg-green-500';
-      case 'processing': return 'bg-yellow-500';
+      case 'processing': return 'bg-blue-500';
+      case 'creating': return 'bg-yellow-500';
       case 'failed': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
@@ -23,8 +24,19 @@ const AvatarLibrary = () => {
     switch (status) {
       case 'completed': return 'Färdig';
       case 'processing': return 'Bearbetas';
+      case 'creating': return 'Skapas';
       case 'failed': return 'Misslyckades';
-      default: return 'Skapas';
+      default: return 'Okänd';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return <CheckCircle className="h-4 w-4" />;
+      case 'processing': return <Clock className="h-4 w-4 animate-spin" />;
+      case 'creating': return <Clock className="h-4 w-4 animate-pulse" />;
+      case 'failed': return <AlertCircle className="h-4 w-4" />;
+      default: return <Clock className="h-4 w-4" />;
     }
   };
 
@@ -81,7 +93,8 @@ const AvatarLibrary = () => {
                       Skapad {new Date(avatar.created_at).toLocaleDateString('sv-SE')}
                     </CardDescription>
                   </div>
-                  <Badge className={getStatusColor(avatar.status)}>
+                  <Badge className={`${getStatusColor(avatar.status)} flex items-center gap-1`}>
+                    {getStatusIcon(avatar.status)}
                     {getStatusText(avatar.status)}
                   </Badge>
                 </div>
@@ -106,6 +119,18 @@ const AvatarLibrary = () => {
                       <Play className="h-4 w-4 mr-1" />
                       Preview
                     </Button>
+                  )}
+                  
+                  {avatar.status === 'creating' && (
+                    <div className="flex-1 text-center text-sm text-muted-foreground py-2">
+                      Skapar avatar...
+                    </div>
+                  )}
+                  
+                  {avatar.status === 'processing' && (
+                    <div className="flex-1 text-center text-sm text-blue-600 py-2">
+                      Bearbetar...
+                    </div>
                   )}
                   
                   <Button variant="outline" size="sm">
