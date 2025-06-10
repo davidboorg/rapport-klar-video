@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -245,6 +244,19 @@ RISKER OCH UTMANINGAR
       await new Promise(resolve => setTimeout(resolve, 1000));
       updateStepStatus(4, 'completed', 100);
 
+      // Update project status to completed
+      const { error: projectUpdateError } = await supabase
+        .from('projects')
+        .update({ 
+          status: 'completed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', projectId);
+
+      if (projectUpdateError) {
+        console.error('Error updating project status:', projectUpdateError);
+      }
+
       toast({
         title: "Bearbetning klar!",
         description: "Din rapport har analyserats och manuscriptförslag är redo.",
@@ -257,6 +269,15 @@ RISKER OCH UTMANINGAR
       const errorMessage = error instanceof Error ? error.message : 'Okänt fel uppstod';
       
       updateStepStatus(currentStep, 'error', 0);
+      
+      // Update project status to failed
+      await supabase
+        .from('projects')
+        .update({ 
+          status: 'failed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', projectId);
       
       toast({
         title: "Bearbetning misslyckades",
