@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAvatars } from '@/hooks/useAvatars';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Plus, User, Play, Trash2, Settings, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import AvatarDebugPanel from './AvatarDebugPanel';
 
 const AvatarLibrary = () => {
   const { avatars, loading, deleteAvatar } = useAvatars();
@@ -41,6 +41,14 @@ const AvatarLibrary = () => {
     }
   };
 
+  // Check if any avatar has been in creating/processing state for too long
+  const stuckAvatars = avatars.filter(avatar => {
+    const createdAt = new Date(avatar.created_at);
+    const now = new Date();
+    const minutesAgo = (now.getTime() - createdAt.getTime()) / (1000 * 60);
+    return (avatar.status === 'creating' || avatar.status === 'processing') && minutesAgo > 10;
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -65,6 +73,16 @@ const AvatarLibrary = () => {
           </Link>
         </Button>
       </div>
+
+      {/* Show debug panel if there are stuck avatars */}
+      {stuckAvatars.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-yellow-600">⚠️ Avatarer som verkar ha fastnat</h3>
+          {stuckAvatars.map(avatar => (
+            <AvatarDebugPanel key={avatar.id} avatarId={avatar.id} />
+          ))}
+        </div>
+      )}
 
       {avatars.length === 0 ? (
         <Card className="text-center py-12">
