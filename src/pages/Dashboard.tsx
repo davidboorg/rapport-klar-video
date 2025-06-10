@@ -141,50 +141,50 @@ const Dashboard = () => {
 
         {/* Quick Navigation */}
         <div className="grid gap-6 mb-8 md:grid-cols-3 lg:grid-cols-6">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" asChild>
-            <Link to="/dashboard">
+          <Link to="/dashboard">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6 text-center">
                 <Home className="h-8 w-8 mx-auto mb-2 text-blue-600" />
                 <p className="font-medium">Dashboard</p>
               </CardContent>
-            </Link>
-          </Card>
+            </Card>
+          </Link>
           
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" asChild>
-            <Link to="/projects">
+          <Link to="/projects">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6 text-center">
                 <FileText className="h-8 w-8 mx-auto mb-2 text-green-600" />
                 <p className="font-medium">My Report Videos</p>
               </CardContent>
-            </Link>
-          </Card>
+            </Card>
+          </Link>
           
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" asChild>
-            <Link to="/projects">
+          <Link to="/projects">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6 text-center">
                 <Plus className="h-8 w-8 mx-auto mb-2 text-purple-600" />
                 <p className="font-medium">Create New Video</p>
               </CardContent>
-            </Link>
-          </Card>
+            </Card>
+          </Link>
           
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" asChild>
-            <Link to="/avatars">
+          <Link to="/avatars">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6 text-center">
                 <User className="h-8 w-8 mx-auto mb-2 text-orange-600" />
                 <p className="font-medium">Avatar Library</p>
               </CardContent>
-            </Link>
-          </Card>
+            </Card>
+          </Link>
           
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" asChild>
-            <Link to="/profile">
+          <Link to="/profile">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6 text-center">
                 <Settings className="h-8 w-8 mx-auto mb-2 text-slate-600" />
                 <p className="font-medium">Settings</p>
               </CardContent>
-            </Link>
-          </Card>
+            </Card>
+          </Link>
           
           <Card className="hover:shadow-md transition-shadow cursor-pointer">
             <CardContent className="p-6 text-center">
