@@ -58,6 +58,7 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
   const [scriptAlternatives, setScriptAlternatives] = useState<ScriptAlternative[]>([]);
   const [existingVideoUrl, setExistingVideoUrl] = useState<string | null>(null);
   const [hasProcessedData, setHasProcessedData] = useState(false);
+  const [useAdvancedProcessing, setUseAdvancedProcessing] = useState(true);
   const { toast } = useToast();
 
   // Calculate estimated video duration (150 words per minute speaking rate)
@@ -114,6 +115,12 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
   };
 
   const startIntelligentProcessing = async () => {
+    if (useAdvancedProcessing) {
+      // Use the new advanced processing pipeline
+      setProcessing(true);
+      return;
+    }
+
     setProcessing(true);
     setProcessingStep(0);
 
@@ -236,16 +243,24 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
     }
   };
 
-  // Show processing workflow if processing or no data yet
-  if (isProcessing || (!hasProcessedData && !scriptAlternatives.length)) {
+  // Show advanced processing workflow if enabled and processing
+  if (useAdvancedProcessing && (isProcessing || (!hasProcessedData && !scriptAlternatives.length))) {
     return (
       <div className="space-y-6">
         <ProcessingWorkflow 
+          projectId={projectId}
           isProcessing={isProcessing}
           currentStep={processingStep}
-          onComplete={() => {
+          autoStart={false}
+          onComplete={(result) => {
             setProcessing(false);
-            fetchProjectData();
+            if (result.success) {
+              fetchProjectData();
+              toast({
+                title: "Processing Complete!",
+                description: "Your report has been analyzed and scripts are ready.",
+              });
+            }
           }}
         />
         
@@ -253,14 +268,22 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
           <Card>
             <CardContent className="pt-6 text-center">
               <Brain className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="font-medium mb-2">Redo för intelligent bearbetning</h3>
+              <h3 className="font-medium mb-2">Ready for AI Processing</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Ladda upp en PDF-rapport för att starta automatisk analys och script-generering.
+                Upload a PDF report to start our advanced processing pipeline with real-time feedback.
               </p>
-              <Button onClick={startIntelligentProcessing}>
-                <Wand2 className="w-4 h-4 mr-2" />
-                Starta Bearbetning
-              </Button>
+              <div className="flex gap-2 justify-center">
+                <Button onClick={startIntelligentProcessing}>
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  Start Advanced Processing
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setUseAdvancedProcessing(false)}
+                >
+                  Use Simple Mode
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -397,3 +420,5 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
 };
 
 export default ScriptEditor;
+
+}

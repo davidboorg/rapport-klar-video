@@ -1,220 +1,204 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
-  FileText, 
-  Brain, 
-  Wand2, 
-  CheckCircle, 
-  Clock,
-  TrendingUp,
-  MessageSquare,
-  Zap
+  Wand2,
+  Play,
+  Pause,
+  RefreshCw
 } from "lucide-react";
-
-interface ProcessingStep {
-  id: string;
-  title: string;
-  description: string;
-  icon: any;
-  status: 'pending' | 'processing' | 'completed' | 'error';
-  progress?: number;
-}
+import { useProcessingPipeline } from "@/hooks/useProcessingPipeline";
+import ProcessingPipelineViewer from "./processing/ProcessingPipelineViewer";
+import ProcessingNotifications from "./processing/ProcessingNotifications";
 
 interface ProcessingWorkflowProps {
-  isProcessing: boolean;
+  projectId: string;
+  isProcessing?: boolean;
   currentStep?: number;
   onComplete?: (result: any) => void;
+  autoStart?: boolean;
 }
 
-const ProcessingWorkflow = ({ isProcessing, currentStep = 0, onComplete }: ProcessingWorkflowProps) => {
-  const [steps, setSteps] = useState<ProcessingStep[]>([
-    {
-      id: 'pdf-analysis',
-      title: 'PDF-analys',
-      description: 'Läser och analyserar din kvartalsrapport',
-      icon: FileText,
-      status: 'pending'
-    },
-    {
-      id: 'data-extraction',
-      title: 'Dataextraktion',
-      description: 'Extraherar nyckeltal och finansiella mätvärden',
-      icon: TrendingUp,
-      status: 'pending'
-    },
-    {
-      id: 'content-analysis',
-      title: 'Innehållsanalys',
-      description: 'Identifierar höjdpunkter och viktiga insights',
-      icon: Brain,
-      status: 'pending'
-    },
-    {
-      id: 'script-generation',
-      title: 'Script-generering',
-      description: 'Skapar tre olika script-alternativ',
-      icon: MessageSquare,
-      status: 'pending'
-    },
-    {
-      id: 'quality-check',
-      title: 'Kvalitetskontroll',
-      description: 'Verifierar innehåll och faktacheck',
-      icon: CheckCircle,
-      status: 'pending'
-    }
-  ]);
+const ProcessingWorkflow = ({ 
+  projectId, 
+  isProcessing: externalIsProcessing, 
+  currentStep = 0, 
+  onComplete,
+  autoStart = false 
+}: ProcessingWorkflowProps) => {
+  const {
+    pipeline,
+    isProcessing,
+    showTechnicalDetails,
+    notifications,
+    startProcessing,
+    pauseProcessing,
+    resumeProcessing,
+    retryFailedStep,
+    setShowTechnicalDetails
+  } = useProcessingPipeline(projectId);
 
+  // Auto-start processing if requested
   useEffect(() => {
-    if (!isProcessing) return;
-
-    const updateSteps = async () => {
-      const updatedSteps = [...steps];
-      
-      for (let i = 0; i <= currentStep && i < steps.length; i++) {
-        if (i < currentStep) {
-          updatedSteps[i].status = 'completed';
-          updatedSteps[i].progress = 100;
-        } else if (i === currentStep) {
-          updatedSteps[i].status = 'processing';
-          // Simulate progress for current step
-          let progress = 0;
-          const progressInterval = setInterval(() => {
-            progress += 10;
-            updatedSteps[i].progress = Math.min(progress, 90);
-            setSteps([...updatedSteps]);
-            
-            if (progress >= 90) {
-              clearInterval(progressInterval);
-              if (i === steps.length - 1) {
-                updatedSteps[i].status = 'completed';
-                updatedSteps[i].progress = 100;
-                setSteps([...updatedSteps]);
-                onComplete?.(true);
-              }
-            }
-          }, 500);
-        }
-      }
-      
-      setSteps(updatedSteps);
-    };
-
-    updateSteps();
-  }, [isProcessing, currentStep]);
-
-  const getStepIcon = (step: ProcessingStep) => {
-    const IconComponent = step.icon;
-    
-    if (step.status === 'completed') {
-      return <CheckCircle className="w-5 h-5 text-green-600" />;
-    } else if (step.status === 'processing') {
-      return <IconComponent className="w-5 h-5 text-blue-600 animate-pulse" />;
-    } else {
-      return <IconComponent className="w-5 h-5 text-gray-400" />;
+    if (autoStart && !pipeline && !isProcessing) {
+      startProcessing();
     }
-  };
+  }, [autoStart, pipeline, isProcessing, startProcessing]);
 
-  const getStepStatus = (step: ProcessingStep) => {
-    switch (step.status) {
-      case 'completed':
-        return <Badge className="bg-green-100 text-green-700">Klar</Badge>;
-      case 'processing':
-        return <Badge className="bg-blue-100 text-blue-700">Bearbetar</Badge>;
-      case 'error':
-        return <Badge className="bg-red-100 text-red-700">Fel</Badge>;
-      default:
-        return <Badge variant="outline">Väntar</Badge>;
+  // Call onComplete when pipeline finishes
+  useEffect(() => {
+    if (pipeline?.status === 'completed' && onComplete) {
+      onComplete({
+        success: true,
+        pipeline: pipeline,
+        duration: Date.now() - pipeline.startTime.getTime()
+      });
     }
-  };
+  }, [pipeline?.status, onComplete]);
 
-  const overallProgress = steps.filter(s => s.status === 'completed').length / steps.length * 100;
+  // If no pipeline exists yet, show start interface
+  if (!pipeline) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2">
+              <Wand2 className="w-6 h-6" />
+              AI-Powered Report Processing
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6 text-center">
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                Transform your quarterly report into a professional video presentation 
+                with our advanced AI processing pipeline.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h4 className="font-medium mb-2">Data Extraction</h4>
+                  <p className="text-gray-600">
+                    AI analyzes your PDF and extracts key financial metrics and insights
+                  </p>
+                </div>
+                <div className="p-4 bg-green-50 rounded-lg">
+                  <h4 className="font-medium mb-2">Script Generation</h4>
+                  <p className="text-gray-600">
+                    Creates personalized scripts optimized for different audiences
+                  </p>
+                </div>
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <h4 className="font-medium mb-2">Video Creation</h4>
+                  <p className="text-gray-600">
+                    Generates professional video with your avatar and voice
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Button 
+              onClick={startProcessing}
+              size="lg"
+              className="w-full md:w-auto"
+            >
+              <Play className="w-5 h-5 mr-2" />
+              Start AI Processing
+            </Button>
+
+            <div className="text-xs text-gray-500 space-y-1">
+              <p>• Estimated time: 2-3 minutes</p>
+              <p>• Processing continues even if you leave this page</p>
+              <p>• You'll receive notifications when complete</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Zap className="w-5 h-5" />
-          Intelligent Rapportbearbetning
-        </CardTitle>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span>Framsteg</span>
-            <span>{Math.round(overallProgress)}%</span>
-          </div>
-          <Progress value={overallProgress} className="w-full" />
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        <div className="space-y-4">
-          {steps.map((step, index) => (
-            <div
-              key={step.id}
-              className={`flex items-center gap-4 p-4 rounded-lg transition-all ${
-                step.status === 'processing' 
-                  ? 'bg-blue-50 border border-blue-200' 
-                  : step.status === 'completed'
-                  ? 'bg-green-50 border border-green-200'
-                  : 'bg-gray-50 border border-gray-200'
-              }`}
-            >
-              <div className="flex-shrink-0">
-                {getStepIcon(step)}
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium">{step.title}</h4>
-                  {getStepStatus(step)}
-                </div>
-                <p className="text-sm text-gray-600 mt-1">{step.description}</p>
-                
-                {step.status === 'processing' && step.progress !== undefined && (
-                  <div className="mt-2">
-                    <Progress value={step.progress} className="w-full h-2" />
-                  </div>
-                )}
-              </div>
+    <div className="space-y-6">
+      {/* Main Processing Pipeline */}
+      <ProcessingPipelineViewer
+        pipeline={pipeline}
+        isProcessing={isProcessing}
+        showTechnicalDetails={showTechnicalDetails}
+        notifications={notifications}
+        onPause={pauseProcessing}
+        onResume={resumeProcessing}
+        onRetry={retryFailedStep}
+        onToggleTechnicalDetails={() => setShowTechnicalDetails(!showTechnicalDetails)}
+      />
 
-              {step.status === 'processing' && (
-                <div className="flex-shrink-0">
-                  <Clock className="w-4 h-4 text-blue-600 animate-spin" />
-                </div>
-              )}
-            </div>
-          ))}
-          
-          {isProcessing && (
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg text-center">
-              <p className="text-sm text-blue-700">
-                <strong>AI arbetar med din rapport...</strong>
-              </p>
-              <p className="text-xs text-blue-600 mt-1">
-                Detta tar vanligtvis 30-60 sekunder beroende på rapportens storlek
-              </p>
-            </div>
-          )}
+      {/* Notifications */}
+      <ProcessingNotifications
+        projectId={projectId}
+        isProcessing={isProcessing}
+        currentStep={pipeline.steps[pipeline.currentStepIndex]?.name}
+        progress={pipeline.overallProgress}
+      />
 
-          {!isProcessing && overallProgress === 100 && (
-            <div className="mt-6 p-4 bg-green-50 rounded-lg text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <p className="text-sm text-green-700 font-medium">
-                  Bearbetning klar!
+      {/* Processing Complete Actions */}
+      {pipeline.status === 'completed' && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                <Wand2 className="w-8 h-8 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-green-800">
+                  Processing Complete!
+                </h3>
+                <p className="text-sm text-green-600">
+                  Your video is ready for customization and download
                 </p>
               </div>
-              <p className="text-xs text-green-600">
-                Dina script-alternativ är redo för granskning
-              </p>
+              <div className="flex gap-2 justify-center">
+                <Button onClick={() => window.location.reload()}>
+                  View Results
+                </Button>
+                <Button variant="outline" onClick={startProcessing}>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Process Again
+                </Button>
+              </div>
             </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Processing Failed Actions */}
+      {pipeline.status === 'failed' && (
+        <Card className="border-red-200">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+                <RefreshCw className="w-8 h-8 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-red-800">
+                  Processing Failed
+                </h3>
+                <p className="text-sm text-red-600">
+                  An error occurred during processing. You can retry or contact support.
+                </p>
+              </div>
+              <div className="flex gap-2 justify-center">
+                <Button onClick={retryFailedStep}>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Retry Failed Step
+                </Button>
+                <Button variant="outline" onClick={startProcessing}>
+                  Start Over
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };
 
