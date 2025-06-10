@@ -28,7 +28,8 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [currentPhase, setCurrentPhase] = useState<'uploading' | 'processing' | 'completed' | 'error'>('uploading');
-  const [estimatedTime, setEstimatedTime] = useState(25);
+  const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState(25);
+  const [totalEstimatedTime] = useState(25);
   const [createdAvatar, setCreatedAvatar] = useState(null);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
           if (prev >= 100) {
             clearInterval(uploadInterval);
             setCurrentPhase('processing');
+            setEstimatedTimeRemaining(22); // Reset for processing phase
             toast({
               title: "Upload slutförd",
               description: "Påbörjar avatar-skapande...",
@@ -58,7 +60,7 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
     if (currentPhase === 'processing') {
       const processingInterval = setInterval(async () => {
         setProcessingProgress(prev => {
-          const newProgress = prev + Math.random() * 8;
+          const newProgress = prev + Math.random() * 3 + 1; // Slower, more realistic progress
           
           if (newProgress >= 100) {
             clearInterval(processingInterval);
@@ -67,17 +69,17 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
             return 100;
           }
           
-          // Update estimated time
-          const remaining = Math.ceil((100 - newProgress) / 4);
-          setEstimatedTime(remaining);
+          // Calculate estimated time remaining based on progress
+          const remaining = Math.ceil(((100 - newProgress) / 100) * totalEstimatedTime);
+          setEstimatedTimeRemaining(Math.max(0, remaining));
           
           return newProgress;
         });
-      }, 1200);
+      }, 2000); // Update every 2 seconds for more realistic feel
 
       return () => clearInterval(processingInterval);
     }
-  }, [currentPhase]);
+  }, [currentPhase, totalEstimatedTime]);
 
   const createActualAvatar = async () => {
     try {
@@ -87,6 +89,7 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
       if (avatar) {
         setCreatedAvatar(avatar);
         setCurrentPhase('completed');
+        setEstimatedTimeRemaining(0);
         updateWizardData({ avatarId: avatar.id });
         toast({
           title: "Avatar skapad!",
@@ -104,14 +107,6 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
         variant: "destructive",
       });
     }
-  };
-
-  const handleViewAvatar = () => {
-    navigate('/avatars');
-  };
-
-  const handleCreateReport = () => {
-    navigate('/projects');
   };
 
   const getPhaseIcon = () => {
@@ -145,12 +140,18 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
       case 'uploading':
         return 'Din video laddas upp säkert till våra servrar';
       case 'processing':
-        return `AI-modellen analyserar och skapar din avatar. Beräknad tid: ${estimatedTime} minuter`;
+        return `AI-modellen analyserar och skapar din avatar. Beräknad tid kvar: ${estimatedTimeRemaining} ${estimatedTimeRemaining === 1 ? 'minut' : 'minuter'}`;
       case 'completed':
         return 'Din professionella avatar är nu redo och sparad i ditt avatar-bibliotek';
       case 'error':
         return 'Kontakta support om problemet kvarstår';
     }
+  };
+
+  const formatTimeRemaining = (minutes: number) => {
+    if (minutes === 0) return 'Färdig!';
+    if (minutes < 1) return 'Mindre än 1 minut kvar';
+    return `${minutes} ${minutes === 1 ? 'minut' : 'minuter'} kvar`;
   };
 
   return (
@@ -176,17 +177,52 @@ const AvatarProcessingStep: React.FC<AvatarProcessingStepProps> = ({
                   <span>{Math.round(uploadProgress)}%</span>
                 </div>
                 <Progress value={uploadProgress} className="h-3" />
+                <div className="text-center text-sm text-muted-foreground">
+                  Laddar upp video säkert...
+                </div>
               </div>
             )}
 
             {/* Processing Progress */}
-            {(currentPhase === 'processing' || currentPhase === 'completed') && (
+            {currentPhase === 'processing' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Avatar creation progress</span>
+                    <span>{Math.round(processingProgress)}%</span>
+                  </div>
+                  <Progress value={processingProgress} className="h-3" />
+                </div>
+                
+                {/* Time Remaining Display */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Clock className="h-5 w-5 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-900">Tid kvar:</span>
+                    </div>
+                    <div className="text-lg font-bold text-blue-900">
+                      {formatTimeRemaining(estimatedTimeRemaining)}
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xs text-blue-700">
+                    Avatar-skapandet pågår. Processen kan inte avbrytas eller pausas.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Completed Progress */}
+            {currentPhase === 'completed' && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Avatar creation progress</span>
-                  <span>{Math.round(processingProgress)}%</span>
+                  <span>100%</span>
                 </div>
-                <Progress value={processingProgress} className="h-3" />
+                <Progress value={100} className="h-3" />
+                <div className="text-center text-sm text-green-600 font-medium">
+                  Avatar skapad framgångsrikt!
+                </div>
               </div>
             )}
 
