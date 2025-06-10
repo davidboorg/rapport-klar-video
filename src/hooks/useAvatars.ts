@@ -28,12 +28,17 @@ export const useAvatars = () => {
       setAvatars(prev => prev.map(avatar => {
         if (avatar.status === 'creating' || avatar.status === 'processing') {
           const currentProgress = avatar.progress || 0;
-          const newProgress = Math.min(currentProgress + Math.random() * 15, 95);
+          // Slower progress increment for more realistic feel
+          const increment = Math.random() * 5 + 2; // 2-7% increment
+          const newProgress = Math.min(currentProgress + increment, 95);
+          
+          console.log(`Avatar ${avatar.name} progress: ${Math.round(newProgress)}%`);
+          
           return { ...avatar, progress: newProgress };
         }
         return avatar;
       }));
-    }, 2000);
+    }, 3000); // Update every 3 seconds
 
     return () => clearInterval(interval);
   }, []);
@@ -57,8 +62,12 @@ export const useAvatars = () => {
             console.log('Real-time avatar update:', payload);
             
             if (payload.eventType === 'INSERT') {
-              const newAvatar = { ...payload.new as Avatar, progress: 5 };
+              const newAvatar = { 
+                ...payload.new as Avatar, 
+                progress: 5 // Start with 5% progress
+              };
               setAvatars(prev => [newAvatar, ...prev]);
+              console.log('New avatar created with initial progress:', newAvatar);
               toast({
                 title: "Ny avatar",
                 description: `${newAvatar.name} har lagts till`,
@@ -68,9 +77,13 @@ export const useAvatars = () => {
               setAvatars(prev => prev.map(avatar => 
                 avatar.id === updatedAvatar.id ? { 
                   ...updatedAvatar, 
-                  progress: updatedAvatar.status === 'completed' ? 100 : avatar.progress 
+                  progress: updatedAvatar.status === 'completed' ? 100 : 
+                           updatedAvatar.status === 'failed' ? 0 :
+                           avatar.progress || 10 // Keep existing progress or set to 10%
                 } : avatar
               ));
+              
+              console.log('Avatar updated:', updatedAvatar);
               
               // Show toast for status changes
               if (updatedAvatar.status === 'completed') {
@@ -109,12 +122,24 @@ export const useAvatars = () => {
       if (error) throw error;
       
       // Initialize progress for creating/processing avatars
-      const avatarsWithProgress = (data || []).map(avatar => ({
-        ...avatar,
-        progress: avatar.status === 'creating' ? Math.random() * 30 + 10 : 
-                 avatar.status === 'processing' ? Math.random() * 40 + 30 :
-                 avatar.status === 'completed' ? 100 : 0
-      }));
+      const avatarsWithProgress = (data || []).map(avatar => {
+        let progress = 0;
+        
+        if (avatar.status === 'creating') {
+          progress = Math.random() * 20 + 10; // 10-30% for creating
+        } else if (avatar.status === 'processing') {
+          progress = Math.random() * 30 + 40; // 40-70% for processing
+        } else if (avatar.status === 'completed') {
+          progress = 100;
+        }
+        
+        console.log(`Initial avatar ${avatar.name} status: ${avatar.status}, progress: ${Math.round(progress)}%`);
+        
+        return {
+          ...avatar,
+          progress
+        };
+      });
       
       setAvatars(avatarsWithProgress);
     } catch (error) {

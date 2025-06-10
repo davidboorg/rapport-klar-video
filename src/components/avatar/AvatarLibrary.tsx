@@ -114,16 +114,23 @@ const AvatarLibrary = () => {
                   )}
                 </div>
 
-                {/* Progress bar for creating/processing avatars */}
+                {/* Enhanced progress bar for creating/processing avatars */}
                 {(avatar.status === 'creating' || avatar.status === 'processing') && avatar.progress !== undefined && (
-                  <div className="mb-4 space-y-2">
+                  <div className="mb-4 space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Framsteg</span>
-                      <span className="font-medium">{Math.round(avatar.progress)}%</span>
+                      <span className="text-muted-foreground font-medium">
+                        {avatar.status === 'creating' ? 'Skapar avatar...' : 'Bearbetar avatar...'}
+                      </span>
+                      <span className="font-bold text-primary">
+                        {Math.round(avatar.progress)}%
+                      </span>
                     </div>
-                    <Progress value={avatar.progress} className="h-2" />
+                    <Progress value={avatar.progress} className="h-3" />
                     <div className="text-center text-xs text-muted-foreground">
-                      {avatar.status === 'creating' ? 'Initierar avatar...' : 'Bearbetar avatar...'}
+                      {avatar.status === 'creating' ? 
+                        'Analyserar och förbereder din avatar...' : 
+                        'Tränar AI-modellen med dina data...'
+                      }
                     </div>
                   </div>
                 )}
@@ -137,18 +144,18 @@ const AvatarLibrary = () => {
                   )}
                   
                   {avatar.status === 'creating' && (
-                    <div className="flex-1 text-center text-sm text-yellow-600 py-2 font-medium">
+                    <div className="flex-1 text-center text-sm bg-yellow-50 text-yellow-700 py-2 px-3 rounded font-medium border border-yellow-200">
                       {avatar.progress !== undefined && avatar.progress > 0 ? 
-                        `${Math.round(avatar.progress)}% klart` : 
-                        'Skapar avatar...'
+                        `${Math.round(avatar.progress)}% färdig` : 
+                        'Startar...'
                       }
                     </div>
                   )}
                   
                   {avatar.status === 'processing' && (
-                    <div className="flex-1 text-center text-sm text-blue-600 py-2 font-medium">
+                    <div className="flex-1 text-center text-sm bg-blue-50 text-blue-700 py-2 px-3 rounded font-medium border border-blue-200">
                       {avatar.progress !== undefined ? 
-                        `${Math.round(avatar.progress)}% klart` : 
+                        `${Math.round(avatar.progress)}% färdig` : 
                         'Bearbetar...'
                       }
                     </div>
