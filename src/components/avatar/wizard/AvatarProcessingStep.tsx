@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAvatars } from '@/hooks/useAvatars';
+import { supabase } from '@/integrations/supabase/client';
 import { WizardStepProps, ProcessingPhase, Avatar } from './types';
 import { getPhaseIcon, getPhaseTitle, getPhaseDescription } from './processingUtils';
 import { UploadProgress } from './processing/UploadProgress';
@@ -21,13 +22,14 @@ const AvatarProcessingStep: React.FC<WizardStepProps> = ({
   updateWizardData
 }) => {
   const { toast } = useToast();
-  const { createAvatar, updateAvatarStatus } = useAvatars();
+  const { createAvatar } = useAvatars();
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [currentPhase, setCurrentPhase] = useState<ProcessingPhase>('uploading');
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState(25);
   const [totalEstimatedTime] = useState(25);
   const [createdAvatar, setCreatedAvatar] = useState<Avatar | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   useEffect(() => {
     // Simulate upload process
@@ -37,11 +39,13 @@ const AvatarProcessingStep: React.FC<WizardStepProps> = ({
           if (prev >= 100) {
             clearInterval(uploadInterval);
             setCurrentPhase('processing');
-            setEstimatedTimeRemaining(22); // Reset for processing phase
+            setEstimatedTimeRemaining(22);
             toast({
               title: "Upload slutförd",
-              description: "Påbörjar avatar-skapande...",
+              description: "Påbörjar avatar-skapande med HeyGen...",
             });
+            // Start actual avatar creation
+            createAvatarWithHeyGen();
             return 100;
           }
           return prev + Math.random() * 15;
@@ -52,19 +56,81 @@ const AvatarProcessingStep: React.FC<WizardStepProps> = ({
     }
   }, [currentPhase, toast]);
 
+  const createAvatarWithHeyGen = async () => {
+    try {
+      const avatarName = wizardData.avatarName || 'Min Avatar';
+      
+      console.log('Creating avatar with name:', avatarName);
+      
+      // First create avatar in database
+      const avatar = await createAvatar(avatarName);
+      
+      if (!avatar) {
+        throw new Error('Kunde inte skapa avatar i databasen');
+      }
+
+      console.log('Avatar created in database:', avatar.id);
+      
+      // Simulate a video URL for now (in real implementation, this would be the uploaded video)
+      const mockVideoUrl = 'https://example.com/training-video.mp4';
+      
+      // Call HeyGen API via Edge Function
+      console.log('Calling HeyGen API for avatar:', avatar.id);
+      
+      const { data, error } = await supabase.functions.invoke('create-heygen-avatar', {
+        body: { 
+          avatarId: avatar.id,
+          videoUrl: mockVideoUrl
+        }
+      });
+
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(`HeyGen API fel: ${error.message}`);
+      }
+
+      if (!data?.success) {
+        console.error('HeyGen API error response:', data);
+        throw new Error(`HeyGen API misslyckades: ${data?.error || 'Okänt fel'}`);
+      }
+
+      console.log('HeyGen avatar created successfully:', data);
+      
+      setCreatedAvatar(avatar);
+      setCurrentPhase('completed');
+      setEstimatedTimeRemaining(0);
+      setProcessingProgress(100);
+      
+      updateWizardData({ avatarId: avatar.id });
+      
+      toast({
+        title: "Avatar skapad!",
+        description: `${avatarName} har skapats med HeyGen och är redo för användning.`,
+      });
+
+    } catch (error) {
+      console.error('Error creating avatar with HeyGen:', error);
+      setCurrentPhase('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Okänt fel uppstod');
+      toast({
+        title: "Fel vid skapande",
+        description: "Kunde inte skapa din avatar med HeyGen. Försök igen.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Simulate processing progress updates during HeyGen processing
   useEffect(() => {
-    // Simulate processing and create actual avatar
     if (currentPhase === 'processing') {
-      const processingInterval = setInterval(async () => {
+      const processingInterval = setInterval(() => {
         setProcessingProgress(prev => {
-          const newProgress = prev + Math.random() * 3 + 1; // Slower, more realistic progress
-          
-          if (newProgress >= 100) {
-            clearInterval(processingInterval);
-            // Create actual avatar in database
-            createActualAvatar();
-            return 100;
+          if (prev >= 95) {
+            // Don't go to 100% here, let the actual API call complete first
+            return prev;
           }
+          
+          const newProgress = prev + Math.random() * 2 + 0.5; // Slower progress
           
           // Calculate estimated time remaining based on progress
           const remaining = Math.ceil(((100 - newProgress) / 100) * totalEstimatedTime);
@@ -72,47 +138,19 @@ const AvatarProcessingStep: React.FC<WizardStepProps> = ({
           
           return newProgress;
         });
-      }, 2000); // Update every 2 seconds for more realistic feel
+      }, 3000); // Update every 3 seconds
 
       return () => clearInterval(processingInterval);
     }
   }, [currentPhase, totalEstimatedTime]);
-
-  const createActualAvatar = async () => {
-    try {
-      const avatarName = wizardData.avatarName || 'Min Avatar';
-      const avatar = await createAvatar(avatarName);
-      
-      if (avatar) {
-        // Update avatar status to completed
-        await updateAvatarStatus(avatar.id, 'completed');
-        setCreatedAvatar(avatar);
-        setCurrentPhase('completed');
-        setEstimatedTimeRemaining(0);
-        updateWizardData({ avatarId: avatar.id });
-        toast({
-          title: "Avatar skapad!",
-          description: `${avatarName} har skapats och är redo för användning.`,
-        });
-      } else {
-        throw new Error('Kunde inte skapa avatar');
-      }
-    } catch (error) {
-      console.error('Error creating avatar:', error);
-      setCurrentPhase('error');
-      toast({
-        title: "Fel vid skapande",
-        description: "Kunde inte skapa din avatar. Försök igen.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleRetry = () => {
     setCurrentPhase('uploading');
     setUploadProgress(0);
     setProcessingProgress(0);
     setEstimatedTimeRemaining(25);
+    setErrorMessage('');
+    setCreatedAvatar(null);
   };
 
   const isCompleted = currentPhase === 'completed';
@@ -128,7 +166,10 @@ const AvatarProcessingStep: React.FC<WizardStepProps> = ({
           </div>
           <CardTitle className="text-xl">{getPhaseTitle(currentPhase)}</CardTitle>
           <CardDescription className="text-base">
-            {getPhaseDescription(currentPhase, estimatedTimeRemaining)}
+            {currentPhase === 'error' && errorMessage ? 
+              errorMessage : 
+              getPhaseDescription(currentPhase, estimatedTimeRemaining)
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
