@@ -158,7 +158,7 @@ const Projects = () => {
       const { error: updateError } = await supabase
         .from('projects')
         .update({
-          status: 'uploaded',
+          status: 'processing',
           pdf_url: `uploaded/${file.name}` // Placeholder URL
         })
         .eq('id', finalProjectId);
@@ -407,13 +407,13 @@ const Projects = () => {
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           project.status === 'completed' ? 'bg-green-100 text-green-800' :
                           project.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                          project.status === 'uploaded' ? 'bg-yellow-100 text-yellow-800' :
+                          project.status === 'failed' ? 'bg-red-100 text-red-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
                           {project.status === 'completed' ? 'Completed' :
                            project.status === 'processing' ? 'Processing' :
-                           project.status === 'uploaded' ? 'Uploaded' :
-                           'Draft'}
+                           project.status === 'failed' ? 'Failed' :
+                           'Uploading'}
                         </span>
                         {project.pdf_url && (
                           <span className="text-xs text-green-600">📄 PDF Uploaded</span>
