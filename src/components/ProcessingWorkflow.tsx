@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -92,6 +91,14 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
     ));
   };
 
+  const updateStepProgress = (stepIndex: number, progress: number) => {
+    setSteps(prev => prev.map((step, index) => 
+      index === stepIndex 
+        ? { ...step, progress: Math.min(progress, 100) }
+        : step
+    ));
+  };
+
   const startProcessing = async () => {
     setInternalProcessing(true);
     setCurrentStep(0);
@@ -103,26 +110,36 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
       // Step 1: Fetch PDF content
       console.log('Starting Step 1: PDF Extraction');
       setCurrentStep(0);
-      updateStepStatus(0, 'processing', 20);
+      updateStepStatus(0, 'processing', 10);
       
+      updateStepProgress(0, 30);
       const content = await fetchPdfContent();
       setPdfContent(content);
       
-      updateStepStatus(0, 'processing', 80);
+      updateStepProgress(0, 90);
       await new Promise(resolve => setTimeout(resolve, 500));
       updateStepStatus(0, 'completed', 100);
 
       console.log('Step 1 completed, PDF content length:', content.length);
 
-      // Step 2: AI Analysis (the main processing step)
-      console.log('Starting Step 2: AI Analysis');
+      // Step 2: AI Analysis (the main processing step that takes real time)
+      console.log('Starting Step 2: AI Analysis - This will take some time...');
       setCurrentStep(1);
-      updateStepStatus(1, 'processing', 10);
+      updateStepStatus(1, 'processing', 5);
       
       toast({
         title: "Startar AI-analys",
-        description: "Skickar PDF-innehåll för analys...",
+        description: "Detta kan ta 30-60 sekunder. Vänligen vänta...",
       });
+
+      // Show gradual progress during AI processing
+      const progressInterval = setInterval(() => {
+        setSteps(prev => prev.map((step, index) => 
+          index === 1 && step.progress < 80
+            ? { ...step, progress: step.progress + Math.random() * 5 + 2 }
+            : step
+        ));
+      }, 2000);
 
       console.log('Calling AI function with PDF content, length:', content.length);
 
@@ -134,6 +151,8 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
         }
       });
 
+      clearInterval(progressInterval);
+
       if (aiError) {
         console.error('AI processing error:', aiError);
         updateStepStatus(1, 'error', 0);
@@ -141,22 +160,27 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
       }
 
       console.log('AI processing successful:', aiData);
-      updateStepStatus(1, 'processing', 90);
-      await new Promise(resolve => setTimeout(resolve, 500));
       updateStepStatus(1, 'completed', 100);
 
-      // Step 3: Data Processing
+      // Step 3: Data Processing (quick step)
       console.log('Starting Step 3: Data Processing');
       setCurrentStep(2);
-      updateStepStatus(2, 'processing', 50);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      updateStepStatus(2, 'processing', 30);
+      
+      // Give some time to show this step
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      updateStepProgress(2, 80);
+      await new Promise(resolve => setTimeout(resolve, 800));
       updateStepStatus(2, 'completed', 100);
 
-      // Step 4: Finalization
+      // Step 4: Finalization (quick step)
       console.log('Starting Step 4: Finalization');
       setCurrentStep(3);
-      updateStepStatus(3, 'processing', 50);
-      await new Promise(resolve => setTimeout(resolve, 800));
+      updateStepStatus(3, 'processing', 40);
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      updateStepProgress(3, 90);
+      await new Promise(resolve => setTimeout(resolve, 500));
       updateStepStatus(3, 'completed', 100);
 
       // Update project status to completed
@@ -311,12 +335,17 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-medium">{step.title}</h4>
                     {step.status === 'processing' && (
-                      <span className="text-xs text-blue-600">{step.progress}%</span>
+                      <span className="text-xs text-blue-600">{Math.round(step.progress)}%</span>
                     )}
                   </div>
                   <p className="text-xs text-gray-600 mt-1">{step.description}</p>
                   {step.status === 'processing' && (
                     <Progress value={step.progress} className="w-full mt-2 h-1" />
+                  )}
+                  {step.id === 'ai-analysis' && step.status === 'processing' && (
+                    <p className="text-xs text-orange-600 mt-1 font-medium">
+                      ⏳ AI-analysen pågår - detta tar normalt 30-60 sekunder
+                    </p>
                   )}
                 </div>
               </div>
@@ -356,7 +385,10 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
                 </span>
               </div>
               <p className="text-xs text-blue-700 mt-1">
-                Detta kan ta några minuter. Vänligen vänta medan AI:n analyserar din rapport.
+                {currentStep === 1 ? 
+                  'AI-analysen pågår och kan ta 30-60 sekunder. Detta är normalt för komplexa rapporter.' :
+                  'Vänligen vänta medan bearbetningen pågår.'
+                }
               </p>
             </div>
           )}
