@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useDropzone } from "react-dropzone";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { useProjectManagement } from "@/hooks/useProjectManagement";
 const Projects = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { 
     projects, 
     analytics, 
@@ -403,3 +405,5 @@ const Projects = () => {
 };
 
 export default Projects;
+
+}

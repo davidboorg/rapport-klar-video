@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
+import ProjectEditor from "./pages/ProjectEditor";
 import Templates from "./pages/Templates";
 import Profile from "./pages/Profile";
 import Avatars from "./pages/Avatars";
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/:projectId" element={<ProjectEditor />} />
             <Route path="/templates" element={<Templates />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/avatars/*" element={<Avatars />} />
