@@ -35,7 +35,7 @@ const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   onIndustryFilterChange,
   onClearFilters
 }) => {
-  const hasActiveFilters = statusFilter || reportTypeFilter || industryFilter || searchTerm;
+  const hasActiveFilters = statusFilter !== 'all' || reportTypeFilter !== 'all' || industryFilter !== 'all' || searchTerm;
 
   return (
     <div className="bg-white p-4 rounded-lg border space-y-4">
@@ -73,7 +73,7 @@ const ProjectFilters: React.FC<ProjectFiltersProps> = ({
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All statuses</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="uploading">Uploading</SelectItem>
               <SelectItem value="processing">Processing</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
@@ -90,7 +90,7 @@ const ProjectFilters: React.FC<ProjectFiltersProps> = ({
               <SelectValue placeholder="All types" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All types</SelectItem>
+              <SelectItem value="all">All types</SelectItem>
               <SelectItem value="Q1">Q1</SelectItem>
               <SelectItem value="Q2">Q2</SelectItem>
               <SelectItem value="Q3">Q3</SelectItem>
@@ -109,7 +109,7 @@ const ProjectFilters: React.FC<ProjectFiltersProps> = ({
               <SelectValue placeholder="All industries" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All industries</SelectItem>
+              <SelectItem value="all">All industries</SelectItem>
               <SelectItem value="Technology">Technology</SelectItem>
               <SelectItem value="Finance">Finance</SelectItem>
               <SelectItem value="Healthcare">Healthcare</SelectItem>

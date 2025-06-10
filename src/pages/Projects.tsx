@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,17 +37,17 @@ const Projects = () => {
 
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [reportTypeFilter, setReportTypeFilter] = useState('');
-  const [industryFilter, setIndustryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [reportTypeFilter, setReportTypeFilter] = useState('all');
+  const [industryFilter, setIndustryFilter] = useState('all');
 
   // Filtered projects
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (project.description?.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesStatus = !statusFilter || project.status === statusFilter;
-    const matchesReportType = !reportTypeFilter || project.report_type === reportTypeFilter;
-    const matchesIndustry = !industryFilter || project.industry === industryFilter;
+    const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
+    const matchesReportType = reportTypeFilter === 'all' || project.report_type === reportTypeFilter;
+    const matchesIndustry = industryFilter === 'all' || project.industry === industryFilter;
 
     return matchesSearch && matchesStatus && matchesReportType && matchesIndustry;
   });
@@ -225,9 +224,9 @@ const Projects = () => {
 
   const clearFilters = () => {
     setSearchTerm('');
-    setStatusFilter('');
-    setReportTypeFilter('');
-    setIndustryFilter('');
+    setStatusFilter('all');
+    setReportTypeFilter('all');
+    setIndustryFilter('all');
   };
 
   if (loading) {
@@ -404,3 +403,5 @@ const Projects = () => {
 };
 
 export default Projects;
+
+}
