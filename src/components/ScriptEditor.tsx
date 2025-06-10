@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -93,7 +92,7 @@ const ScriptEditor = ({ projectId, initialScript = "", onScriptUpdate }: ScriptE
 
       if (!contentError && contentData) {
         if (contentData.script_alternatives) {
-          setScriptAlternatives(contentData.script_alternatives as ScriptAlternative[]);
+          setScriptAlternatives(contentData.script_alternatives as unknown as ScriptAlternative[]);
           setHasProcessedData(true);
         }
         if (contentData.video_url) {
