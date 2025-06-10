@@ -142,36 +142,174 @@ export type Database = {
           },
         ]
       }
+      processing_steps: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          project_id: string
+          started_at: string | null
+          status: string
+          step_name: string
+          step_order: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          project_id: string
+          started_at?: string | null
+          status?: string
+          step_name: string
+          step_order: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          project_id?: string
+          started_at?: string | null
+          status?: string
+          step_name?: string
+          step_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processing_steps_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_analytics: {
+        Row: {
+          completion_rate: number | null
+          created_at: string
+          id: string
+          last_viewed_at: string | null
+          project_id: string
+          shares: number | null
+          updated_at: string
+          views: number | null
+        }
+        Insert: {
+          completion_rate?: number | null
+          created_at?: string
+          id?: string
+          last_viewed_at?: string | null
+          project_id: string
+          shares?: number | null
+          updated_at?: string
+          views?: number | null
+        }
+        Update: {
+          completion_rate?: number | null
+          created_at?: string
+          id?: string
+          last_viewed_at?: string | null
+          project_id?: string
+          shares?: number | null
+          updated_at?: string
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_analytics_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_content: {
+        Row: {
+          content_type: string
+          created_at: string
+          file_url: string | null
+          id: string
+          project_id: string
+          script_text: string | null
+          updated_at: string
+          version_number: number | null
+        }
+        Insert: {
+          content_type: string
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          project_id: string
+          script_text?: string | null
+          updated_at?: string
+          version_number?: number | null
+        }
+        Update: {
+          content_type?: string
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          project_id?: string
+          script_text?: string | null
+          updated_at?: string
+          version_number?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_content_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
+          company_logo_url: string | null
           created_at: string
           description: string | null
           financial_data: Json | null
+          fiscal_year: number | null
           id: string
+          industry: string | null
           name: string
           pdf_url: string | null
+          report_type: string | null
           status: Database["public"]["Enums"]["project_status"]
           updated_at: string
           user_id: string
         }
         Insert: {
+          company_logo_url?: string | null
           created_at?: string
           description?: string | null
           financial_data?: Json | null
+          fiscal_year?: number | null
           id?: string
+          industry?: string | null
           name: string
           pdf_url?: string | null
+          report_type?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           updated_at?: string
           user_id: string
         }
         Update: {
+          company_logo_url?: string | null
           created_at?: string
           description?: string | null
           financial_data?: Json | null
+          fiscal_year?: number | null
           id?: string
+          industry?: string | null
           name?: string
           pdf_url?: string | null
+          report_type?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           updated_at?: string
           user_id?: string

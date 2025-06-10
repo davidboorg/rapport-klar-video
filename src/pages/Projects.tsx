@@ -3,107 +3,57 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useDropzone } from "react-dropzone";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Plus, FileText, Calendar, Settings, Trash2, Upload, File } from "lucide-react";
-import { useDropzone } from "react-dropzone";
-
-interface Project {
-  id: string;
-  name: string;
-  description: string;
-  created_at: string;
-  updated_at: string;
-  status: string;
-  pdf_url?: string;
-}
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Upload, File, FileText } from "lucide-react";
+import ProjectCard from "@/components/project/ProjectCard";
+import ProjectFilters from "@/components/project/ProjectFilters";
+import ProjectStats from "@/components/project/ProjectStats";
+import CreateProjectDialog, { ProjectFormData } from "@/components/project/CreateProjectDialog";
+import { useProjectManagement } from "@/hooks/useProjectManagement";
 
 const Projects = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { 
+    projects, 
+    analytics, 
+    stats, 
+    loading, 
+    createProject, 
+    deleteProject, 
+    incrementViews, 
+    incrementShares 
+  } = useProjectManagement();
+
+  // UI State
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newProject, setNewProject] = useState({
-    name: '',
-    description: ''
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [creatingProject, setCreatingProject] = useState(false);
+
+  // Filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [reportTypeFilter, setReportTypeFilter] = useState('');
+  const [industryFilter, setIndustryFilter] = useState('');
+
+  // Filtered projects
+  const filteredProjects = projects.filter(project => {
+    const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (project.description?.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesStatus = !statusFilter || project.status === statusFilter;
+    const matchesReportType = !reportTypeFilter || project.report_type === reportTypeFilter;
+    const matchesIndustry = !industryFilter || project.industry === industryFilter;
+
+    return matchesSearch && matchesStatus && matchesReportType && matchesIndustry;
   });
 
-  useEffect(() => {
-    if (user) {
-      fetchProjects();
-    }
-  }, [user]);
-
-  const fetchProjects = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('id, name, description, created_at, updated_at, status, pdf_url')
-        .order('updated_at', { ascending: false });
-
-      if (error) throw error;
-      setProjects(data || []);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-      toast({
-        title: "Error",
-        description: "Could not fetch projects. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const createProject = async () => {
-    if (!newProject.name.trim()) {
-      toast({
-        title: "Error",
-        description: "Project name is required",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('projects')
-        .insert({
-          name: newProject.name,
-          description: newProject.description,
-          user_id: user?.id,
-          status: 'uploading'
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Project Created!",
-        description: "Your new project has been created successfully.",
-      });
-
-      setNewProject({ name: '', description: '' });
-      setIsDialogOpen(false);
-      fetchProjects();
-    } catch (error) {
-      console.error('Error creating project:', error);
-      toast({
-        title: "Error",
-        description: "Could not create project. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
+  // Upload PDF functionality
   const uploadPDF = async (file: File, projectId?: string) => {
     if (!file.type.includes('pdf')) {
       toast({
@@ -131,19 +81,18 @@ const Projects = () => {
       let finalProjectId = projectId;
       if (!finalProjectId) {
         const projectName = file.name.replace('.pdf', '');
-        const { data: projectData, error: projectError } = await supabase
-          .from('projects')
-          .insert({
-            name: projectName,
-            description: `AI-processed from ${file.name}`,
-            user_id: user?.id,
-            status: 'processing'
-          })
-          .select()
-          .single();
-
-        if (projectError) throw projectError;
-        finalProjectId = projectData.id;
+        const newProject = await createProject({
+          name: projectName,
+          description: `AI-processed from ${file.name}`,
+          industry: '',
+          report_type: 'Q4',
+          fiscal_year: new Date().getFullYear()
+        });
+        
+        if (!newProject) {
+          throw new Error('Failed to create project');
+        }
+        finalProjectId = newProject.id;
       }
 
       // Simulate upload progress
@@ -193,7 +142,6 @@ const Projects = () => {
         });
       }
 
-      fetchProjects();
     } catch (error) {
       console.error('Error uploading PDF:', error);
       toast({
@@ -219,51 +167,67 @@ const Projects = () => {
     multiple: false
   });
 
-  const handleOpenProject = (project: Project) => {
-    toast({
-      title: "Opening Project",
-      description: `Opening ${project.name}...`,
-    });
-    // TODO: Navigate to project editor when implemented
-    console.log('Opening project:', project);
+  // Project actions
+  const handleCreateProject = async (projectData: ProjectFormData) => {
+    setCreatingProject(true);
+    try {
+      await createProject(projectData);
+      setIsCreateDialogOpen(false);
+    } finally {
+      setCreatingProject(false);
+    }
   };
 
-  const handleEditProject = (project: Project) => {
+  const handleOpenProject = (projectId: string) => {
+    incrementViews(projectId);
+    toast({
+      title: "Opening Project",
+      description: `Opening project...`,
+    });
+    // TODO: Navigate to project editor when implemented
+    console.log('Opening project:', projectId);
+  };
+
+  const handleEditProject = (projectId: string) => {
     toast({
       title: "Editing Project",
-      description: `Editing ${project.name}...`,
+      description: `Editing project...`,
     });
     // TODO: Open edit dialog when implemented
-    console.log('Editing project:', project);
+    console.log('Editing project:', projectId);
   };
 
   const handleDeleteProject = async (projectId: string) => {
     if (!confirm('Are you sure you want to delete this project?')) {
       return;
     }
+    await deleteProject(projectId);
+  };
 
-    try {
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', projectId);
+  const handleDownloadVideo = (projectId: string) => {
+    toast({
+      title: "Downloading Video",
+      description: "Video download started...",
+    });
+    // TODO: Implement video download
+    console.log('Downloading video for project:', projectId);
+  };
 
-      if (error) throw error;
+  const handleShareProject = (projectId: string) => {
+    incrementShares(projectId);
+    toast({
+      title: "Sharing Project",
+      description: "Share link copied to clipboard!",
+    });
+    // TODO: Implement sharing functionality
+    console.log('Sharing project:', projectId);
+  };
 
-      toast({
-        title: "Project Deleted",
-        description: "The project has been deleted successfully.",
-      });
-
-      fetchProjects();
-    } catch (error) {
-      console.error('Error deleting project:', error);
-      toast({
-        title: "Error",
-        description: "Could not delete project. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('');
+    setReportTypeFilter('');
+    setIndustryFilter('');
   };
 
   if (loading) {
@@ -285,56 +249,31 @@ const Projects = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">My Report Videos</h1>
+            <h1 className="text-3xl font-bold text-slate-900">Project Dashboard</h1>
             <p className="text-slate-600 mt-2">
-              Upload quarterly reports and create AI-powered video presentations
+              Manage your quarterly report videos and track their performance
             </p>
           </div>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                New Project
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Project</DialogTitle>
-                <DialogDescription>
-                  Create a new project for your quarterly report video
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div>
-                  <Label htmlFor="name">Project Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="e.g. Q4 2024 Financial Report"
-                    value={newProject.name}
-                    onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="description">Description (optional)</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe your project..."
-                    value={newProject.description}
-                    onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={createProject}>
-                    Create Project
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <CreateProjectDialog
+            open={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+            onCreateProject={handleCreateProject}
+            loading={creatingProject}
+          />
+          
+          <Button 
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            New Project
+          </Button>
+        </div>
+
+        {/* Statistics */}
+        <div className="mb-8">
+          <ProjectStats stats={stats} />
         </div>
 
         {/* Upload Area */}
@@ -342,7 +281,7 @@ const Projects = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Upload className="h-5 w-5" />
-              Upload Quarterly Report
+              Quick Upload
             </CardTitle>
             <CardDescription>
               Upload your PDF quarterly report to start creating a video presentation
@@ -391,6 +330,23 @@ const Projects = () => {
           </CardContent>
         </Card>
 
+        {/* Filters */}
+        {projects.length > 0 && (
+          <div className="mb-6">
+            <ProjectFilters
+              searchTerm={searchTerm}
+              statusFilter={statusFilter}
+              reportTypeFilter={reportTypeFilter}
+              industryFilter={industryFilter}
+              onSearchChange={setSearchTerm}
+              onStatusFilterChange={setStatusFilter}
+              onReportTypeFilterChange={setReportTypeFilter}
+              onIndustryFilterChange={setIndustryFilter}
+              onClearFilters={clearFilters}
+            />
+          </div>
+        )}
+
         {/* Projects Grid */}
         {projects.length === 0 ? (
           <Card className="text-center py-16">
@@ -403,75 +359,42 @@ const Projects = () => {
                 Upload your first quarterly report to create a professional video presentation with AI.
               </p>
               <Button 
-                {...getRootProps()}
+                onClick={() => setIsCreateDialogOpen(true)}
                 className="flex items-center gap-2 mx-auto"
               >
-                <input {...getInputProps()} />
-                <Upload className="h-4 w-4" />
-                Upload Your First Report
+                <Plus className="h-4 w-4" />
+                Create Your First Project
+              </Button>
+            </CardContent>
+          </Card>
+        ) : filteredProjects.length === 0 ? (
+          <Card className="text-center py-16">
+            <CardContent>
+              <FileText className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-xl font-medium text-slate-900 mb-2">
+                No projects match your filters
+              </h3>
+              <p className="text-slate-600 mb-6 max-w-md mx-auto">
+                Try adjusting your search terms or filters to find what you're looking for.
+              </p>
+              <Button variant="outline" onClick={clearFilters}>
+                Clear All Filters
               </Button>
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
-              <Card key={project.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{project.name}</CardTitle>
-                      <CardDescription className="mt-2">
-                        {project.description || "No description"}
-                      </CardDescription>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          project.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          project.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                          project.status === 'failed' ? 'bg-red-100 text-red-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {project.status === 'completed' ? 'Completed' :
-                           project.status === 'processing' ? 'Processing' :
-                           project.status === 'failed' ? 'Failed' :
-                           'Uploading'}
-                        </span>
-                        {project.pdf_url && (
-                          <span className="text-xs text-green-600">📄 PDF Uploaded</span>
-                        )}
-                      </div>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => handleDeleteProject(project.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm text-slate-500 mb-4">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      Created {new Date(project.created_at).toLocaleDateString('en-US')}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      className="flex-1"
-                      onClick={() => handleOpenProject(project)}
-                    >
-                      {project.status === 'completed' ? 'View Video' : 'Continue'}
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => handleEditProject(project)}
-                    >
-                      Edit
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+            {filteredProjects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                analytics={analytics[project.id]}
+                onOpenProject={handleOpenProject}
+                onEditProject={handleEditProject}
+                onDeleteProject={handleDeleteProject}
+                onDownloadVideo={handleDownloadVideo}
+                onShareProject={handleShareProject}
+              />
             ))}
           </div>
         )}
