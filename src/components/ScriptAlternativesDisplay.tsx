@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Clock, Users, Share2, Play, Check } from 'lucide-react';
+import { Clock, Users, Share2, Play, Check, TrendingUp } from 'lucide-react';
 
 interface ScriptAlternative {
   type: 'executive' | 'investor' | 'social';

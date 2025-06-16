@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +48,28 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
   const [showProcessingWorkflow, setShowProcessingWorkflow] = useState(false);
   const [dataLoadingState, setDataLoadingState] = useState<'loading' | 'loaded' | 'error'>('loading');
   const { toast } = useToast();
+
+  const parseScriptAlternatives = (data: any): ScriptAlternative[] => {
+    if (!Array.isArray(data)) return [];
+    
+    return data.filter((item: any) => 
+      item && 
+      typeof item === 'object' &&
+      typeof item.type === 'string' &&
+      typeof item.title === 'string' &&
+      typeof item.duration === 'string' &&
+      typeof item.script === 'string' &&
+      typeof item.tone === 'string' &&
+      Array.isArray(item.key_points)
+    ).map((item: any) => ({
+      type: item.type as 'executive' | 'investor' | 'social',
+      title: item.title,
+      duration: item.duration,
+      script: item.script,
+      tone: item.tone,
+      key_points: item.key_points
+    }));
+  };
 
   useEffect(() => {
     console.log('ScriptEditorContent: Initializing for project:', projectId);
@@ -109,8 +130,9 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
         .maybeSingle();
 
       if (!contentError && contentData) {
-        if (contentData.script_alternatives && Array.isArray(contentData.script_alternatives)) {
-          setScriptAlternatives(contentData.script_alternatives as ScriptAlternative[]);
+        if (contentData.script_alternatives) {
+          const parsedAlternatives = parseScriptAlternatives(contentData.script_alternatives);
+          setScriptAlternatives(parsedAlternatives);
         }
         
         if (contentData.script_text && !initialScript) {
