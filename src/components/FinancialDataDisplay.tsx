@@ -1,14 +1,8 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  BarChart3,
-  Star,
-  Calendar
-} from "lucide-react";
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { TrendingUp, DollarSign, Building2, Calendar } from 'lucide-react';
 
 interface FinancialData {
   company_name?: string;
@@ -17,107 +11,158 @@ interface FinancialData {
   ebitda?: string;
   growth_percentage?: string;
   key_highlights?: string[];
+  concerns?: string[];
+  report_type?: string;
+  currency?: string;
+  ceo_quote?: string;
+  forward_guidance?: string;
 }
 
 interface FinancialDataDisplayProps {
   data: FinancialData;
-  className?: string;
 }
 
-const FinancialDataDisplay = ({ data, className = "" }: FinancialDataDisplayProps) => {
-  const parsePercentage = (value: string) => {
-    const match = value?.match(/([-+]?\d+(?:\.\d+)?)/);
-    return match ? parseFloat(match[1]) : null;
-  };
-
-  const growthPercentage = data.growth_percentage ? parsePercentage(data.growth_percentage) : null;
-  const isPositiveGrowth = growthPercentage !== null && growthPercentage > 0;
-
+const FinancialDataDisplay: React.FC<FinancialDataDisplayProps> = ({ data }) => {
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BarChart3 className="w-5 h-5" />
-          Finansiell översikt
-        </CardTitle>
-        {data.company_name && (
-          <p className="text-lg font-semibold text-blue-600">{data.company_name}</p>
-        )}
-      </CardHeader>
-
-      <CardContent className="space-y-6">
-        {/* Period */}
-        {data.period && (
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-slate-500" />
-            <span className="text-sm font-medium">Rapportperiod:</span>
-            <Badge variant="outline">{data.period}</Badge>
+    <div className="space-y-6">
+      {/* Header */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="w-5 h-5" />
+            Financial Overview
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <label className="text-sm text-gray-600">Company</label>
+              <p className="font-medium">{data.company_name || 'N/A'}</p>
+            </div>
+            <div>
+              <label className="text-sm text-gray-600">Period</label>
+              <p className="font-medium">{data.period || 'N/A'}</p>
+            </div>
+            <div>
+              <label className="text-sm text-gray-600">Report Type</label>
+              <p className="font-medium">{data.report_type || 'N/A'}</p>
+            </div>
+            <div>
+              <label className="text-sm text-gray-600">Currency</label>
+              <p className="font-medium">{data.currency || 'N/A'}</p>
+            </div>
           </div>
-        )}
+        </CardContent>
+      </Card>
 
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Revenue */}
-          {data.revenue && (
-            <div className="p-4 bg-green-50 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <DollarSign className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-medium text-green-800">Intäkter</span>
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <DollarSign className="w-8 h-8 text-blue-600" />
+              <div>
+                <p className="text-sm text-gray-600">Revenue</p>
+                <p className="text-2xl font-bold">{data.revenue || 'N/A'}</p>
               </div>
-              <p className="text-lg font-bold text-green-900">{data.revenue}</p>
             </div>
-          )}
+          </CardContent>
+        </Card>
 
-          {/* EBITDA */}
-          {data.ebitda && (
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <BarChart3 className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-800">EBITDA</span>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="w-8 h-8 text-green-600" />
+              <div>
+                <p className="text-sm text-gray-600">EBITDA</p>
+                <p className="text-2xl font-bold">{data.ebitda || 'N/A'}</p>
               </div>
-              <p className="text-lg font-bold text-blue-900">{data.ebitda}</p>
             </div>
-          )}
+          </CardContent>
+        </Card>
 
-          {/* Growth */}
-          {data.growth_percentage && (
-            <div className={`p-4 rounded-lg ${isPositiveGrowth ? 'bg-green-50' : 'bg-red-50'}`}>
-              <div className="flex items-center gap-2 mb-2">
-                {isPositiveGrowth ? (
-                  <TrendingUp className="w-4 h-4 text-green-600" />
-                ) : (
-                  <TrendingDown className="w-4 h-4 text-red-600" />
-                )}
-                <span className={`text-sm font-medium ${isPositiveGrowth ? 'text-green-800' : 'text-red-800'}`}>
-                  Tillväxt
-                </span>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-8 h-8 text-purple-600" />
+              <div>
+                <p className="text-sm text-gray-600">Growth</p>
+                <p className="text-2xl font-bold">{data.growth_percentage || 'N/A'}</p>
               </div>
-              <p className={`text-lg font-bold ${isPositiveGrowth ? 'text-green-900' : 'text-red-900'}`}>
-                {data.growth_percentage}
-              </p>
             </div>
-          )}
-        </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* Key Highlights */}
+      {/* Highlights & Concerns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {data.key_highlights && data.key_highlights.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Star className="w-4 h-4 text-yellow-500" />
-              <span className="font-medium">Viktiga höjdpunkter</span>
-            </div>
-            <div className="space-y-2">
-              {data.key_highlights.map((highlight, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-                  <p className="text-sm text-slate-700">{highlight}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Key Highlights</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {data.key_highlights.map((highlight, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      +
+                    </Badge>
+                    <span className="text-sm">{highlight}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
         )}
-      </CardContent>
-    </Card>
+
+        {data.concerns && data.concerns.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Concerns</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {data.concerns.map((concern, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                      !
+                    </Badge>
+                    <span className="text-sm">{concern}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* CEO Quote */}
+      {data.ceo_quote && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">CEO Statement</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <blockquote className="italic text-gray-700 border-l-4 border-blue-200 pl-4">
+              "{data.ceo_quote}"
+            </blockquote>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Forward Guidance */}
+      {data.forward_guidance && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Forward Guidance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700">{data.forward_guidance}</p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };
 

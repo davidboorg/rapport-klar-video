@@ -3,9 +3,13 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import ProcessingWorkflow from "./ProcessingWorkflow";
-import ScriptEditorTabs from "./ScriptEditorTabs";
-import ScriptEditorLoading from "./ScriptEditorLoading";
-import { useScriptEditorActions } from "./ScriptEditorHelpers";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Brain, FileText, Film } from "lucide-react";
+import FinancialDataDisplay from "./FinancialDataDisplay";
+import ScriptAlternativesDisplay from "./ScriptAlternativesDisplay";
 
 interface ScriptEditorContentProps {
   projectId: string;
@@ -36,72 +40,20 @@ interface ScriptAlternative {
   key_points: string[];
 }
 
-// Helper function to safely convert JSON to ScriptAlternative[]
-const parseScriptAlternatives = (data: any): ScriptAlternative[] => {
-  console.log('Parsing script alternatives:', data);
-  
-  if (!Array.isArray(data)) {
-    console.log('Data is not an array, returning empty array');
-    return [];
-  }
-  
-  const parsed = data.filter((item): item is ScriptAlternative => {
-    const isValid = (
-      typeof item === 'object' &&
-      item !== null &&
-      typeof item.type === 'string' &&
-      ['executive', 'investor', 'social'].includes(item.type) &&
-      typeof item.title === 'string' &&
-      typeof item.duration === 'string' &&
-      typeof item.script === 'string' &&
-      typeof item.tone === 'string' &&
-      Array.isArray(item.key_points)
-    );
-    
-    if (!isValid) {
-      console.log('Invalid script alternative item:', item);
-    }
-    
-    return isValid;
-  });
-  
-  console.log(`Parsed ${parsed.length} valid script alternatives from ${data.length} items`);
-  return parsed;
-};
-
 const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: ScriptEditorContentProps) => {
   const [script, setScript] = useState(initialScript);
   const [isSaving, setSaving] = useState(false);
   const [isProcessing, setProcessing] = useState(false);
   const [financialData, setFinancialData] = useState<FinancialData | null>(null);
   const [scriptAlternatives, setScriptAlternatives] = useState<ScriptAlternative[]>([]);
-  const [existingVideoUrl, setExistingVideoUrl] = useState<string | null>(null);
-  const [hasProcessedData, setHasProcessedData] = useState(false);
   const [showProcessingWorkflow, setShowProcessingWorkflow] = useState(false);
-  const [projectStatus, setProjectStatus] = useState<string>('');
   const [dataLoadingState, setDataLoadingState] = useState<'loading' | 'loaded' | 'error'>('loading');
   const { toast } = useToast();
 
-  const {
-    handleSave: saveScript,
-    handleScriptSelect,
-    handleCustomizeScript,
-    handlePreview,
-    handleProcessingComplete: processComplete
-  } = useScriptEditorActions(projectId, script, setScript, onScriptUpdate);
-
-  const handleSave = () => saveScript(setSaving);
-  const handleProcessingComplete = (result: { success: boolean; data?: any; error?: string }) => {
-    console.log('Processing completed with result:', result);
-    processComplete(result, fetchProjectData, setProcessing, setShowProcessingWorkflow);
-  };
-
   useEffect(() => {
-    console.log('=== ScriptEditorContent: Initializing ===');
-    console.log('Project ID:', projectId);
+    console.log('ScriptEditorContent: Initializing for project:', projectId);
     fetchProjectData();
     
-    // Set up real-time subscription for project changes
     const subscription = supabase
       .channel('project_changes')
       .on(
@@ -125,12 +77,10 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
   }, [projectId]);
 
   const fetchProjectData = async () => {
-    console.log('=== Fetching Project Data ===');
-    console.log('Project ID:', projectId);
+    console.log('Fetching project data for:', projectId);
     setDataLoadingState('loading');
     
     try {
-      // Fetch project data
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
         .select('financial_data, status, pdf_url')
@@ -142,98 +92,39 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
         throw projectError;
       }
       
-      console.log('Project data fetched:', {
+      console.log('Project data:', {
         status: projectData.status,
         hasPdfUrl: !!projectData.pdf_url,
-        hasFinancialData: !!projectData.financial_data,
-        financialDataKeys: projectData.financial_data ? Object.keys(projectData.financial_data) : []
+        hasFinancialData: !!projectData.financial_data
       });
 
-      setProjectStatus(projectData.status);
-
-      // Process financial data
-      if (projectData?.financial_data && typeof projectData.financial_data === 'object') {
-        console.log('Setting financial data:', projectData.financial_data);
+      if (projectData?.financial_data) {
         setFinancialData(projectData.financial_data as FinancialData);
-      } else {
-        console.log('No valid financial data found');
-        setFinancialData(null);
       }
 
-      // Fetch generated content
       const { data: contentData, error: contentError } = await supabase
         .from('generated_content')
-        .select('script_text, script_alternatives, video_url')
+        .select('script_text, script_alternatives')
         .eq('project_id', projectId)
         .maybeSingle();
 
-      console.log('Generated content query result:', {
-        hasData: !!contentData,
-        hasScriptAlternatives: !!(contentData?.script_alternatives),
-        scriptAlternativesType: typeof contentData?.script_alternatives,
-        scriptAlternativesLength: Array.isArray(contentData?.script_alternatives) ? contentData.script_alternatives.length : 'not array',
-        error: contentError
-      });
-
       if (!contentError && contentData) {
-        // Handle script alternatives with safe type conversion
-        if (contentData.script_alternatives) {
-          const parsedAlternatives = parseScriptAlternatives(contentData.script_alternatives);
-          console.log('Setting script alternatives:', parsedAlternatives.length, 'items');
-          setScriptAlternatives(parsedAlternatives);
-        } else {
-          console.log('No script alternatives in content data');
-          setScriptAlternatives([]);
+        if (contentData.script_alternatives && Array.isArray(contentData.script_alternatives)) {
+          setScriptAlternatives(contentData.script_alternatives as ScriptAlternative[]);
         }
-
-        // Handle video URL
-        if (contentData.video_url) {
-          setExistingVideoUrl(contentData.video_url);
-        }
-
-        // Handle script text
+        
         if (contentData.script_text && !initialScript) {
           setScript(contentData.script_text);
         }
-      } else {
-        console.log('No generated content found or error:', contentError);
-        setScriptAlternatives([]);
       }
 
-      // Determine processing state
-      const hasValidFinancialData = !!(projectData?.financial_data && 
-        typeof projectData.financial_data === 'object' &&
-        Object.keys(projectData.financial_data).length > 0);
+      const hasProcessedData = !!(projectData?.financial_data || 
+        (contentData?.script_alternatives && Array.isArray(contentData.script_alternatives) && contentData.script_alternatives.length > 0));
       
-      const hasValidScriptAlternatives = !!(contentData?.script_alternatives && 
-        Array.isArray(contentData.script_alternatives) && 
-        contentData.script_alternatives.length > 0);
-      
-      const hasProcessedData = hasValidFinancialData || hasValidScriptAlternatives;
-      
-      console.log('Processing state assessment:', {
-        hasValidFinancialData,
-        hasValidScriptAlternatives,
-        hasProcessedData,
-        projectStatus: projectData.status
-      });
-
-      setHasProcessedData(hasProcessedData);
-
-      // Determine if we should show processing workflow
       const shouldShowProcessing = (
         (projectData?.pdf_url && !hasProcessedData) ||
-        projectData.status === 'processing' ||
-        (projectData.status === 'failed' && !hasProcessedData)
+        projectData.status === 'processing'
       );
-
-      console.log('Processing workflow decision:', {
-        shouldShowProcessing,
-        reason: projectData?.pdf_url && !hasProcessedData ? 'Has PDF but no processed data' :
-                projectData.status === 'processing' ? 'Currently processing' :
-                projectData.status === 'failed' && !hasProcessedData ? 'Failed and no processed data' :
-                'Should not show processing'
-      });
 
       if (shouldShowProcessing) {
         setShowProcessingWorkflow(true);
@@ -246,71 +137,197 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
       setDataLoadingState('loaded');
 
     } catch (error) {
-      console.error('=== Error in fetchProjectData ===');
-      console.error('Error details:', error);
+      console.error('Error in fetchProjectData:', error);
       setDataLoadingState('error');
       toast({
-        title: "Fel vid laddning",
-        description: "Kunde inte ladda projektdata. Försök igen.",
+        title: "Loading Error",
+        description: "Could not load project data. Please try again.",
         variant: "destructive",
       });
     }
   };
 
-  // Show loading state
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('generated_content')
+        .upsert({
+          project_id: projectId,
+          script_text: script,
+          generation_status: 'completed',
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Script Saved",
+        description: "Your video script has been saved successfully.",
+      });
+
+      onScriptUpdate?.(script);
+    } catch (error) {
+      console.error('Error saving script:', error);
+      toast({
+        title: "Save Error",
+        description: "Could not save script. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleScriptSelect = (selectedScript: ScriptAlternative) => {
+    setScript(selectedScript.script);
+    toast({
+      title: "Script Selected",
+      description: `${selectedScript.title} has been selected as your video script.`,
+    });
+  };
+
+  const handleProcessingComplete = (result: { success: boolean; data?: any; error?: string }) => {
+    console.log('Processing completed with result:', result);
+    setProcessing(false);
+    
+    if (result.success) {
+      setTimeout(() => {
+        fetchProjectData();
+        setShowProcessingWorkflow(false);
+      }, 1000);
+      
+      toast({
+        title: "AI Processing Complete!",
+        description: "Your report has been analyzed and script suggestions are ready.",
+      });
+    } else {
+      setShowProcessingWorkflow(false);
+      toast({
+        title: "Processing Failed",
+        description: result.error || "Something went wrong during processing.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (dataLoadingState === 'loading') {
-    return <ScriptEditorLoading />;
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
-  // Show processing workflow if needed
   if (showProcessingWorkflow) {
-    console.log('=== Rendering ProcessingWorkflow ===');
     return (
       <div className="space-y-6">
         <ProcessingWorkflow 
           projectId={projectId}
           isProcessing={isProcessing}
           currentStep={0}
-          autoStart={!isProcessing && projectStatus !== 'completed'}
+          autoStart={!isProcessing}
           onComplete={handleProcessingComplete}
         />
       </div>
     );
   }
 
-  // Show main tabs interface
-  console.log('=== Rendering Main Interface ===');
-  console.log('State summary:', {
-    hasFinancialData: !!financialData,
-    scriptAlternativesCount: scriptAlternatives.length,
-    hasProcessedData,
-    projectStatus,
-    financialDataPreview: financialData ? {
-      company_name: financialData.company_name,
-      revenue: financialData.revenue,
-      period: financialData.period
-    } : null
-  });
-
   return (
     <div className="space-y-6">
-      <ScriptEditorTabs
-        projectId={projectId}
-        script={script}
-        setScript={setScript}
-        isSaving={isSaving}
-        isProcessing={isProcessing}
-        financialData={financialData}
-        scriptAlternatives={scriptAlternatives}
-        existingVideoUrl={existingVideoUrl}
-        dataLoadingState={dataLoadingState}
-        onSave={handleSave}
-        onPreview={handlePreview}
-        onScriptSelect={handleScriptSelect}
-        onCustomizeScript={handleCustomizeScript}
-        onStartProcessing={() => setShowProcessingWorkflow(true)}
-        onRefreshData={fetchProjectData}
-      />
+      <Tabs defaultValue="review" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="review" className="flex items-center gap-2">
+            <Brain className="w-4 h-4" />
+            Review & Select
+          </TabsTrigger>
+          <TabsTrigger value="script" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Edit Script
+          </TabsTrigger>
+          <TabsTrigger value="video" className="flex items-center gap-2">
+            <Film className="w-4 h-4" />
+            Generate Video
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="review">
+          <div className="space-y-6">
+            {financialData && (
+              <FinancialDataDisplay data={financialData} />
+            )}
+            
+            {scriptAlternatives.length > 0 && (
+              <ScriptAlternativesDisplay 
+                alternatives={scriptAlternatives}
+                onScriptSelect={handleScriptSelect}
+              />
+            )}
+            
+            {!financialData && scriptAlternatives.length === 0 && (
+              <Card>
+                <CardContent className="pt-6 text-center">
+                  <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="font-medium mb-2">No processed data available</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Start processing to get AI-generated script suggestions.
+                  </p>
+                  <Button onClick={() => setShowProcessingWorkflow(true)}>
+                    Start Processing
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="script">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Video Script</label>
+                  <Textarea
+                    value={script}
+                    onChange={(e) => setScript(e.target.value)}
+                    placeholder="Enter your video script here..."
+                    className="min-h-[300px]"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleSave} disabled={isSaving}>
+                    {isSaving ? 'Saving...' : 'Save Script'}
+                  </Button>
+                  <Button variant="outline" onClick={() => {
+                    if ('speechSynthesis' in window) {
+                      const utterance = new SpeechSynthesisUtterance(script);
+                      utterance.lang = 'en-US';
+                      speechSynthesis.speak(utterance);
+                    }
+                  }}>
+                    Preview
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="video">
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <Film className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="font-medium mb-2">Video Generation</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Video generation feature will be available soon.
+              </p>
+              <Button disabled>
+                Generate Video
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

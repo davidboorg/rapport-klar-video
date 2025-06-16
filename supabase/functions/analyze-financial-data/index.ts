@@ -20,51 +20,48 @@ serve(async (req) => {
     console.log('PDF text length:', pdfText?.length || 0);
 
     if (!projectId || !pdfText) {
-      throw new Error('Saknas projectId eller pdfText');
+      throw new Error('Missing projectId or pdfText');
     }
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
-      throw new Error('OpenAI API key saknas i miljövariabler');
+      throw new Error('OpenAI API key missing');
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    // Förbättrad AI-prompt för bättre extraktion
+    // Extract financial data with OpenAI
     const analysisPrompt = `
-Analysera denna svenska kvartalsrapport och extrahera finansiell information. Svara ENDAST med valid JSON utan extra text.
-
-VIKTIG INSTRUKTION: Returnera data i följande exakta JSON-format:
+Analyze this financial report and extract key financial data. Return ONLY valid JSON in this exact format:
 
 {
-  "company_name": "Företagsnamn",
+  "company_name": "Company Name",
   "period": "Q4 2024",
-  "report_type": "Q4",
+  "report_type": "Quarterly",
   "currency": "SEK",
-  "revenue": "123.4 miljoner",
-  "ebitda": "45.2 miljoner", 
+  "revenue": "123.4 million",
+  "ebitda": "45.2 million", 
   "growth_percentage": "+12.3%",
   "key_highlights": [
-    "Stark tillväxt inom segment X",
-    "Ny produktlansering genomförd",
-    "Förbättrade marginaler"
+    "Strong growth in segment X",
+    "New product launch completed",
+    "Improved margins"
   ],
   "concerns": [
-    "Ökade råvarukostnader",
-    "Marknadsturbulens"
+    "Increased raw material costs",
+    "Market turbulence"
   ],
-  "ceo_quote": "Vi ser fortsatt stark efterfrågan...",
-  "forward_guidance": "Förväntningar för nästa kvartal..."
+  "ceo_quote": "We see continued strong demand...",
+  "forward_guidance": "Expectations for next quarter..."
 }
 
-Analysera denna rapport och fyll i all tillgänglig information:
-
-${pdfText.substring(0, 15000)}
+Financial report text:
+${pdfText.substring(0, 10000)}
 `;
 
-    console.log('Sending request to OpenAI...');
+    console.log('Sending request to OpenAI for financial analysis...');
 
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -77,7 +74,7 @@ ${pdfText.substring(0, 15000)}
         messages: [
           {
             role: 'system',
-            content: 'Du är en expert på svensk finansiell rapportanalys. Returnera ENDAST valid JSON utan extra text eller förklaringar.'
+            content: 'You are a financial report analyst. Return ONLY valid JSON without any explanations or markdown formatting.'
           },
           {
             role: 'user',
@@ -92,7 +89,7 @@ ${pdfText.substring(0, 15000)}
     if (!openAIResponse.ok) {
       const errorText = await openAIResponse.text();
       console.error('OpenAI API error:', errorText);
-      throw new Error(`OpenAI API fel: ${openAIResponse.status} - ${errorText}`);
+      throw new Error(`OpenAI API error: ${openAIResponse.status}`);
     }
 
     const openAIData = await openAIResponse.json();
@@ -103,17 +100,15 @@ ${pdfText.substring(0, 15000)}
       const content = openAIData.choices[0].message.content.trim();
       console.log('AI response content:', content);
       
-      // Rensa bort eventuell markdown formatting
       const cleanedContent = content.replace(/```json\n?|\n?```/g, '').trim();
       financialData = JSON.parse(cleanedContent);
       console.log('Parsed financial data:', financialData);
     } catch (parseError) {
       console.error('JSON parsing error:', parseError);
-      console.error('Raw content:', openAIData.choices[0].message.content);
-      throw new Error('Kunde inte tolka AI-svaret som valid JSON');
+      throw new Error('Could not parse AI response as valid JSON');
     }
 
-    // Spara finansiell data till projektet
+    // Save financial data to project
     const { error: updateError } = await supabase
       .from('projects')
       .update({ 
@@ -125,50 +120,50 @@ ${pdfText.substring(0, 15000)}
 
     if (updateError) {
       console.error('Error updating project:', updateError);
-      throw new Error(`Kunde inte uppdatera projekt: ${updateError.message}`);
+      throw new Error(`Could not update project: ${updateError.message}`);
     }
 
     console.log('Financial data saved to project');
 
-    // Generera script-alternativ baserat på finansiell data
+    // Generate script alternatives
     const scriptPrompt = `
-Baserat på denna finansiella data, skapa 3 professionella script-alternativ för en videot presentation.
+Based on this financial data, create 3 professional script alternatives for video presentation.
 
-Finansiell data:
+Financial data:
 ${JSON.stringify(financialData, null, 2)}
 
-Skapa scripts för dessa målgrupper:
-1. Executive Summary (1-2 min, för upptagna chefer)
-2. Investor Presentation (3-4 min, detaljerad för investerare)  
-3. Social Media (30-60 sek, engagerande för sociala medier)
+Create scripts for these audiences:
+1. Executive Summary (1-2 min, for busy executives)
+2. Investor Presentation (3-4 min, detailed for investors)  
+3. Social Media (30-60 sec, engaging for social media)
 
-Returnera ENDAST valid JSON i detta format:
+Return ONLY valid JSON in this format:
 
 {
   "script_alternatives": [
     {
       "type": "executive",
       "title": "Executive Summary",
-      "duration": "1-2 minuter",
-      "tone": "Professionell och koncis",
-      "key_points": ["punkt 1", "punkt 2", "punkt 3"],
-      "script": "Komplett script text här..."
+      "duration": "1-2 minutes",
+      "tone": "Professional and concise",
+      "key_points": ["point 1", "point 2", "point 3"],
+      "script": "Complete script text here..."
     },
     {
       "type": "investor", 
-      "title": "Investerarpresentation",
-      "duration": "3-4 minuter",
-      "tone": "Detaljerad och analytisk",
-      "key_points": ["punkt 1", "punkt 2", "punkt 3"],
-      "script": "Komplett script text här..."
+      "title": "Investor Presentation",
+      "duration": "3-4 minutes",
+      "tone": "Detailed and analytical",
+      "key_points": ["point 1", "point 2", "point 3"],
+      "script": "Complete script text here..."
     },
     {
       "type": "social",
       "title": "Social Media",
-      "duration": "30-60 sekunder", 
-      "tone": "Engagerande och lättillgänglig",
-      "key_points": ["punkt 1", "punkt 2", "punkt 3"],
-      "script": "Komplett script text här..."
+      "duration": "30-60 seconds", 
+      "tone": "Engaging and accessible",
+      "key_points": ["point 1", "point 2", "point 3"],
+      "script": "Complete script text here..."
     }
   ]
 }
@@ -187,7 +182,7 @@ Returnera ENDAST valid JSON i detta format:
         messages: [
           {
             role: 'system',
-            content: 'Du skapar professionella videoscript på svenska baserat på finansiell data. Returnera ENDAST valid JSON.'
+            content: 'You create professional video scripts based on financial data. Return ONLY valid JSON.'
           },
           {
             role: 'user',
@@ -199,9 +194,7 @@ Returnera ENDAST valid JSON i detta format:
       }),
     });
 
-    if (!scriptResponse.ok) {
-      console.error('Script generation failed, but continuing...');
-    } else {
+    if (scriptResponse.ok) {
       const scriptData = await scriptResponse.json();
       
       try {
@@ -211,7 +204,7 @@ Returnera ENDAST valid JSON i detta format:
         
         console.log('Generated script alternatives:', parsedScripts.script_alternatives?.length || 0);
 
-        // Spara script-alternativ
+        // Save script alternatives
         const { error: contentError } = await supabase
           .from('generated_content')
           .upsert({
@@ -238,7 +231,7 @@ Returnera ENDAST valid JSON i detta format:
       JSON.stringify({ 
         success: true, 
         financial_data: financialData,
-        message: 'Finansiell analys och script-generering slutförd'
+        message: 'Financial analysis and script generation completed'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -252,7 +245,7 @@ Returnera ENDAST valid JSON i detta format:
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'Okänt fel uppstod under AI-analysen'
+        error: error.message || 'Unknown error occurred during AI analysis'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
