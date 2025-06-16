@@ -38,10 +38,15 @@ interface ScriptAlternative {
 
 // Helper function to safely convert JSON to ScriptAlternative[]
 const parseScriptAlternatives = (data: any): ScriptAlternative[] => {
-  if (!Array.isArray(data)) return [];
+  console.log('Parsing script alternatives:', data);
   
-  return data.filter((item): item is ScriptAlternative => {
-    return (
+  if (!Array.isArray(data)) {
+    console.log('Data is not an array, returning empty array');
+    return [];
+  }
+  
+  const parsed = data.filter((item): item is ScriptAlternative => {
+    const isValid = (
       typeof item === 'object' &&
       item !== null &&
       typeof item.type === 'string' &&
@@ -52,7 +57,16 @@ const parseScriptAlternatives = (data: any): ScriptAlternative[] => {
       typeof item.tone === 'string' &&
       Array.isArray(item.key_points)
     );
+    
+    if (!isValid) {
+      console.log('Invalid script alternative item:', item);
+    }
+    
+    return isValid;
   });
+  
+  console.log(`Parsed ${parsed.length} valid script alternatives from ${data.length} items`);
+  return parsed;
 };
 
 const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: ScriptEditorContentProps) => {
@@ -77,8 +91,10 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
   } = useScriptEditorActions(projectId, script, setScript, onScriptUpdate);
 
   const handleSave = () => saveScript(setSaving);
-  const handleProcessingComplete = (result: { success: boolean; data?: any; error?: string }) => 
+  const handleProcessingComplete = (result: { success: boolean; data?: any; error?: string }) => {
+    console.log('Processing completed with result:', result);
     processComplete(result, fetchProjectData, setProcessing, setShowProcessingWorkflow);
+  };
 
   useEffect(() => {
     console.log('=== ScriptEditorContent: Initializing ===');
@@ -155,6 +171,7 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
         hasData: !!contentData,
         hasScriptAlternatives: !!(contentData?.script_alternatives),
         scriptAlternativesType: typeof contentData?.script_alternatives,
+        scriptAlternativesLength: Array.isArray(contentData?.script_alternatives) ? contentData.script_alternatives.length : 'not array',
         error: contentError
       });
 
@@ -165,7 +182,7 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
           console.log('Setting script alternatives:', parsedAlternatives.length, 'items');
           setScriptAlternatives(parsedAlternatives);
         } else {
-          console.log('No valid script alternatives found');
+          console.log('No script alternatives in content data');
           setScriptAlternatives([]);
         }
 
