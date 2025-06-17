@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { Play, Upload, CheckCircle, ArrowRight, Users, Shield, TrendingUp, Clock, Zap, Star, Crown, X, FileText, Headphones, Video } from "lucide-react";
+import { Play, ArrowRight, Users, Shield, TrendingUp, Clock, Zap, Star, CheckCircle, FileText, Headphones, Video, Mic, Brain, Target, BarChart3, PresentationChart, Building2, UserCheck, Globe, Smartphone, Award, Briefcase } from "lucide-react";
 
 const Landing = () => {
   return (
@@ -18,9 +18,9 @@ const Landing = () => {
             <h1 className="text-2xl font-bold text-slate-900">ReportFlow</h1>
           </div>
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="#features" className="text-slate-600 hover:text-blue-700 transition-colors">Features</a>
+            <a href="#platform" className="text-slate-600 hover:text-blue-700 transition-colors">Platform</a>
+            <a href="#solutions" className="text-slate-600 hover:text-blue-700 transition-colors">Solutions</a>
             <a href="#pricing" className="text-slate-600 hover:text-blue-700 transition-colors">Pricing</a>
-            <a href="#testimonials" className="text-slate-600 hover:text-blue-700 transition-colors">Success Stories</a>
           </nav>
           <div className="flex items-center space-x-4">
             <Link to="/login">
@@ -33,429 +33,504 @@ const Landing = () => {
         </div>
       </header>
 
-      {/* Hero Section - Maximum Impact */}
+      {/* Hero Section - Balanced Dual Messaging */}
       <section className="py-20 px-6 bg-gradient-to-br from-blue-50 to-white">
-        <div className="container mx-auto text-center max-w-6xl">
-          {/* Social Proof Banner */}
-          <Badge className="mb-6 bg-green-100 text-green-800 hover:bg-green-100 px-4 py-2">
-            <Users className="w-4 h-4 mr-2" />
-            Trusted by 100+ Nordic executives and board members
-          </Badge>
-          
-          {/* Primary Headlines */}
+        <div className="container mx-auto text-center max-w-7xl">
+          {/* Primary Headline */}
           <h1 className="text-6xl md:text-7xl font-bold text-slate-900 mb-6 leading-tight">
-            Stop Wasting Hours on
-            <span className="text-blue-700 block">Financial Briefings</span>
+            AI Content Engine for
+            <span className="text-blue-700 block">Financial Communication</span>
           </h1>
           
-          <p className="text-2xl text-slate-700 mb-8 leading-relaxed max-w-4xl mx-auto">
-            AI transforms your reports into podcasts and videos that executives actually consume
+          {/* Balanced Subheadline */}
+          <p className="text-2xl text-slate-700 mb-12 leading-relaxed max-w-5xl mx-auto">
+            Transform financial reports into professional videos and podcasts for both investor relations and board management
           </p>
-          
-          {/* Power Statement */}
-          <div className="bg-white rounded-2xl p-8 shadow-lg mb-12 max-w-4xl mx-auto">
-            <p className="text-xl font-medium text-slate-800 mb-6">
-              From 3-hour board meetings to 30-minute strategic sessions.<br/>
-              From unread investor reports to engaging presentations that drive action.
-            </p>
-            
-            {/* Dual Value Proposition */}
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Users className="w-8 h-8 text-purple-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-slate-800 mb-2">For Board Members</h3>
-                <p className="text-slate-600">Arrive informed, not overwhelmed</p>
-              </div>
-              <div className="text-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <TrendingUp className="w-8 h-8 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-slate-800 mb-2">For Public Companies</h3>
-                <p className="text-slate-600">Investor communications that actually get watched</p>
-              </div>
-            </div>
-          </div>
 
-          {/* Hero CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/market-selection">
-              <Button size="lg" className="bg-blue-700 hover:bg-blue-800 text-xl px-12 py-6">
-                Transform Your Next Report
-                <ArrowRight className="ml-3 w-6 h-6" />
-              </Button>
-            </Link>
-            <Button size="lg" variant="outline" className="text-xl px-12 py-6 border-2">
-              <Play className="mr-3 w-6 h-6" />
-              Watch 2-Minute Demo
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Before vs After Section */}
-      <section className="py-20 px-6 bg-slate-50">
-        <div className="container mx-auto max-w-7xl">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-bold text-slate-900 mb-6">The Old Way vs The ReportFlow Way</h2>
-            <p className="text-xl text-slate-600">See the dramatic transformation in how executives consume financial information</p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-12">
-            {/* Traditional Way */}
-            <Card className="border-2 border-red-200 bg-red-50">
-              <CardContent className="p-8">
-                <div className="text-center mb-6">
-                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <X className="w-8 h-8 text-red-600" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-red-800 mb-2">Traditional Way</h3>
-                  <p className="text-red-700">Inefficient and time-consuming</p>
+          {/* Dual Value Proposition - 50/50 Split */}
+          <div className="grid md:grid-cols-2 gap-8 mb-12 max-w-6xl mx-auto">
+            {/* Left Column - Public Companies */}
+            <Card className="border-2 border-blue-200 bg-blue-50 p-8">
+              <CardContent className="p-0">
+                <div className="flex items-center space-x-3 mb-6">
+                  <Video className="w-8 h-8 text-blue-600" />
+                  <h3 className="text-2xl font-bold text-blue-800">Professional Investor Content</h3>
                 </div>
-                <ul className="space-y-4">
+                <p className="text-xl text-blue-700 mb-6">Transform quarterly reports into engaging investor presentations</p>
+                <ul className="space-y-3 text-left">
                   {[
-                    "40-page quarterly reports that nobody reads",
-                    "3-hour board meetings spent on data briefings",
-                    "Executives arriving unprepared to strategic discussions",
-                    "$25,000 video production costs and 6-week timelines",
-                    "Investor communications that get ignored"
-                  ].map((item, index) => (
-                    <li key={index} className="flex items-start space-x-3">
-                      <X className="w-5 h-5 text-red-600 mt-1 flex-shrink-0" />
-                      <span className="text-red-800">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* ReportFlow Way */}
-            <Card className="border-2 border-green-200 bg-green-50">
-              <CardContent className="p-8">
-                <div className="text-center mb-6">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle className="w-8 h-8 text-green-600" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-green-800 mb-2">ReportFlow Way</h3>
-                  <p className="text-green-700">Efficient and engaging</p>
-                </div>
-                <ul className="space-y-4">
-                  {[
-                    "10-minute AI podcasts consumed during commute",
-                    "30-minute board meetings focused on decisions", 
-                    "Executives arriving fully briefed and ready",
-                    "Professional videos generated in 10 minutes for $200",
-                    "Engaging content that investors actually watch"
-                  ].map((item, index) => (
-                    <li key={index} className="flex items-start space-x-3">
-                      <CheckCircle className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                      <span className="text-green-800">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Transformation Metrics */}
-          <div className="mt-16 grid md:grid-cols-4 gap-8">
-            {[
-              { metric: "2.5 hours", label: "Saved per board meeting", icon: Clock },
-              { metric: "90%", label: "Reduction in prep time", icon: TrendingUp },
-              { metric: "10x", label: "Higher investor engagement", icon: Users },
-              { metric: "95%", label: "Cost reduction vs traditional", icon: Star }
-            ].map((item, index) => (
-              <div key={index} className="text-center bg-white p-6 rounded-xl shadow-md">
-                <item.icon className="w-8 h-8 text-blue-600 mx-auto mb-4" />
-                <div className="text-3xl font-bold text-slate-900 mb-2">{item.metric}</div>
-                <p className="text-slate-600">{item.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Dual Market Sections */}
-      <section className="py-20 px-6 bg-white" id="features">
-        <div className="container mx-auto max-w-7xl">
-          {/* Board Management Section */}
-          <div className="mb-20">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <Badge className="mb-4 bg-purple-100 text-purple-800">Board Management</Badge>
-                <h2 className="text-4xl font-bold text-slate-900 mb-6">Revolutionary Board Meeting Efficiency</h2>
-                <p className="text-xl text-slate-600 mb-8">Board members managing 5-15 companies get personalized podcast briefings instead of document stacks</p>
-                
-                <Card className="bg-purple-50 border-purple-200 mb-8">
-                  <CardContent className="p-6">
-                    <p className="text-purple-800 italic mb-4">
-                      "As a board member, I used to spend weekends reading through monthly reports from 8 companies. Now I listen to AI-generated podcasts during my morning run and arrive at meetings ready for strategic discussions, not status updates."
-                    </p>
-                    <p className="font-semibold text-purple-900">- Lars Andersson, Board Member</p>
-                  </CardContent>
-                </Card>
-
-                <ul className="space-y-3">
-                  {[
-                    "Portfolio dashboard for multiple companies",
-                    "AI podcasts optimized for mobile listening",
-                    "Strategic decision summaries, not just numbers",
-                    "Cross-company trend analysis and insights"
-                  ].map((feature, index) => (
-                    <li key={index} className="flex items-center space-x-3">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <span className="text-slate-700">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="bg-gradient-to-br from-purple-100 to-purple-50 p-8 rounded-2xl">
-                <div className="text-center">
-                  <Headphones className="w-24 h-24 text-purple-600 mx-auto mb-6" />
-                  <div className="space-y-4">
-                    <div className="bg-white p-4 rounded-lg shadow-sm">
-                      <h4 className="font-semibold text-purple-800">Company A - Monthly Report</h4>
-                      <p className="text-sm text-purple-600">8-minute strategic briefing ready</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-lg shadow-sm">
-                      <h4 className="font-semibold text-purple-800">Company B - Q1 Results</h4>
-                      <p className="text-sm text-purple-600">12-minute analysis available</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-lg shadow-sm">
-                      <h4 className="font-semibold text-purple-800">Portfolio Insights</h4>
-                      <p className="text-sm text-purple-600">Cross-company trends identified</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* IR & Public Company Section */}
-          <div>
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div className="bg-gradient-to-br from-blue-100 to-blue-50 p-8 rounded-2xl">
-                <div className="text-center">
-                  <Video className="w-24 h-24 text-blue-600 mx-auto mb-6" />
-                  <div className="space-y-4">
-                    <div className="bg-white p-4 rounded-lg shadow-sm">
-                      <h4 className="font-semibold text-blue-800">Q4 2024 Results</h4>
-                      <p className="text-sm text-blue-600">Professional video generated</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-lg shadow-sm">
-                      <h4 className="font-semibold text-blue-800">Investor Briefing</h4>
-                      <p className="text-sm text-blue-600">Personal avatar presentation</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-lg shadow-sm">
-                      <h4 className="font-semibold text-blue-800">Social Media Clips</h4>
-                      <p className="text-sm text-blue-600">Multiple formats ready</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <Badge className="mb-4 bg-blue-100 text-blue-800">Investor Relations</Badge>
-                <h2 className="text-4xl font-bold text-slate-900 mb-6">Investor Relations That Actually Engage</h2>
-                <p className="text-xl text-slate-600 mb-8">Transform quarterly reports into professional videos with your personal AI avatar</p>
-                
-                <Card className="bg-blue-50 border-blue-200 mb-8">
-                  <CardContent className="p-6">
-                    <p className="text-blue-800 italic mb-4">
-                      "Our investor videos now get 5x more views than traditional reports. ReportFlow lets me personally present our results even when I'm traveling globally."
-                    </p>
-                    <p className="font-semibold text-blue-900">- Maria Källström, CFO</p>
-                  </CardContent>
-                </Card>
-
-                <ul className="space-y-3">
-                  {[
-                    "Personal executive avatars for consistent branding",
-                    "Professional video production in minutes",
-                    "Multiple format output: Video, audio, social media",
+                    "AI-generated videos with executive avatars",
+                    "Professional podcast for investor briefings", 
+                    "Multi-format content from single report",
                     "Enterprise-grade quality and compliance"
                   ].map((feature, index) => (
                     <li key={index} className="flex items-center space-x-3">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <span className="text-slate-700">{feature}</span>
+                      <CheckCircle className="w-5 h-5 text-blue-600" />
+                      <span className="text-blue-800">{feature}</span>
                     </li>
                   ))}
                 </ul>
-              </div>
+              </CardContent>
+            </Card>
+
+            {/* Right Column - Board Management */}
+            <Card className="border-2 border-purple-200 bg-purple-50 p-8">
+              <CardContent className="p-0">
+                <div className="flex items-center space-x-3 mb-6">
+                  <Headphones className="w-8 h-8 text-purple-600" />
+                  <h3 className="text-2xl font-bold text-purple-800">Efficient Board Communication</h3>
+                </div>
+                <p className="text-xl text-purple-700 mb-6">Turn monthly reports into strategic board briefings</p>
+                <ul className="space-y-3 text-left">
+                  {[
+                    "AI-generated podcasts for pre-meeting consumption",
+                    "Portfolio overview across multiple companies",
+                    "Strategic summaries focused on decision-making", 
+                    "Mobile-optimized for busy board schedules"
+                  ].map((feature, index) => (
+                    <li key={index} className="flex items-center space-x-3">
+                      <CheckCircle className="w-5 h-5 text-purple-600" />
+                      <span className="text-purple-800">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Unified CTA */}
+          <div className="bg-white rounded-2xl p-8 shadow-lg mb-12 max-w-5xl mx-auto">
+            <h3 className="text-3xl font-bold text-slate-900 mb-6">One Platform, Two Revolutionary Applications</h3>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/market-selection">
+                <Button size="lg" className="bg-blue-700 hover:bg-blue-800 text-lg px-8 py-4">
+                  For Public Companies
+                  <Building2 className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
+              <Link to="/market-selection">
+                <Button size="lg" className="bg-purple-700 hover:bg-purple-800 text-lg px-8 py-4">
+                  For Board Management
+                  <Users className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
+              <Button size="lg" variant="outline" className="text-lg px-8 py-4 border-2">
+                <Play className="mr-2 w-5 h-5" />
+                Explore Both
+              </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Technology Showcase */}
-      <section className="py-20 px-6 bg-slate-50">
-        <div className="container mx-auto max-w-6xl text-center">
-          <h2 className="text-4xl font-bold text-slate-900 mb-12">Powered by Cutting-Edge AI</h2>
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
+      {/* Content Generation Showcase - Central Focus */}
+      <section className="py-20 px-6 bg-slate-50" id="platform">
+        <div className="container mx-auto max-w-7xl">
+          <div className="text-center mb-16">
+            <h2 className="text-5xl font-bold text-slate-900 mb-6">AI Content Engine Powers Both Markets</h2>
+            <p className="text-xl text-slate-600">One Upload → Multiple Professional Formats</p>
+          </div>
+
+          {/* Content Transformation Visual */}
+          <div className="bg-white rounded-2xl p-12 shadow-lg mb-16">
+            <div className="flex flex-col items-center space-y-8">
+              {/* Input */}
+              <div className="flex items-center space-x-4">
+                <FileText className="w-12 h-12 text-slate-600" />
+                <div className="text-center">
+                  <h4 className="text-xl font-semibold text-slate-800">Financial Report</h4>
+                  <p className="text-slate-600">Input</p>
+                </div>
+              </div>
+
+              {/* AI Processing */}
+              <div className="flex items-center space-x-4">
+                <ArrowRight className="w-8 h-8 text-blue-600" />
+                <Brain className="w-12 h-12 text-blue-600" />
+                <div className="text-center">
+                  <h4 className="text-xl font-semibold text-blue-800">AI Processing</h4>
+                  <p className="text-blue-600">Intelligent analysis & generation</p>
+                </div>
+                <ArrowRight className="w-8 h-8 text-blue-600" />
+              </div>
+
+              {/* Outputs */}
+              <div className="grid md:grid-cols-4 gap-6 w-full">
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <Video className="w-10 h-10 text-blue-600 mx-auto mb-3" />
+                  <h5 className="font-semibold text-blue-800">Professional Video</h5>
+                  <p className="text-sm text-blue-600">IR Output</p>
+                </div>
+                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                  <Headphones className="w-10 h-10 text-purple-600 mx-auto mb-3" />
+                  <h5 className="font-semibold text-purple-800">Strategic Podcast</h5>
+                  <p className="text-sm text-purple-600">Board Output</p>
+                </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <Smartphone className="w-10 h-10 text-green-600 mx-auto mb-3" />
+                  <h5 className="font-semibold text-green-800">Social Media</h5>
+                  <p className="text-sm text-green-600">Bonus Output</p>
+                </div>
+                <div className="text-center p-4 bg-orange-50 rounded-lg">
+                  <BarChart3 className="w-10 h-10 text-orange-600 mx-auto mb-3" />
+                  <h5 className="font-semibold text-orange-800">Executive Summary</h5>
+                  <p className="text-sm text-orange-600">Additional Output</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Processing Power */}
+          <div className="grid md:grid-cols-4 gap-8">
             {[
-              { name: "OpenAI GPT-4", desc: "Intelligent financial analysis and script generation", icon: "🧠" },
+              { name: "OpenAI GPT-4", desc: "Intelligent content analysis and script generation", icon: "🧠" },
               { name: "ElevenLabs", desc: "Professional voice cloning and narration", icon: "🎤" },
-              { name: "HeyGen", desc: "Personal avatar creation and video generation", icon: "👤" }
+              { name: "HeyGen", desc: "Executive avatar creation and video production", icon: "👤" },
+              { name: "Advanced PDF", desc: "Extract insights from any financial document", icon: "📄" }
             ].map((tech, index) => (
-              <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
+              <Card key={index} className="p-6 hover:shadow-lg transition-shadow text-center">
                 <div className="text-4xl mb-4">{tech.icon}</div>
-                <h3 className="text-xl font-semibold mb-2">{tech.name}</h3>
+                <h3 className="text-lg font-semibold mb-2">{tech.name}</h3>
                 <p className="text-slate-600">{tech.desc}</p>
               </Card>
             ))}
           </div>
-          <p className="text-xl text-slate-700 font-medium">
-            Your expertise + AI efficiency = Professional results
-          </p>
         </div>
       </section>
 
-      {/* Results & Testimonials */}
-      <section className="py-20 px-6 bg-white" id="testimonials">
-        <div className="container mx-auto max-w-6xl">
+      {/* Dual Market Success Stories - Equal Prominence */}
+      <section className="py-20 px-6 bg-white" id="solutions">
+        <div className="container mx-auto max-w-7xl">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-8">ReportFlow customers report:</h2>
-            <div className="grid md:grid-cols-4 gap-8">
+            <h2 className="text-4xl font-bold text-slate-900 mb-8">Dual Market Success Stories</h2>
+            <p className="text-xl text-slate-600">Revolutionary results across both market segments</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-12">
+            {/* Public Company Success */}
+            <div className="space-y-8">
+              <div className="text-center">
+                <Badge className="mb-4 bg-blue-100 text-blue-800 px-4 py-2">Public Company Success</Badge>
+                <h3 className="text-3xl font-bold text-slate-900 mb-4">Investor Engagement Revolution</h3>
+              </div>
+              
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="p-8">
+                  <p className="text-blue-800 italic text-lg mb-6">
+                    "Our Q3 earnings video generated 5x more engagement than traditional reports. ReportFlow's AI created professional content that investors actually consume."
+                  </p>
+                  <p className="font-semibold text-blue-900">- Maria Källström, CFO, Listed Tech Company</p>
+                </CardContent>
+              </Card>
+
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { metric: "340%", label: "Higher investor engagement" },
+                  { metric: "95%", label: "Cost reduction vs traditional video" },
+                  { metric: "10 min", label: "vs 6 weeks production time" },
+                  { metric: "100%", label: "Professional quality maintained" }
+                ].map((stat, index) => (
+                  <div key={index} className="text-center bg-blue-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-700 mb-1">{stat.metric}</div>
+                    <p className="text-sm text-blue-600">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Board Management Success */}
+            <div className="space-y-8">
+              <div className="text-center">
+                <Badge className="mb-4 bg-purple-100 text-purple-800 px-4 py-2">Board Management Success</Badge>
+                <h3 className="text-3xl font-bold text-slate-900 mb-4">Board Meeting Transformation</h3>
+              </div>
+              
+              <Card className="bg-purple-50 border-purple-200">
+                <CardContent className="p-8">
+                  <p className="text-purple-800 italic text-lg mb-6">
+                    "Managing 8 board positions used to consume my weekends reading reports. Now I listen to AI-generated briefings during commutes and arrive fully prepared for strategic discussions."
+                  </p>
+                  <p className="font-semibold text-purple-900">- Lars Andersson, Professional Board Member</p>
+                </CardContent>
+              </Card>
+
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { metric: "85%", label: "Reduction in preparation time" },
+                  { metric: "30 min", label: "3-hour meetings reduced" },
+                  { metric: "Multiple", label: "Portfolio management" },
+                  { metric: "Strategic", label: "Focus instead of data review" }
+                ].map((stat, index) => (
+                  <div key={index} className="text-center bg-purple-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-purple-700 mb-1">{stat.metric}</div>
+                    <p className="text-sm text-purple-600">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Content Engine Features - Unified Platform */}
+      <section className="py-20 px-6 bg-slate-50">
+        <div className="container mx-auto max-w-7xl">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-slate-900 mb-6">Advanced AI Content Generation for Both Markets</h2>
+            <p className="text-xl text-slate-600">Unified platform with market-specific features</p>
+          </div>
+
+          {/* Core Engine Capabilities */}
+          <Card className="mb-12 p-8 bg-white shadow-lg">
+            <h3 className="text-2xl font-bold text-slate-900 mb-6 text-center">Core Engine Capabilities</h3>
+            <div className="grid md:grid-cols-3 gap-6">
               {[
-                { metric: "85%", label: "Reduction in board meeting preparation time" },
-                { metric: "4x", label: "Higher investor presentation engagement" },
-                { metric: "90%", label: "Of executives prefer AI briefings over document reading" },
-                { metric: "95%", label: "Would recommend to other board members" }
-              ].map((stat, index) => (
-                <div key={index} className="text-center">
-                  <div className="text-4xl font-bold text-blue-700 mb-2">{stat.metric}</div>
-                  <p className="text-slate-600">{stat.label}</p>
+                { icon: Brain, title: "Intelligent PDF Analysis", desc: "Advanced data extraction and context awareness" },
+                { icon: Video, title: "Multi-format Generation", desc: "Video, audio, and text content creation" },
+                { icon: Mic, title: "Professional Scripts", desc: "Context-aware script creation with quality assurance" },
+                { icon: UserCheck, title: "Avatar & Voice Cloning", desc: "Personal branding with executive avatars" },
+                { icon: Shield, title: "Brand Customization", desc: "Compliance features and brand consistency" },
+                { icon: Zap, title: "Real-time Processing", desc: "Fast generation with quality assurance" }
+              ].map((feature, index) => (
+                <div key={index} className="flex items-start space-x-4">
+                  <feature.icon className="w-8 h-8 text-blue-600 mt-1" />
+                  <div>
+                    <h4 className="font-semibold text-slate-800 mb-1">{feature.title}</h4>
+                    <p className="text-slate-600 text-sm">{feature.desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
+          </Card>
+
+          {/* Market-Specific Features */}
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card className="p-8 border-2 border-blue-200">
+              <h3 className="text-xl font-bold text-blue-800 mb-6 flex items-center">
+                <Building2 className="w-6 h-6 mr-2" />
+                Public Company Features
+              </h3>
+              <ul className="space-y-3">
+                {[
+                  "Quarterly/annual report processing",
+                  "Investor presentation templates", 
+                  "Executive avatar for consistent branding",
+                  "Compliance with financial communication standards",
+                  "Integration with investor platforms"
+                ].map((feature, index) => (
+                  <li key={index} className="flex items-center space-x-3">
+                    <CheckCircle className="w-4 h-4 text-blue-600" />
+                    <span className="text-slate-700">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+
+            <Card className="p-8 border-2 border-purple-200">
+              <h3 className="text-xl font-bold text-purple-800 mb-6 flex items-center">
+                <Users className="w-6 h-6 mr-2" />
+                Board Management Features
+              </h3>
+              <ul className="space-y-3">
+                {[
+                  "Monthly report briefing generation",
+                  "Portfolio dashboard for multiple companies",
+                  "Strategic decision-focused summaries",
+                  "Mobile podcast optimization", 
+                  "Cross-company trend analysis"
+                ].map((feature, index) => (
+                  <li key={index} className="flex items-center space-x-3">
+                    <CheckCircle className="w-4 h-4 text-purple-600" />
+                    <span className="text-slate-700">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Founder Expertise - Dual Market Credibility */}
+      <section className="py-20 px-6 bg-white">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">Built by Someone Who Lives Both Worlds</h2>
+          </div>
+          
+          <Card className="p-8 bg-gradient-to-r from-blue-50 to-purple-50">
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">David Borg, Founder & CEO</h3>
+                <p className="text-lg text-slate-700 mb-6 italic">
+                  "As an entrepreneur who sold for 90M SEK and now serves on multiple boards, I understand both the investor relations challenge and the board efficiency problem. ReportFlow's content engine solves both."
+                </p>
+                
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-slate-800">Dual Experience:</h4>
+                  {[
+                    "CEO/Founder perspective on investor communications",
+                    "Board member experience across multiple companies", 
+                    "Understanding of both public and private company needs",
+                    "Nordic business culture and professional standards expertise"
+                  ].map((credential, index) => (
+                    <div key={index} className="flex items-center space-x-3">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="text-slate-700">{credential}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="w-48 h-48 bg-gradient-to-br from-blue-200 to-purple-200 rounded-full mx-auto mb-6"></div>
+                <Badge className="bg-green-100 text-green-800 px-4 py-2">90M SEK Exit + Active Board Member</Badge>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      {/* Unified Technology - Shared Innovation */}
+      <section className="py-20 px-6 bg-slate-50">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-slate-900 mb-6">Same Advanced AI, Different Applications</h2>
+            <p className="text-xl text-slate-600">Cutting-edge content generation solving communication challenges in both contexts</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 gap-8">
             {[
-              "Game-changing for board efficiency. I can manage twice as many board positions effectively.",
-              "Our investor relations have never been more engaging. Professional quality that rivals expensive agencies.",
-              "Finally, board meetings focused on strategy instead of spreadsheet reviews."
-            ].map((testimonial, index) => (
-              <Card key={index} className="p-6 bg-white">
-                <CardContent className="p-0">
-                  <p className="text-slate-700 italic mb-4">"{testimonial}"</p>
-                  <div className="flex space-x-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                </CardContent>
+              { icon: Target, title: "Financial Analysis", desc: "AI understands both investor-focused and board-focused content needs" },
+              { icon: Award, title: "Professional Quality", desc: "Enterprise-grade output suitable for both investor presentations and board briefings" },
+              { icon: Clock, title: "Efficiency Gains", desc: "Revolutionary time savings whether preparing for earnings calls or board meetings" },
+              { icon: UserCheck, title: "Personal Touch", desc: "Your voice and presence in both investor relations and board communications" }
+            ].map((benefit, index) => (
+              <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
+                <benefit.icon className="w-12 h-12 text-blue-600 mb-4" />
+                <h3 className="text-xl font-semibold text-slate-800 mb-3">{benefit.title}</h3>
+                <p className="text-slate-600">{benefit.desc}</p>
               </Card>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Pricing & Value */}
-      <section className="py-20 px-6 bg-slate-50" id="pricing">
+      {/* Pricing - Market-Appropriate Value */}
+      <section className="py-20 px-6 bg-white" id="pricing">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">Transparent Pricing</h2>
-            <p className="text-xl text-slate-600">Professional results at a fraction of traditional costs</p>
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">Content Engine Pricing</h2>
+            <p className="text-xl text-slate-600">Market-appropriate value for professional content generation</p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-16">
-            <Card className="border-2 hover:border-purple-200 transition-colors">
-              <CardContent className="p-8">
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold text-slate-900 mb-2">Board Management</h3>
-                  <div className="text-4xl font-bold text-purple-600 mb-2">From 5,000 SEK</div>
-                  <p className="text-slate-600">per month</p>
-                  <p className="text-sm text-purple-600 mt-2">Cost of one traditional board meeting = 6 months of ReportFlow</p>
-                </div>
-                <Link to="/market-selection">
-                  <Button className="w-full bg-purple-600 hover:bg-purple-700">Start Board Transformation</Button>
-                </Link>
-              </CardContent>
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-12">
+            <Card className="border-2 border-blue-200 p-8">
+              <div className="text-center mb-6">
+                <Building2 className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">Public Company Content</h3>
+                <div className="text-3xl font-bold text-blue-600 mb-2">15,000-50,000 SEK</div>
+                <p className="text-slate-600">per month</p>
+              </div>
+              <ul className="space-y-3 mb-6">
+                {[
+                  "Unlimited quarterly/annual report processing",
+                  "Professional video and podcast generation",
+                  "Executive avatar creation and management", 
+                  "Enterprise compliance and security features"
+                ].map((feature, index) => (
+                  <li key={index} className="flex items-center space-x-3">
+                    <CheckCircle className="w-4 h-4 text-blue-600" />
+                    <span className="text-slate-700 text-sm">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link to="/market-selection">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700">Transform IR Communications</Button>
+              </Link>
             </Card>
 
-            <Card className="border-2 hover:border-blue-200 transition-colors">
-              <CardContent className="p-8">
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold text-slate-900 mb-2">Public Company IR</h3>
-                  <div className="text-4xl font-bold text-blue-600 mb-2">From 15,000 SEK</div>
-                  <p className="text-slate-600">per month</p>
-                  <p className="text-sm text-blue-600 mt-2">Cost of one professional video = Full year of unlimited content</p>
-                </div>
-                <Link to="/market-selection">
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700">Transform IR Communications</Button>
-                </Link>
-              </CardContent>
+            <Card className="border-2 border-purple-200 p-8">
+              <div className="text-center mb-6">
+                <Users className="w-12 h-12 text-purple-600 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">Board Management Content</h3>
+                <div className="text-3xl font-bold text-purple-600 mb-2">5,000-15,000 SEK</div>
+                <p className="text-slate-600">per month</p>
+              </div>
+              <ul className="space-y-3 mb-6">
+                {[
+                  "Monthly report processing for multiple companies",
+                  "Portfolio management dashboard",
+                  "Strategic briefing generation",
+                  "Mobile-optimized podcast delivery"
+                ].map((feature, index) => (
+                  <li key={index} className="flex items-center space-x-3">
+                    <CheckCircle className="w-4 h-4 text-purple-600" />
+                    <span className="text-slate-700 text-sm">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link to="/market-selection">
+                <Button className="w-full bg-purple-600 hover:bg-purple-700">Optimize Board Meetings</Button>
+              </Link>
             </Card>
           </div>
 
-          {/* Value Calculator */}
-          <Card className="bg-green-50 border-green-200 max-w-4xl mx-auto">
-            <CardContent className="p-8 text-center">
-              <h3 className="text-2xl font-bold text-green-800 mb-6">Calculate Your Savings</h3>
-              <div className="grid md:grid-cols-3 gap-6">
-                <div>
-                  <div className="text-3xl font-bold text-green-700">48 hours</div>
-                  <p className="text-green-600">Traditional board prep time per year</p>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-green-700">0 hours</div>
-                  <p className="text-green-600">ReportFlow prep time</p>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-green-700">6 days</div>
-                  <p className="text-green-600">Full workdays saved per year</p>
-                </div>
-              </div>
-            </CardContent>
+          <Card className="bg-green-50 border-green-200 max-w-4xl mx-auto p-8 text-center">
+            <h3 className="text-2xl font-bold text-green-800 mb-4">Enterprise Solutions</h3>
+            <p className="text-green-700 mb-6">Custom packages for organizations needing both IR and board management content generation</p>
+            <Button variant="outline" className="border-green-600 text-green-700 hover:bg-green-100">
+              <Briefcase className="w-4 h-4 mr-2" />
+              Schedule Enterprise Consultation
+            </Button>
           </Card>
         </div>
       </section>
 
-      {/* Call to Action Section */}
+      {/* Final Call to Action - Balanced Pathways */}
       <section className="py-20 px-6 bg-blue-700">
-        <div className="container mx-auto text-center max-w-4xl">
-          <Badge className="mb-6 bg-orange-100 text-orange-800 px-4 py-2">
-            <Zap className="w-4 h-4 mr-2" />
-            Limited beta access for Nordic executives
-          </Badge>
-          
+        <div className="container mx-auto text-center max-w-5xl">
           <h2 className="text-5xl font-bold text-white mb-6">
-            Join the Financial Communication Revolution
+            Choose Your Content Revolution
           </h2>
           
           <p className="text-xl text-blue-100 mb-12">
-            Transform how your organization handles financial briefings and investor communications
+            ReportFlow: The Complete Financial Content Engine
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Link to="/market-selection">
-              <Button size="lg" className="bg-white text-blue-700 hover:bg-slate-100 text-xl px-12 py-6">
-                Start Your Free Transform
-                <ArrowRight className="ml-3 w-6 h-6" />
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
+            <Card className="p-6 bg-white">
+              <Building2 className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+              <h3 className="font-bold text-slate-900 mb-2">Transform Investor Relations</h3>
+              <p className="text-slate-600 text-sm mb-4">Professional AI-generated content that drives engagement and saves costs</p>
+              <Link to="/market-selection">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700">Public Company Demo</Button>
+              </Link>
+            </Card>
+
+            <Card className="p-6 bg-white">
+              <Users className="w-12 h-12 text-purple-600 mx-auto mb-4" />
+              <h3 className="font-bold text-slate-900 mb-2">Optimize Board Meetings</h3>
+              <p className="text-slate-600 text-sm mb-4">Strategic briefings that save time and improve decision-making</p>
+              <Link to="/market-selection">
+                <Button className="w-full bg-purple-600 hover:bg-purple-700">Board Management Demo</Button>
+              </Link>
+            </Card>
+
+            <Card className="p-6 bg-white">
+              <Globe className="w-12 h-12 text-green-600 mx-auto mb-4" />
+              <h3 className="font-bold text-slate-900 mb-2">Explore Full Platform</h3>
+              <p className="text-slate-600 text-sm mb-4">Comprehensive demo covering both applications</p>
+              <Button className="w-full bg-green-600 hover:bg-green-700">
+                <Play className="w-4 h-4 mr-2" />
+                Full Platform Demo
               </Button>
-            </Link>
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-700 text-xl px-12 py-6">
-              Book Executive Demo
-            </Button>
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-700 text-xl px-12 py-6">
-              Download ROI Calculator
-            </Button>
+            </Card>
           </div>
 
-          {/* Trust Signals */}
-          <div className="grid md:grid-cols-4 gap-6">
-            {[
-              { icon: Shield, text: "SOC 2 compliant security" },
-              { icon: CheckCircle, text: "GDPR compliant data handling" },
-              { icon: TrendingUp, text: "99.9% uptime guarantee" },
-              { icon: Star, text: "Enterprise-grade encryption" }
-            ].map((signal, index) => (
-              <div key={index} className="flex items-center space-x-2 text-blue-100">
-                <signal.icon className="w-5 h-5" />
-                <span className="text-sm">{signal.text}</span>
-              </div>
-            ))}
+          <div className="bg-white/10 rounded-2xl p-8">
+            <p className="text-blue-100 mb-4">Or speak with our team about custom solutions for your specific needs</p>
+            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-700">
+              Schedule Executive Consultation
+            </Button>
           </div>
         </div>
       </section>
@@ -471,14 +546,22 @@ const Landing = () => {
                 </div>
                 <h3 className="text-xl font-bold">ReportFlow</h3>
               </div>
-              <p className="text-slate-400">Revolutionizing financial communication with AI-powered efficiency.</p>
+              <p className="text-slate-400">AI content engine for financial communication excellence.</p>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Product</h4>
+              <h4 className="font-semibold mb-4">Solutions</h4>
               <ul className="space-y-2 text-slate-400">
+                <li><a href="#" className="hover:text-white transition-colors">Public Company IR</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Board Management</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Investor Relations</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">API Access</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Enterprise Solutions</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Platform</h4>
+              <ul className="space-y-2 text-slate-400">
+                <li><a href="#" className="hover:text-white transition-colors">AI Content Engine</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Professional Videos</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Strategic Podcasts</a></li>
               </ul>
             </div>
             <div>
@@ -486,14 +569,6 @@ const Landing = () => {
               <ul className="space-y-2 text-slate-400">
                 <li><a href="#" className="hover:text-white transition-colors">About</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Nordic Focus</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Success Stories</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-slate-400">
-                <li><a href="#" className="hover:text-white transition-colors">Executive Demo</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">ROI Calculator</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
               </ul>
             </div>
