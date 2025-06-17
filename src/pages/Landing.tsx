@@ -1,9 +1,8 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { Play, ArrowRight, Users, Shield, TrendingUp, Clock, Zap, Star, CheckCircle, FileText, Headphones, Video, Mic, Brain, Target, BarChart3, PresentationChart, Building2, UserCheck, Globe, Smartphone, Award, Briefcase } from "lucide-react";
+import { Play, ArrowRight, Users, Shield, TrendingUp, Clock, Zap, Star, CheckCircle, FileText, Headphones, Video, Mic, Brain, Target, BarChart3, Presentation, Building2, UserCheck, Globe, Smartphone, Award, Briefcase } from "lucide-react";
 
 const Landing = () => {
   return (
