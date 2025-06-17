@@ -6,9 +6,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Brain, FileText, Film } from "lucide-react";
+import { Brain, FileText, Film, Mic } from "lucide-react";
 import FinancialDataDisplay from "./FinancialDataDisplay";
 import ScriptAlternativesDisplay from "./ScriptAlternativesDisplay";
+import VideoGeneration from "./VideoGeneration";
+import PodcastGeneration from "./content/PodcastGeneration";
 
 interface ScriptEditorContentProps {
   projectId: string;
@@ -70,6 +72,17 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
       key_points: item.key_points
     }));
   };
+
+  // Add market type detection
+  const [marketType, setMarketType] = useState<'ir' | 'board'>('ir');
+
+  useEffect(() => {
+    // Detect market type from localStorage or project data
+    const storedMarket = localStorage.getItem('selectedMarket') as 'ir' | 'board';
+    if (storedMarket) {
+      setMarketType(storedMarket);
+    }
+  }, []);
 
   useEffect(() => {
     console.log('ScriptEditorContent: Initializing for project:', projectId);
@@ -258,7 +271,7 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
   return (
     <div className="space-y-6">
       <Tabs defaultValue="review" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="review" className="flex items-center gap-2">
             <Brain className="w-4 h-4" />
             Review & Select
@@ -266,6 +279,10 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
           <TabsTrigger value="script" className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
             Edit Script
+          </TabsTrigger>
+          <TabsTrigger value="podcast" className="flex items-center gap-2">
+            <Mic className="w-4 h-4" />
+            Generate Podcast
           </TabsTrigger>
           <TabsTrigger value="video" className="flex items-center gap-2">
             <Film className="w-4 h-4" />
@@ -308,11 +325,17 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
             <CardContent className="pt-6">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Video Script</label>
+                  <label className="block text-sm font-medium mb-2">
+                    {marketType === 'ir' ? 'Investor Communication Script' : 'Board Briefing Script'}
+                  </label>
                   <Textarea
                     value={script}
                     onChange={(e) => setScript(e.target.value)}
-                    placeholder="Enter your video script here..."
+                    placeholder={
+                      marketType === 'ir' 
+                        ? "Enter your investor presentation script here..."
+                        : "Enter your board briefing script here..."
+                    }
                     className="min-h-[300px]"
                   />
                 </div>
@@ -335,19 +358,24 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
           </Card>
         </TabsContent>
         
+        <TabsContent value="podcast">
+          <PodcastGeneration
+            projectId={projectId}
+            scriptText={script}
+            marketType={marketType}
+            onPodcastGenerated={(podcastUrl) => {
+              console.log('Podcast generated:', podcastUrl);
+            }}
+          />
+        </TabsContent>
+        
         <TabsContent value="video">
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <Film className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="font-medium mb-2">Video Generation</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Video generation feature will be available soon.
-              </p>
-              <Button disabled>
-                Generate Video
-              </Button>
-            </CardContent>
-          </Card>
+          <VideoGeneration
+            projectId={projectId}
+            scriptText={script}
+            financialData={financialData}
+            existingVideoUrl={null}
+          />
         </TabsContent>
       </Tabs>
     </div>
