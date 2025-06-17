@@ -310,46 +310,8 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Founder Credibility */}
-      <section className="py-20 px-6 bg-white">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">Built by an entrepreneur who understands executive time constraints</h2>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h3 className="text-3xl font-bold text-slate-900 mb-4">David Borg, Founder & CEO</h3>
-              <p className="text-xl text-slate-700 mb-8">
-                "After selling my previous company for 90M SEK, I experienced firsthand how much time gets wasted in board meetings and investor communications. ReportFlow eliminates the briefing phase so leaders can focus on what matters: making strategic decisions."
-              </p>
-              
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  "Successful tech entrepreneur (90M SEK exit)",
-                  "Board member experience across multiple companies",
-                  "Deep understanding of Nordic business culture",
-                  "AI and automation expertise"
-                ].map((credential, index) => (
-                  <div key={index} className="flex items-start space-x-2">
-                    <CheckCircle className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                    <span className="text-slate-700">{credential}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="bg-slate-100 p-8 rounded-2xl">
-              <div className="w-48 h-48 bg-slate-300 rounded-full mx-auto mb-6"></div>
-              <div className="text-center">
-                <Badge className="bg-orange-100 text-orange-800">90M SEK Exit</Badge>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Results & Testimonials */}
-      <section className="py-20 px-6 bg-slate-50" id="testimonials">
+      <section className="py-20 px-6 bg-white" id="testimonials">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-slate-900 mb-8">ReportFlow customers report:</h2>
@@ -390,7 +352,7 @@ const Landing = () => {
       </section>
 
       {/* Pricing & Value */}
-      <section className="py-20 px-6 bg-white" id="pricing">
+      <section className="py-20 px-6 bg-slate-50" id="pricing">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-slate-900 mb-4">Transparent Pricing</h2>
@@ -522,7 +484,7 @@ const Landing = () => {
             <div>
               <h4 className="font-semibold mb-4">Company</h4>
               <ul className="space-y-2 text-slate-400">
-                <li><a href="#" className="hover:text-white transition-colors">About David Borg</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">About</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Nordic Focus</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Success Stories</a></li>
               </ul>
@@ -537,7 +499,7 @@ const Landing = () => {
             </div>
           </div>
           <div className="border-t border-slate-800 mt-8 pt-8 text-center text-slate-400">
-            <p>&copy; 2024 ReportFlow AB. All rights reserved. | Built by David Borg</p>
+            <p>&copy; 2024 ReportFlow AB. All rights reserved.</p>
           </div>
         </div>
       </footer>
