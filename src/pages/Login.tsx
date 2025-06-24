@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAuth } from "@/contexts/BergetAuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { Play, Eye, EyeOff, Shield, AlertCircle, Wifi, WifiOff } from "lucide-react";
@@ -197,7 +197,7 @@ const Login = () => {
                 </>
               ) : (
                 <>
-                  <WifiOff className="w-4 h-4 text-red-600" />
+                  <WifiOff className="w-4 w-4 text-red-600" />
                   <span className="text-red-600">Offline</span>
                 </>
               )}
