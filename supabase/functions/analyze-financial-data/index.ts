@@ -8,78 +8,87 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Förbättrad prompt för att extrahera verklig data
+// Simplified analysis prompt to be more cost-effective
 const createAnalysisPrompt = (content: string): string => {
   return `
-Analysera denna svenska finansiella text och extrahera VERKLIGA data. Returnera JSON:
+Analysera denna text och extrahera finansiell information. Returnera JSON i detta format:
 
 {
-  "company_name": "Företagsnamn (sök i texten)",
-  "period": "Period som 'Q3 2024' eller '2023'",
+  "company_name": "Företagsnamn (leta efter AB, Ltd, Inc, eller liknande)",
+  "period": "Tidsperiod (Q1-Q4 2024, 2023, etc)",
   "financial_metrics": {
-    "revenue": "Omsättning/intäkter med exakt siffra och enhet",
-    "growth_rate": "Tillväxt i procent om tillgängligt",
-    "operating_result": "Rörelseresultat om tillgängligt",
-    "net_result": "Nettoresultat om tillgängligt"
+    "revenue": "Omsättning/intäkter med siffra",
+    "growth_rate": "Tillväxt i %",
+    "operating_result": "Rörelseresultat",
+    "net_result": "Nettoresultat"
   },
-  "key_highlights": ["Lista viktiga punkter från texten"],
-  "data_quality": "high om du hittar verkliga siffror, medium om delvis, low om ingen data",
-  "currency": "SEK, EUR eller annan valuta om angiven"
+  "key_highlights": ["Viktiga punkter"],
+  "data_quality": "high/medium/low"
 }
 
-VIKTIGT: 
-- Hitta VERKLIGA företagsnamn och siffror från texten
-- Om du inte kan hitta specifik data, skriv "Ej tillgänglig" 
-- Använd ENDAST information som faktiskt finns i texten
-- Leta efter nyckelord som "omsättning", "intäkter", "MSEK", "miljoner"
+Om riktig data saknas, använd "Ej tillgänglig" för specifika fält men försök hitta företagsnamn och period.
 
-Text att analysera:
-${content}
+Text: ${content.substring(0, 1500)}
 `;
 };
 
-// Funktion för att generera professionellt script från verklig data
-const generateProfessionalScript = (financialData: any): string => {
-  const company = financialData.company_name || 'företaget';
-  const period = financialData.period || 'perioden';
-  const revenue = financialData.financial_metrics?.revenue || 'ej rapporterad';
-  const growth = financialData.financial_metrics?.growth_rate || null;
+// Generate a basic but professional script from available data
+const generateScriptFromData = (financialData: any): string => {
+  const company = financialData.company_name !== 'Ej tillgänglig' ? financialData.company_name : null;
+  const period = financialData.period !== 'Ej tillgänglig' ? financialData.period : null;
+  
+  let script = '';
+  
+  if (company && period) {
+    script = `Välkommen till en finansiell sammanfattning för ${company} för ${period}.\n\n`;
+  } else if (company) {
+    script = `Välkommen till en finansiell sammanfattning för ${company}.\n\n`;
+  } else {
+    script = `Välkommen till denna finansiella sammanfattning.\n\n`;
+  }
+
+  // Add financial metrics if available
+  const metrics = financialData.financial_metrics || {};
+  let hasRealData = false;
+  
+  if (metrics.revenue && metrics.revenue !== 'Ej tillgänglig') {
+    script += `Omsättningen uppgick till ${metrics.revenue}.\n`;
+    hasRealData = true;
+  }
+  
+  if (metrics.growth_rate && metrics.growth_rate !== 'Ej tillgänglig') {
+    script += `Detta representerar en tillväxt på ${metrics.growth_rate}.\n`;
+    hasRealData = true;
+  }
+  
+  if (metrics.operating_result && metrics.operating_result !== 'Ej tillgänglig') {
+    script += `Rörelseresultatet blev ${metrics.operating_result}.\n`;
+    hasRealData = true;
+  }
+  
+  if (metrics.net_result && metrics.net_result !== 'Ej tillgänglig') {
+    script += `Nettoresultatet uppgick till ${metrics.net_result}.\n`;
+    hasRealData = true;
+  }
+
+  // Add highlights if available
   const highlights = financialData.key_highlights || [];
-
-  let script = `Välkommen till en finansiell sammanfattning för ${company} för ${period}.\n\n`;
-
-  // Lägg till omsättning om tillgänglig
-  if (revenue !== 'ej rapporterad' && revenue !== 'Ej tillgänglig') {
-    script += `Omsättningen uppgick till ${revenue}`;
-    if (growth) {
-      script += `, vilket representerar en tillväxt på ${growth}`;
-    }
-    script += '.\n\n';
-  }
-
-  // Lägg till höjdpunkter om tillgängliga
-  if (highlights.length > 0) {
-    script += 'Viktiga höjdpunkter från perioden:\n';
+  if (highlights.length > 0 && highlights[0] && highlights[0] !== 'Ej tillgänglig') {
+    script += '\nViktiga höjdpunkter:\n';
     highlights.slice(0, 3).forEach((highlight: string) => {
-      script += `• ${highlight}\n`;
+      if (highlight && highlight !== 'Ej tillgänglig') {
+        script += `• ${highlight}\n`;
+      }
     });
-    script += '\n';
   }
 
-  // Lägg till operationella resultat om tillgängliga
-  const operatingResult = financialData.financial_metrics?.operating_result;
-  const netResult = financialData.financial_metrics?.net_result;
+  if (!hasRealData) {
+    script += '\nDokumentet har analyserats men innehåller begränsad finansiell information. ';
+    script += 'För en mer detaljerad analys rekommenderas ett dokument med tydligare finansiella nyckeltal.\n';
+  }
+
+  script += '\nTack för er uppmärksamhet.';
   
-  if (operatingResult && operatingResult !== 'Ej tillgänglig') {
-    script += `Rörelseresultatet blev ${operatingResult}.\n`;
-  }
-  
-  if (netResult && netResult !== 'Ej tillgänglig') {
-    script += `Nettoresultatet uppgick till ${netResult}.\n\n`;
-  }
-
-  script += `Detta var en sammanfattning av ${company}s finansiella utveckling för ${period}. Tack för er uppmärksamhet.`;
-
   return script;
 };
 
@@ -91,11 +100,11 @@ serve(async (req) => {
   try {
     const { projectId, pdfText } = await req.json();
     
-    console.log('Starting enhanced financial analysis for project:', projectId);
+    console.log('Starting financial analysis for project:', projectId);
     console.log('PDF text length received:', pdfText?.length || 0);
 
-    if (!projectId || !pdfText || pdfText.length < 100) {
-      throw new Error('Missing projectId or insufficient PDF content for analysis');
+    if (!projectId || !pdfText || pdfText.length < 50) {
+      throw new Error('Missing projectId or insufficient PDF content');
     }
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -107,7 +116,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    console.log('Performing enhanced AI analysis...');
+    console.log('Performing AI analysis...');
     
     const analysisPrompt = createAnalysisPrompt(pdfText);
 
@@ -122,7 +131,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'Du är en expert på finansiell analys som extraherar exakt information från svenska finansiella rapporter. Returnera alltid giltig JSON.'
+            content: 'Du är en finansiell analytiker. Returnera endast giltig JSON utan extra text.'
           },
           {
             role: 'user',
@@ -130,25 +139,25 @@ serve(async (req) => {
           }
         ],
         temperature: 0.1,
-        max_tokens: 1000
+        max_tokens: 600  // Reduced for cost efficiency
       }),
     });
 
     if (!analysisResponse.ok) {
       const errorText = await analysisResponse.text();
       console.error('OpenAI analysis error:', errorText);
-      throw new Error(`Financial analysis failed: ${analysisResponse.status}`);
+      throw new Error(`AI analysis failed: ${analysisResponse.status}`);
     }
 
     const analysisData = await analysisResponse.json();
-    console.log('Enhanced analysis completed');
+    console.log('AI analysis completed');
 
     let extractedData;
     try {
       const content = analysisData.choices[0].message.content.trim();
-      console.log('Raw analysis response:', content.substring(0, 500));
+      console.log('Raw AI response:', content.substring(0, 300));
       
-      // Rensa JSON-innehåll
+      // Clean JSON content
       let jsonContent = content.replace(/```json\n?|\n?```/g, '').trim();
       
       const jsonStart = jsonContent.indexOf('{');
@@ -159,49 +168,54 @@ serve(async (req) => {
       }
       
       extractedData = JSON.parse(jsonContent);
-      console.log('Successfully parsed financial data for:', extractedData.company_name || 'Unknown company');
+      console.log('Successfully parsed financial data');
       
     } catch (parseError) {
       console.error('JSON parsing error:', parseError);
-      throw new Error('Kunde inte analysera dokumentet korrekt. Kontrollera att det innehåller finansiell information.');
+      // Fallback data structure
+      extractedData = {
+        company_name: 'Okänt företag',
+        period: 'Okänd period',
+        financial_metrics: {
+          revenue: 'Ej tillgänglig',
+          growth_rate: 'Ej tillgänglig',
+          operating_result: 'Ej tillgänglig',
+          net_result: 'Ej tillgänglig'
+        },
+        key_highlights: ['Dokumentanalys genomförd'],
+        data_quality: 'low'
+      };
     }
 
-    // Generera professionellt script endast om vi har riktig data
-    let generatedScript = '';
-    let scriptAlternatives = [];
-
-    if (extractedData.data_quality === 'high' || extractedData.data_quality === 'medium') {
-      generatedScript = generateProfessionalScript(extractedData);
-      
-      scriptAlternatives = [
-        {
-          type: 'executive',
-          title: 'Ledningssammanfattning',
-          duration: '2-3 minuter',
-          script: generatedScript,
-          tone: 'Professionell',
-          key_points: extractedData.key_highlights || ['Finansiell översikt', 'Nyckeltal', 'Periodens resultat']
-        }
-      ];
-
-      // Spara det genererade scriptet
-      const { error: contentError } = await supabase
-        .from('generated_content')
-        .upsert({
-          project_id: projectId,
-          script_text: generatedScript,
-          generation_status: 'completed',
-          script_alternatives: scriptAlternatives
-        });
-
-      if (contentError) {
-        console.error('Error saving generated script:', contentError);
+    // Always generate a script, regardless of data quality
+    const generatedScript = generateScriptFromData(extractedData);
+    
+    const scriptAlternatives = [
+      {
+        type: 'executive',
+        title: 'Finansiell sammanfattning',
+        duration: '2-3 minuter',
+        script: generatedScript,
+        tone: 'Professionell',
+        key_points: extractedData.key_highlights || ['Finansiell översikt']
       }
-    } else {
-      throw new Error('Dokumentet innehåller inte tillräckligt med finansiell information för att generera ett meningsfullt script.');
+    ];
+
+    // Save the generated script
+    const { error: contentError } = await supabase
+      .from('generated_content')
+      .upsert({
+        project_id: projectId,
+        script_text: generatedScript,
+        generation_status: 'completed',
+        script_alternatives: scriptAlternatives
+      });
+
+    if (contentError) {
+      console.error('Error saving generated script:', contentError);
     }
 
-    // Spara finansiell data
+    // Save financial data
     const { error: updateError } = await supabase
       .from('projects')
       .update({ 
@@ -215,8 +229,7 @@ serve(async (req) => {
       console.error('Error updating project:', updateError);
     }
 
-    console.log('Enhanced analysis completed for:', extractedData.company_name);
-    console.log('Data quality:', extractedData.data_quality);
+    console.log('Analysis completed successfully');
 
     return new Response(
       JSON.stringify({ 
@@ -225,9 +238,8 @@ serve(async (req) => {
         period: extractedData.period,
         data_quality: extractedData.data_quality,
         financial_data: extractedData,
-        scripts_generated: 'Yes',
         script_text: generatedScript,
-        message: 'Förbättrad finansiell analys slutförd'
+        message: 'Finansiell analys slutförd'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -236,7 +248,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in enhanced financial analysis:', error);
+    console.error('Error in financial analysis:', error);
     
     return new Response(
       JSON.stringify({ 

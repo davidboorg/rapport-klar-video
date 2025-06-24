@@ -8,86 +8,58 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Förbättrad funktion för att extrahera finansiell text från PDF
-const extractFinancialContent = (text: string): string => {
-  console.log('Extracting financial content from text of length:', text.length);
+// Improved function to clean and extract meaningful content
+const extractMeaningfulContent = (text: string): string => {
+  console.log('Processing text of length:', text.length);
   
-  // Rensa bort kontrolltecken och onödiga symboler
+  // Remove control characters and normalize
   let cleanedText = text
-    .replace(/[\x00-\x1F\x7F-\x9F]/g, ' ') // Ta bort kontrolltecken
-    .replace(/[^\w\säöåÄÖÅ.,%-]/g, ' ')    // Behåll bara text, siffror och viktig punktuation
-    .replace(/\s+/g, ' ')                   // Normalisera whitespace
+    .replace(/[\x00-\x1F\x7F-\x9F]/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 
-  // Sök efter finansiella nyckelord på svenska och engelska
-  const financialKeywords = [
-    'omsättning', 'intäkter', 'revenue', 'turnover',
-    'rörelseresultat', 'EBIT', 'operating result',
-    'nettoresultat', 'nettovinst', 'net income', 'profit',
-    'MSEK', 'MEUR', 'miljoner', 'million',
-    'kvartal', 'Q1', 'Q2', 'Q3', 'Q4',
-    'tillväxt', 'growth', 'procent', '%',
-    'balansomslutning', 'total assets',
-    'eget kapital', 'equity',
-    'skulder', 'liabilities',
-    'kassaflöde', 'cash flow'
-  ];
-
-  // Dela upp i meningar och hitta relevanta stycken
-  const sentences = cleanedText.split(/[.!?]+/).filter(s => s.length > 20);
-  const relevantSentences: string[] = [];
+  // Try to find readable Swedish/English words and numbers
+  const meaningfulSentences: string[] = [];
+  const sentences = cleanedText.split(/[.!?]+/).filter(s => s.length > 10);
   
-  // Första passningen: hitta meningar med finansiella nyckelord
   for (const sentence of sentences) {
-    const lowerSentence = sentence.toLowerCase();
-    const keywordMatches = financialKeywords.filter(keyword => 
-      lowerSentence.includes(keyword.toLowerCase())
-    ).length;
+    const trimmed = sentence.trim();
     
-    // Lägg till meningar som innehåller finansiella nyckelord OCH siffror
-    if (keywordMatches >= 1 && /\d+/.test(sentence)) {
-      relevantSentences.push(sentence.trim());
+    // Check if sentence contains meaningful words (at least 3 consecutive letters)
+    const hasRealWords = /[a-öA-Ö]{3,}/.test(trimmed);
+    // Check if sentence contains numbers that might be financial data
+    const hasNumbers = /\d+/.test(trimmed);
+    
+    if (hasRealWords && hasNumbers && trimmed.length > 15) {
+      meaningfulSentences.push(trimmed);
     }
     
-    // Stoppa när vi har tillräckligt med innehåll
-    if (relevantSentences.length >= 15) break;
+    if (meaningfulSentences.length >= 20) break;
   }
 
-  // Om vi inte hittar tillräckligt, försök hitta paragrafer med siffror
-  if (relevantSentences.length < 5) {
-    console.log('Limited financial sentences found, expanding search...');
-    
-    // Dela upp i större stycken och sök efter numeriska data
-    const paragraphs = cleanedText.split(/\n\s*\n/).filter(p => p.length > 50);
-    
-    for (const paragraph of paragraphs) {
-      // Leta efter stycken med många siffror (troligen tabeller eller finansdata)
-      const numberMatches = paragraph.match(/\d+[.,]?\d*/g) || [];
-      if (numberMatches.length >= 3) {
-        relevantSentences.push(paragraph.trim());
-      }
+  if (meaningfulSentences.length === 0) {
+    // Fallback: try to extract any text with numbers
+    const textWithNumbers = cleanedText.split(/\s+/)
+      .filter(word => /\d/.test(word) && word.length > 2)
+      .slice(0, 100)
+      .join(' ');
       
-      if (relevantSentences.length >= 10) break;
+    if (textWithNumbers.length > 50) {
+      return textWithNumbers;
     }
+    
+    // Last resort: return first part that has some structure
+    const firstPart = cleanedText.substring(0, 2000);
+    if (firstPart.length > 100) {
+      return firstPart;
+    }
+    
+    throw new Error('PDF innehåller ingen läsbar text. Kontrollera att det är en textbaserad PDF och inte en bild.');
   }
 
-  let extractedContent = '';
-  if (relevantSentences.length > 0) {
-    extractedContent = relevantSentences.join('. ');
-    console.log('Successfully extracted', relevantSentences.length, 'relevant financial sections');
-  } else {
-    // Sista utvägen: ta första delen av dokumentet om det innehåller siffror
-    const firstPart = cleanedText.substring(0, 5000);
-    if (/\d+/.test(firstPart)) {
-      extractedContent = firstPart;
-      console.log('Using first part of document with numbers as fallback');
-    } else {
-      throw new Error('Inget finansiellt innehåll kunde extraheras från dokumentet. Kontrollera att PDF:en innehåller läsbar text.');
-    }
-  }
-
-  // Begränsa till 8000 tecken för AI-analys
-  return extractedContent.substring(0, 8000);
+  const result = meaningfulSentences.join('. ');
+  console.log('Extracted meaningful content length:', result.length);
+  return result.substring(0, 6000); // Limit for AI processing
 };
 
 serve(async (req) => {
@@ -98,7 +70,7 @@ serve(async (req) => {
   try {
     const { pdfUrl, projectId } = await req.json();
     
-    console.log('Starting enhanced PDF content extraction from:', pdfUrl);
+    console.log('Starting PDF extraction from:', pdfUrl);
 
     if (!pdfUrl || !projectId) {
       throw new Error('Missing pdfUrl or projectId');
@@ -122,7 +94,7 @@ serve(async (req) => {
       const pdfArrayBuffer = await pdfResponse.arrayBuffer();
       console.log('PDF downloaded, size:', pdfArrayBuffer.byteLength, 'bytes');
 
-      // Försök med pdf-parse först
+      // Try pdf-parse first
       try {
         const pdfParse = await import('https://esm.sh/pdf-parse@1.1.1');
         const pdfBuffer = new Uint8Array(pdfArrayBuffer);
@@ -142,50 +114,43 @@ serve(async (req) => {
         }
 
       } catch (parseError) {
-        console.log('PDF-parse failed, trying raw text extraction...');
+        console.log('PDF-parse failed, trying raw extraction...');
         
-        // Alternativ metod: rå textextraktion
+        // Alternative: raw text extraction
         const decoder = new TextDecoder('utf-8', { ignoreBOM: true });
         const rawText = decoder.decode(pdfArrayBuffer);
         
-        // Extrahera text från PDF-streams
-        const textPatterns = [
-          /\(([^)]{10,})\)/g,  // Text inom parenteser
-          /BT\s+([^ET]+)ET/g,  // Text mellan BT och ET
-          /Tj\s*\[\s*\(([^)]+)\)/g  // Tj-kommandon
+        // Extract text patterns from PDF structure
+        const textMatches = [
+          ...rawText.matchAll(/\(([^)]{5,})\)/g),
+          ...rawText.matchAll(/BT\s+([^ET]+)ET/g),
+          ...rawText.matchAll(/Tj\s*\[\s*\(([^)]+)\)/g)
         ];
         
-        let extractedParts: string[] = [];
-        
-        for (const pattern of textPatterns) {
-          const matches = rawText.match(pattern) || [];
-          extractedParts = extractedParts.concat(
-            matches.map(match => match.replace(/[()]/g, '').trim())
-                  .filter(text => text.length > 5 && /[a-öA-Ö]/.test(text))
-          );
-        }
-        
-        if (extractedParts.length > 0) {
-          extractedText = extractedParts.join(' ');
-          extractionMethod = 'raw-text-patterns';
-          console.log('Raw text extraction successful, found:', extractedParts.length, 'text parts');
+        if (textMatches.length > 0) {
+          extractedText = textMatches
+            .map(match => match[1] || match[0])
+            .filter(text => text && text.length > 3)
+            .join(' ');
+          extractionMethod = 'raw-patterns';
+          console.log('Raw extraction found text parts:', textMatches.length);
         } else {
-          throw new Error('Ingen läsbar text hittades i PDF:en');
+          throw new Error('No readable text found in PDF');
         }
       }
 
     } catch (error) {
       console.error('PDF extraction failed:', error);
-      throw new Error(`PDF-extrahering misslyckades: ${error.message}. Kontrollera att filen är en giltig PDF med läsbar text.`);
+      throw new Error(`PDF extraction failed: ${error.message}`);
     }
 
-    // Extrahera finansiellt innehåll från den rena texten
-    const financialContent = extractFinancialContent(extractedText);
+    // Extract meaningful content
+    const meaningfulContent = extractMeaningfulContent(extractedText);
     
-    console.log('Final financial content length:', financialContent.length);
-    console.log('Content preview:', financialContent.substring(0, 200));
+    console.log('Final extracted content length:', meaningfulContent.length);
+    console.log('Content preview:', meaningfulContent.substring(0, 200));
 
-    // Uppdatera projektstatus
+    // Update project status
     const { error: updateError } = await supabase
       .from('projects')
       .update({ 
@@ -201,9 +166,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        content: financialContent,
+        content: meaningfulContent,
         method: extractionMethod,
-        length: financialContent.length,
+        length: meaningfulContent.length,
         quality_score: extractionMethod === 'pdf-parse' ? 'high' : 'medium'
       }),
       { 
@@ -213,7 +178,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in enhanced PDF extraction:', error);
+    console.error('Error in PDF extraction:', error);
     
     return new Response(
       JSON.stringify({ 
