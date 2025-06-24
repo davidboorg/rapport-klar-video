@@ -1,6 +1,18 @@
 
 import React from 'react';
-import { CheckCircle, Clock, ArrowRight } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { 
+  Upload, 
+  Brain, 
+  FileText, 
+  Mic, 
+  Video, 
+  Download,
+  CheckCircle,
+  Loader2
+} from 'lucide-react';
 import { WorkflowStep } from './WorkflowController';
 
 interface StatusIndicatorProps {
@@ -10,61 +22,98 @@ interface StatusIndicatorProps {
 
 const StatusIndicator: React.FC<StatusIndicatorProps> = ({ status, currentStep }) => {
   const steps = [
-    { key: 'upload', label: 'Uppladdning' },
-    { key: 'processing', label: 'Bearbetning' },
-    { key: 'scriptReview', label: 'Manus' },
-    { key: 'audio', label: 'Ljud' },
-    { key: 'video', label: 'Video' },
-    { key: 'download', label: 'Nedladdning' }
+    { key: 'upload', label: 'Ladda upp', icon: Upload },
+    { key: 'processing', label: 'Bearbetar', icon: Brain },
+    { key: 'scriptReview', label: 'Granska manus', icon: FileText },
+    { key: 'audio', label: 'Generera podcast', icon: Mic },
+    { key: 'video', label: 'Video (kommer snart)', icon: Video },
+    { key: 'download', label: 'Ladda ner', icon: Download }
   ];
 
-  const getCurrentStepIndex = () => {
-    return steps.findIndex(step => step.key === currentStep);
+  const currentStepIndex = steps.findIndex(step => step.key === currentStep);
+  const progress = ((currentStepIndex + 1) / steps.length) * 100;
+
+  const getStepStatus = (stepIndex: number) => {
+    if (stepIndex < currentStepIndex) return 'completed';
+    if (stepIndex === currentStepIndex) return 'current';
+    return 'pending';
   };
 
-  const currentIndex = getCurrentStepIndex();
+  const getStepIcon = (step: any, stepIndex: number) => {
+    const status = getStepStatus(stepIndex);
+    const IconComponent = step.icon;
+    
+    if (status === 'completed') {
+      return <CheckCircle className="w-5 h-5 text-green-600" />;
+    } else if (status === 'current') {
+      return <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />;
+    } else {
+      return <IconComponent className="w-5 h-5 text-gray-400" />;
+    }
+  };
+
+  const getStepBadge = (stepIndex: number) => {
+    const status = getStepStatus(stepIndex);
+    
+    if (status === 'completed') {
+      return <Badge className="bg-green-100 text-green-700">Klar</Badge>;
+    } else if (status === 'current') {
+      return <Badge className="bg-blue-100 text-blue-700">Pågår</Badge>;
+    } else {
+      return <Badge variant="outline">Väntar</Badge>;
+    }
+  };
 
   return (
-    <div className="mb-8">
-      <div className="flex items-center justify-center mb-4">
-        <div className="flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-lg">
-          <Clock className="w-4 h-4 text-blue-600" />
-          <span className="text-blue-800 font-medium">{status}</span>
-        </div>
-      </div>
-      
-      <div className="flex items-center justify-between">
-        {steps.map((step, index) => (
-          <React.Fragment key={step.key}>
-            <div className="flex flex-col items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                index < currentIndex 
-                  ? 'bg-green-500 text-white' 
-                  : index === currentIndex 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-200 text-gray-500'
-              }`}>
-                {index < currentIndex ? (
-                  <CheckCircle className="w-4 h-4" />
-                ) : (
-                  <span>{index + 1}</span>
-                )}
-              </div>
-              <span className={`text-xs mt-1 ${
-                index <= currentIndex ? 'text-gray-800' : 'text-gray-400'
-              }`}>
-                {step.label}
-              </span>
+    <Card className="mb-6">
+      <CardContent className="pt-6">
+        <div className="space-y-4">
+          {/* Progress Bar */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium">Framsteg</span>
+              <span className="text-sm text-gray-600">{Math.round(progress)}%</span>
             </div>
-            {index < steps.length - 1 && (
-              <ArrowRight className={`w-4 h-4 ${
-                index < currentIndex ? 'text-green-500' : 'text-gray-300'
-              }`} />
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-    </div>
+            <Progress value={progress} className="h-2" />
+          </div>
+
+          {/* Current Status */}
+          <div className="p-3 bg-blue-50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+              <span className="text-sm font-medium text-blue-900">{status}</span>
+            </div>
+          </div>
+
+          {/* Steps Overview */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-700">Workflow-steg</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {steps.map((step, index) => (
+                <div 
+                  key={step.key}
+                  className={`flex items-center gap-2 p-2 rounded-lg ${
+                    getStepStatus(index) === 'current' 
+                      ? 'bg-blue-50 border border-blue-200' 
+                      : getStepStatus(index) === 'completed'
+                      ? 'bg-green-50 border border-green-200'
+                      : 'bg-gray-50'
+                  }`}
+                >
+                  {getStepIcon(step, index)}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium truncate">{step.label}</div>
+                    <div className="mt-1">
+                      {getStepBadge(index)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

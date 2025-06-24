@@ -7,7 +7,8 @@ import AudioGenerationStep from './AudioGenerationStep';
 import VideoGenerationStep from './VideoGenerationStep';
 import DownloadStep from './DownloadStep';
 import StatusIndicator from './StatusIndicator';
-import { mockProcessFile, mockGenerateAudio, mockGenerateVideo } from '@/lib/mockApi';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export type WorkflowStep = 'upload' | 'processing' | 'scriptReview' | 'audio' | 'video' | 'download';
 
@@ -18,40 +19,187 @@ const WorkflowController: React.FC = () => {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<string>('Väntar på uppladdning');
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleUpload = async (uploadedFile: File) => {
-    setFile(uploadedFile);
-    setStatus('Bearbetar rapport...');
-    setStep('processing');
-    
-    const generatedScript = await mockProcessFile(uploadedFile);
-    setScript(generatedScript);
-    setStatus('Manus genererat');
-    setStep('scriptReview');
+    try {
+      setFile(uploadedFile);
+      setStatus('Skapar projekt...');
+      setStep('processing');
+
+      // Create a new project in Supabase
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          name: `Demo: ${uploadedFile.name}`,
+          description: 'Demo workflow project',
+          status: 'processing'
+        })
+        .select()
+        .single();
+
+      if (projectError) {
+        throw new Error(`Kunde inte skapa projekt: ${projectError.message}`);
+      }
+
+      setProjectId(project.id);
+      setStatus('Laddar upp fil...');
+
+      // Upload file to Supabase storage (you'll need to create this bucket)
+      const fileName = `${project.id}/${uploadedFile.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(fileName, uploadedFile);
+
+      if (uploadError) {
+        throw new Error(`Uppladdning misslyckades: ${uploadError.message}`);
+      }
+
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(fileName);
+
+      // Update project with PDF URL
+      const { error: updateError } = await supabase
+        .from('projects')
+        .update({ pdf_url: publicUrl })
+        .eq('id', project.id);
+
+      if (updateError) {
+        throw new Error(`Kunde inte uppdatera projekt: ${updateError.message}`);
+      }
+
+      setStatus('Bearbetar dokument med Berget AI...');
+
+      // Call Supabase function to process with Berget AI
+      const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-financial-data', {
+        body: {
+          projectId: project.id,
+          pdfUrl: publicUrl
+        }
+      });
+
+      if (analysisError) {
+        throw new Error(`AI-analys misslyckades: ${analysisError.message}`);
+      }
+
+      if (!analysisData?.success) {
+        throw new Error(`AI-analys fel: ${analysisData?.error || 'Okänt fel'}`);
+      }
+
+      // Get the generated script alternatives
+      const { data: contentData, error: contentError } = await supabase
+        .from('generated_content')
+        .select('script_alternatives')
+        .eq('project_id', project.id)
+        .single();
+
+      if (contentError || !contentData?.script_alternatives) {
+        throw new Error('Kunde inte hämta genererat manus');
+      }
+
+      // Use the first script alternative as default
+      const scriptAlternatives = contentData.script_alternatives as any[];
+      const defaultScript = scriptAlternatives[0]?.script || 'Inget manus genererat';
+      
+      setScript(defaultScript);
+      setStatus('Manus genererat och redo för granskning');
+      setStep('scriptReview');
+
+      toast({
+        title: "Bearbetning Slutförd!",
+        description: "Ditt dokument har analyserats och manus har genererats.",
+      });
+
+    } catch (error) {
+      console.error('Upload and processing error:', error);
+      setStatus(`Fel: ${error instanceof Error ? error.message : 'Okänt fel'}`);
+      
+      toast({
+        title: "Fel uppstod",
+        description: error instanceof Error ? error.message : 'Ett okänt fel uppstod',
+        variant: "destructive",
+      });
+    }
   };
 
   const handleScriptApprove = async (approvedScript: string) => {
-    setScript(approvedScript);
-    setStatus('Genererar podcast...');
-    setStep('audio');
-    
-    const audio = await mockGenerateAudio(approvedScript);
-    setAudioUrl(audio);
-    setStatus('Podcast klar');
+    try {
+      setScript(approvedScript);
+      setStatus('Genererar podcast med ElevenLabs...');
+      setStep('audio');
+
+      // Call our generate-podcast Supabase function
+      const { data: audioData, error: audioError } = await supabase.functions.invoke('generate-podcast', {
+        body: {
+          text: approvedScript,
+          voice: 'alloy', // Default voice
+          projectId: projectId
+        }
+      });
+
+      if (audioError) {
+        throw new Error(`Podcast-generering misslyckades: ${audioError.message}`);
+      }
+
+      if (!audioData?.success) {
+        throw new Error(`Podcast-fel: ${audioData?.error || 'Okänt fel'}`);
+      }
+
+      // Convert base64 to blob URL for playback
+      const audioBlob = new Blob([Uint8Array.from(atob(audioData.audioContent), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      setAudioUrl(audioUrl);
+      setStatus('Podcast klar för nedladdning');
+
+      toast({
+        title: "Podcast Genererad!",
+        description: "Din podcast är redo att lyssna på och ladda ner.",
+      });
+
+    } catch (error) {
+      console.error('Audio generation error:', error);
+      setStatus(`Fel: ${error instanceof Error ? error.message : 'Okänt fel'}`);
+      
+      toast({
+        title: "Podcast-fel",
+        description: error instanceof Error ? error.message : 'Kunde inte generera podcast',
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleAudioReady = async () => {
+  const handleAudioReady = () => {
     setStep('video');
-    setStatus('Genererar video...');
+    setStatus('Video-steg (kommer snart)...');
     
-    const video = await mockGenerateVideo(script || '');
-    setVideoUrl(video);
-    setStatus('Video klar');
-    setStep('download');
+    // Skip video for now and go directly to download
+    setTimeout(() => {
+      setStep('download');
+      setStatus('Klar för nedladdning');
+    }, 1000);
   };
 
   const handleDownload = () => {
-    setStatus('Klar för nedladdning');
+    if (audioUrl) {
+      // Create download link
+      const link = document.createElement('a');
+      link.href = audioUrl;
+      link.download = `podcast-${Date.now()}.mp3`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setStatus('Podcast nedladdad');
+      
+      toast({
+        title: "Nedladdning Slutförd",
+        description: "Din podcast har laddats ner framgångsrikt.",
+      });
+    }
   };
 
   const handleReset = () => {
@@ -60,6 +208,7 @@ const WorkflowController: React.FC = () => {
     setScript(null);
     setAudioUrl(null);
     setVideoUrl(null);
+    setProjectId(null);
     setStatus('Väntar på uppladdning');
   };
 
@@ -80,7 +229,12 @@ const WorkflowController: React.FC = () => {
         <VideoGenerationStep script={script} videoUrl={videoUrl} />
       )}
       {step === 'download' && (
-        <DownloadStep audioUrl={audioUrl} videoUrl={videoUrl} onDownload={handleDownload} onReset={handleReset} />
+        <DownloadStep 
+          audioUrl={audioUrl} 
+          videoUrl={videoUrl} 
+          onDownload={handleDownload} 
+          onReset={handleReset} 
+        />
       )}
     </div>
   );
