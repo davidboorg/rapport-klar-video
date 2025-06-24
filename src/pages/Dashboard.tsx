@@ -43,7 +43,7 @@ const Dashboard = () => {
         {/* Welcome Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            Welcome back, {user.user_metadata?.firstName || user.email?.split('@')[0]}!
+            Welcome back, {user.firstName || user.email?.split('@')[0]}!
           </h1>
           <p className="text-slate-600">
             Manage your ReportFlow projects and create professional videos from your financial reports.

@@ -31,10 +31,10 @@ const Navbar = () => {
     setMobileMenuOpen(false);
   };
 
-  // Get user display information - adjust for Berget user structure
-  const firstName = user?.user_metadata?.firstName || user?.user_metadata?.first_name || "";
-  const lastName = user?.user_metadata?.lastName || user?.user_metadata?.last_name || "";
-  const company = user?.user_metadata?.company || "";
+  // Get user display information from BergetUser properties
+  const firstName = user?.firstName || "";
+  const lastName = user?.lastName || "";
+  const company = user?.company || "";
   const email = user?.email || "";
 
   return (
