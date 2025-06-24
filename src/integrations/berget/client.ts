@@ -81,7 +81,8 @@ class BergetClient {
     try {
       console.log('Attempting login to Berget.ai API via secure proxy...');
       
-      const result = await this.makeSecureRequest('/auth/login', {
+      // Try the standard authentication endpoint
+      const result = await this.makeSecureRequest('/authenticate', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
@@ -122,7 +123,7 @@ class BergetClient {
     try {
       console.log('Attempting registration to Berget.ai API via secure proxy...');
       
-      const result = await this.makeSecureRequest('/auth/register', {
+      const result = await this.makeSecureRequest('/register', {
         method: 'POST',
         body: JSON.stringify({
           email,
