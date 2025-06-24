@@ -8,6 +8,49 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Function to chunk text and extract meaningful sections
+const extractFinancialSections = (text: string): string => {
+  console.log('Extracting financial sections from text of length:', text.length);
+  
+  // Split text into smaller chunks and look for financial keywords
+  const financialKeywords = [
+    'omsättning', 'intäkter', 'revenue', 'rörelseresultat', 'EBIT', 'EBITDA',
+    'nettoresultat', 'vinst', 'förlust', 'miljoner', 'MSEK', 'MEUR', 'miljoner kronor',
+    'tillväxt', 'procent', '%', 'Q1', 'Q2', 'Q3', 'Q4', 'kvartal', 'helår',
+    'balansräkning', 'tillgångar', 'eget kapital', 'skulder', 'kassaflöde',
+    'framtidsutsikter', 'prognos', 'guidning', 'marknad', 'konkurrens'
+  ];
+  
+  // Split text into paragraphs and sentences
+  const paragraphs = text.split(/\n\s*\n|\. /).filter(p => p.length > 20);
+  const relevantSections: string[] = [];
+  
+  // Extract paragraphs containing financial keywords
+  for (const paragraph of paragraphs) {
+    const lowerParagraph = paragraph.toLowerCase();
+    const hasFinancialKeywords = financialKeywords.some(keyword => 
+      lowerParagraph.includes(keyword.toLowerCase())
+    );
+    
+    if (hasFinancialKeywords && paragraph.length > 50) {
+      relevantSections.push(paragraph.trim());
+    }
+  }
+  
+  // If we found relevant sections, use them. Otherwise, use first part of text
+  let extractedText = '';
+  if (relevantSections.length > 0) {
+    extractedText = relevantSections.slice(0, 15).join('\n\n'); // Take first 15 relevant sections
+    console.log('Found', relevantSections.length, 'financial sections');
+  } else {
+    // Fallback: take readable portions from the beginning
+    extractedText = text.substring(0, 15000); // Limit to ~15k characters
+    console.log('No financial sections found, using first 15k characters');
+  }
+  
+  return extractedText;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -18,7 +61,6 @@ serve(async (req) => {
     
     console.log('Starting financial analysis for project:', projectId);
     console.log('PDF text length received:', pdfText?.length || 0);
-    console.log('Text preview (first 500 chars):', pdfText?.substring(0, 500) || 'NO CONTENT');
 
     if (!projectId || !pdfText || pdfText.length < 50) {
       throw new Error('Missing projectId or insufficient PDF content for analysis');
@@ -32,6 +74,10 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
+
+    // Extract only relevant financial sections to reduce token count
+    const relevantText = extractFinancialSections(pdfText);
+    console.log('Reduced text length from', pdfText.length, 'to', relevantText.length, 'characters');
 
     // Enhanced financial data extraction with stronger instructions
     console.log('Performing intelligent financial analysis...');
@@ -83,7 +129,7 @@ SÖK IGENOM TEXTEN efter:
 Om du INTE hittar verkliga finansiella data, sätt "data_quality": "low" och använd "Ej tillgänglig i extraherad text".
 
 Text att analysera:
-${pdfText}
+${relevantText}
 `;
 
     const analysisResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -93,7 +139,7 @@ ${pdfText}
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini', // Switch to smaller, faster model to avoid rate limits
         messages: [
           {
             role: 'system',
@@ -105,7 +151,7 @@ ${pdfText}
           }
         ],
         temperature: 0.1,
-        max_tokens: 4000
+        max_tokens: 3000 // Reduced from 4000 to stay within limits
       }),
     });
 
@@ -185,7 +231,7 @@ Returnera ENDAST denna JSON-struktur:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o',
+          model: 'gpt-4o-mini', // Use smaller model here too
           messages: [
             {
               role: 'system',
@@ -197,7 +243,7 @@ Returnera ENDAST denna JSON-struktur:
             }
           ],
           temperature: 0.2,
-          max_tokens: 4000
+          max_tokens: 3000 // Reduced token limit
         }),
       });
 
@@ -268,7 +314,7 @@ Returnera ENDAST denna JSON-struktur:
         data_quality: extractedData.data_quality,
         financial_data: extractedData,
         scripts_generated: parsedScripts ? 'Yes' : 'No',
-        message: 'Förbättrad finansiell analys med verklig dataextraktion'
+        message: 'Optimerad finansiell analys med smart textextraktion'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
