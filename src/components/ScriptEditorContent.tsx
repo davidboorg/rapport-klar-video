@@ -1,36 +1,23 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useAdvancedProcessing } from "@/hooks/useAdvancedProcessing";
+import { useScriptEditorData } from "@/hooks/useScriptEditorData";
+import { useScriptEditorUpload } from "@/hooks/useScriptEditorUpload";
 import AdvancedProcessingViewer from "./processing/AdvancedProcessingViewer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Brain, FileText, Film, Mic, Upload } from "lucide-react";
-import FinancialDataDisplay from "./FinancialDataDisplay";
-import ScriptAlternativesDisplay from "./ScriptAlternativesDisplay";
 import VideoGeneration from "./VideoGeneration";
 import PodcastGeneration from "./content/PodcastGeneration";
+import UploadTab from "./script-editor/UploadTab";
+import ReviewTab from "./script-editor/ReviewTab";
+import ScriptTab from "./script-editor/ScriptTab";
 
 interface ScriptEditorContentProps {
   projectId: string;
   initialScript?: string;
   onScriptUpdate?: (script: string) => void;
-}
-
-interface FinancialData {
-  company_name?: string;
-  period?: string;
-  revenue?: string;
-  ebitda?: string;
-  growth_percentage?: string;
-  key_highlights?: string[];
-  concerns?: string[];
-  report_type?: string;
-  currency?: string;
-  ceo_quote?: string;
-  forward_guidance?: string;
 }
 
 interface ScriptAlternative {
@@ -45,112 +32,44 @@ interface ScriptAlternative {
 const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: ScriptEditorContentProps) => {
   const [script, setScript] = useState(initialScript);
   const [isSaving, setSaving] = useState(false);
-  const [financialData, setFinancialData] = useState<FinancialData | null>(null);
-  const [scriptAlternatives, setScriptAlternatives] = useState<ScriptAlternative[]>([]);
-  const [showProcessing, setShowProcessing] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [marketType, setMarketType] = useState<'ir' | 'board'>('ir');
   const { toast } = useToast();
 
-  // Use the new advanced processing hook
-  const {
+  // Use custom hooks for data and upload logic
+  const { financialData, scriptAlternatives, fetchProjectData } = useScriptEditorData(projectId);
+  const { 
+    showProcessing, 
+    setShowProcessing, 
+    handleFileUpload,
     tasks,
     currentTaskIndex,
     isProcessing,
-    overallProgress,
-    processDocument
-  } = useAdvancedProcessing(projectId);
+    overallProgress
+  } = useScriptEditorUpload(projectId);
 
   useEffect(() => {
     const storedMarket = localStorage.getItem('selectedMarket') as 'ir' | 'board';
     if (storedMarket) {
       setMarketType(storedMarket);
     }
-    fetchProjectData();
+    loadProjectData();
   }, [projectId]);
 
-  const fetchProjectData = async () => {
-    try {
-      const { data: projectData, error: projectError } = await supabase
-        .from('projects')
-        .select('financial_data, status, pdf_url')
-        .eq('id', projectId)
-        .single();
-
-      if (projectError) throw projectError;
-      
-      if (projectData?.financial_data) {
-        setFinancialData(projectData.financial_data as FinancialData);
-      }
-
-      const { data: contentData, error: contentError } = await supabase
-        .from('generated_content')
-        .select('script_text, script_alternatives')
-        .eq('project_id', projectId)
-        .maybeSingle();
-
-      if (!contentError && contentData) {
-        if (contentData.script_alternatives && Array.isArray(contentData.script_alternatives)) {
-          // Safely convert Json[] to ScriptAlternative[] by validating the structure
-          const alternatives = (contentData.script_alternatives as unknown as ScriptAlternative[])
-            .filter((alt: any) => 
-              alt && 
-              typeof alt === 'object' && 
-              alt.type && 
-              alt.title && 
-              alt.script
-            );
-          setScriptAlternatives(alternatives);
-        }
-        
-        if (contentData.script_text && !initialScript) {
-          setScript(contentData.script_text);
-        }
-      }
-
-      // Show processing if we have a PDF but no processed data
-      const hasProcessedData = !!(projectData?.financial_data || 
-        (contentData?.script_alternatives && Array.isArray(contentData.script_alternatives)));
-      
-      if (projectData?.pdf_url && !hasProcessedData) {
-        setShowProcessing(true);
-      }
-
-    } catch (error) {
-      console.error('Error fetching project data:', error);
-      toast({
-        title: "Loading Error",
-        description: "Could not load project data. Please try again.",
-        variant: "destructive",
-      });
+  const loadProjectData = async () => {
+    const result = await fetchProjectData();
+    if (typeof result === 'string') {
+      setScript(result || initialScript);
+    } else if (result?.shouldShowProcessing) {
+      setShowProcessing(true);
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (file.type !== 'application/pdf') {
-      toast({
-        title: "Invalid File Type",
-        description: "Please upload a PDF file.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSelectedFile(file);
-    setShowProcessing(true);
-
-    // Map marketType to the correct API parameter
-    const documentType: 'quarterly' | 'board' = marketType === 'ir' ? 'quarterly' : 'board';
-
-    // Start the advanced processing pipeline
-    const result = await processDocument(file, documentType);
+  const handleFileUploadWithRefresh = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const result = await handleFileUpload(event, marketType);
     
-    if (result.success) {
+    if (result?.success) {
       // Refresh project data after successful processing
-      await fetchProjectData();
+      await loadProjectData();
       setShowProcessing(false);
     }
   };
@@ -247,87 +166,28 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
         </TabsList>
         
         <TabsContent value="upload">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center space-y-4">
-                <Upload className="w-16 h-16 mx-auto text-gray-400" />
-                <div>
-                  <h3 className="text-lg font-medium mb-2">Upload Your Document</h3>
-                  <p className="text-gray-600 mb-4">
-                    Upload your {marketType === 'ir' ? 'quarterly report' : 'board briefing document'} for AI analysis
-                  </p>
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    id="document-upload"
-                  />
-                  <label htmlFor="document-upload">
-                    <Button asChild className="cursor-pointer">
-                      <span>Choose PDF File</span>
-                    </Button>
-                  </label>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <UploadTab 
+            marketType={marketType}
+            onFileUpload={handleFileUploadWithRefresh}
+          />
         </TabsContent>
         
         <TabsContent value="review">
-          <div className="space-y-6">
-            {financialData && (
-              <FinancialDataDisplay data={financialData} />
-            )}
-            
-            {scriptAlternatives.length > 0 && (
-              <ScriptAlternativesDisplay 
-                alternatives={scriptAlternatives}
-                onScriptSelect={handleScriptSelect}
-              />
-            )}
-            
-            {!financialData && scriptAlternatives.length === 0 && (
-              <Card>
-                <CardContent className="pt-6 text-center">
-                  <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="font-medium mb-2">No data available</h3>
-                  <p className="text-sm text-gray-600">
-                    Upload a document to get AI-generated analysis and scripts.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+          <ReviewTab
+            financialData={financialData}
+            scriptAlternatives={scriptAlternatives}
+            onScriptSelect={handleScriptSelect}
+          />
         </TabsContent>
         
         <TabsContent value="script">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    {marketType === 'ir' ? 'Investor Communication Script' : 'Board Briefing Script'}
-                  </label>
-                  <Textarea
-                    value={script}
-                    onChange={(e) => setScript(e.target.value)}
-                    placeholder={
-                      marketType === 'ir' 
-                        ? "Enter your investor presentation script here..."
-                        : "Enter your board briefing script here..."
-                    }
-                    className="min-h-[300px]"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleSave} disabled={isSaving}>
-                    {isSaving ? 'Saving...' : 'Save Script'}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <ScriptTab
+            script={script}
+            setScript={setScript}
+            marketType={marketType}
+            isSaving={isSaving}
+            onSave={handleSave}
+          />
         </TabsContent>
         
         <TabsContent value="podcast">
