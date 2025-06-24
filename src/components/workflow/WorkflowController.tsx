@@ -109,7 +109,46 @@ const WorkflowController: React.FC = () => {
         throw new Error(`AI-analys fel: ${analysisData?.error || 'Okänt fel'}`);
       }
 
-      // Get the generated script alternatives
+      // Check data quality and handle script generation accordingly
+      if (analysisData.data_quality === 'low' || analysisData.scripts_generated === 'No') {
+        // Generate a basic script from the financial data
+        const basicScript = generateBasicScript(analysisData.financial_data);
+        
+        // Save the basic script to generated_content
+        const { error: contentError } = await supabase
+          .from('generated_content')
+          .insert({
+            project_id: project.id,
+            script_text: basicScript,
+            generation_status: 'completed',
+            script_alternatives: [{
+              type: 'executive',
+              title: 'Grundläggande sammanfattning',
+              duration: '2-3 minuter',
+              script: basicScript,
+              tone: 'Informativ',
+              key_points: ['Dokumentanalys genomförd', 'Grundläggande information extraherad']
+            }]
+          });
+
+        if (contentError) {
+          console.error('Error saving basic script:', contentError);
+        }
+
+        setScript(basicScript);
+        setStatus('Grundläggande manus genererat (låg datakvalitet)');
+        setStep('scriptReview');
+
+        toast({
+          title: "Analys slutförd med begränsningar",
+          description: "Ett grundläggande manus har genererats. Dokumentet kunde inte analyseras fullt ut.",
+          variant: "destructive",
+        });
+
+        return;
+      }
+
+      // Get the generated script alternatives (for high quality data)
       const { data: contentData, error: contentError } = await supabase
         .from('generated_content')
         .select('script_alternatives')
@@ -143,6 +182,23 @@ const WorkflowController: React.FC = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const generateBasicScript = (financialData: any): string => {
+    const companyName = financialData?.company_name || 'Företaget';
+    const period = financialData?.report_period || 'denna period';
+    
+    return `
+Välkommen till en sammanfattning för ${companyName} för ${period}.
+
+Även om vi inte kunde extrahera fullständiga finansiella detaljer från dokumentet, har vi genomfört en grundläggande analys.
+
+Dokumentet har bearbetats och vi har identifierat att det innehåller finansiell information, men för en mer detaljerad analys skulle ett tydligare dokument eller kompletterande information vara till hjälp.
+
+Vi fortsätter att arbeta för att förbättra våra processer och leverera värde till våra intressenter.
+
+Tack för er uppmärksamhet.
+    `.trim();
   };
 
   const handleScriptApprove = async (approvedScript: string) => {
