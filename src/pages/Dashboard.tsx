@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/BergetAuthContext';
 import Navbar from '@/components/Navbar';
+import WorkflowController from '@/components/workflow/WorkflowController';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -47,6 +48,11 @@ const Dashboard = () => {
           <p className="text-slate-600">
             Manage your ReportFlow projects and create professional videos from your financial reports.
           </p>
+        </div>
+
+        {/* Demo Workflow Section */}
+        <div className="mb-8">
+          <WorkflowController />
         </div>
 
         {/* Quick Actions */}

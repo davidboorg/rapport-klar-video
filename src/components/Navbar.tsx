@@ -1,5 +1,6 @@
+
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/BergetAuthContext";
 import { Link, useLocation } from "react-router-dom";
 import { Play, Settings, User, LogOut, Menu } from "lucide-react";
 import {
@@ -30,7 +31,7 @@ const Navbar = () => {
     setMobileMenuOpen(false);
   };
 
-  // Get user display information - adjust for Supabase user structure
+  // Get user display information - adjust for Berget user structure
   const firstName = user?.user_metadata?.firstName || user?.user_metadata?.first_name || "";
   const lastName = user?.user_metadata?.lastName || user?.user_metadata?.last_name || "";
   const company = user?.user_metadata?.company || "";
