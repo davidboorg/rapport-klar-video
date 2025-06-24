@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import UploadStep from './UploadStep';
 import ProcessingStep from './ProcessingStep';
@@ -133,7 +134,7 @@ const WorkflowController: React.FC = () => {
       setStatus('Genererar podcast med ElevenLabs...');
       setStep('audio');
 
-      // Call our generate-podcast Supabase function
+      // Call our generate-podcast Supabase function (no direct API access)
       const { data: audioData, error: audioError } = await supabase.functions.invoke('generate-podcast', {
         body: {
           text: approvedScript,

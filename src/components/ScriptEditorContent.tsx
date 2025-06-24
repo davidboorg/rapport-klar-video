@@ -126,7 +126,7 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
               </div>
               <h3 className="text-lg font-medium mb-2">Advanced AI Processing</h3>
               <p className="text-gray-600">
-                Your document is being processed using Berget.ai's advanced EU-compliant AI system with intelligent document chunking and multi-stage analysis.
+                Your document is being processed using our secure EU-compliant AI system with intelligent document chunking and multi-stage analysis via Supabase Functions.
               </p>
             </div>
           </CardContent>
