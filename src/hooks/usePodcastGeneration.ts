@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { elevenLabsClient, VOICE_PRESETS } from '@/integrations/elevenlabs/client';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface PodcastSettings {
@@ -30,26 +30,29 @@ export const usePodcastGeneration = () => {
     setIsGenerating(true);
 
     try {
-      console.log('Generating podcast with ElevenLabs...', { settings });
+      console.log('Generating podcast with ElevenLabs via Supabase Function...', { settings });
 
-      // Generate audio using ElevenLabs
-      const { data: audioBlob, error } = await elevenLabsClient.textToSpeech(
-        scriptText,
-        settings.voiceId,
-        {
-          stability: 0.5,
-          similarity_boost: 0.75,
-          style: 0.0,
-          use_speaker_boost: true
+      // Generate audio using Supabase Function
+      const { data: audioData, error: audioError } = await supabase.functions.invoke('generate-podcast', {
+        body: {
+          text: scriptText,
+          voice: settings.voiceId,
+          projectId: `podcast_${Date.now()}`
         }
-      );
+      });
 
-      if (error || !audioBlob) {
-        throw new Error(error?.message || 'Failed to generate audio');
+      if (audioError) {
+        throw new Error(`Podcast generation failed: ${audioError.message}`);
       }
 
-      // Create object URL for the generated audio
+      if (!audioData?.success) {
+        throw new Error(`Podcast error: ${audioData?.error || 'Unknown error'}`);
+      }
+
+      // Convert base64 to blob URL for playback
+      const audioBlob = new Blob([Uint8Array.from(atob(audioData.audioContent), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
       const audioUrl = URL.createObjectURL(audioBlob);
+      
       setGeneratedAudioUrl(audioUrl);
 
       toast({

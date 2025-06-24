@@ -1,6 +1,6 @@
 
-import { bergetClient } from '@/integrations/berget/client';
-import { useAuth } from '@/contexts/BergetAuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar } from '@/types/avatar';
 
@@ -12,10 +12,15 @@ export const useAvatarOperations = () => {
     if (!user) return null;
 
     try {
-      const { data, error } = await bergetClient.createAvatar({
-        user_id: user.id,
-        name,
-        status: 'creating' as const
+      const { data, error } = await supabase.functions.invoke('berget-api-proxy', {
+        body: {
+          action: 'createAvatar',
+          payload: {
+            user_id: user.id,
+            name,
+            status: 'creating' as const
+          }
+        }
       });
 
       if (error) throw error;
@@ -39,7 +44,12 @@ export const useAvatarOperations = () => {
 
   const deleteAvatar = async (avatarId: string) => {
     try {
-      const { error } = await bergetClient.deleteAvatar(avatarId);
+      const { error } = await supabase.functions.invoke('berget-api-proxy', {
+        body: {
+          action: 'deleteAvatar',
+          payload: { avatarId }
+        }
+      });
 
       if (error) throw error;
 
@@ -59,7 +69,12 @@ export const useAvatarOperations = () => {
 
   const updateAvatarStatus = async (avatarId: string, status: Avatar['status']) => {
     try {
-      const { error } = await bergetClient.updateAvatar(avatarId, { status });
+      const { error } = await supabase.functions.invoke('berget-api-proxy', {
+        body: {
+          action: 'updateAvatar',
+          payload: { avatarId, status }
+        }
+      });
 
       if (error) throw error;
     } catch (error) {
@@ -74,7 +89,9 @@ export const useAvatarOperations = () => {
         description: "Fetching latest information from Berget.ai...",
       });
 
-      const { data, error } = await bergetClient.refreshAvatar(avatarId);
+      const { data, error } = await supabase.functions.invoke('refresh-avatar-data', {
+        body: { avatarId }
+      });
 
       if (error) throw error;
 

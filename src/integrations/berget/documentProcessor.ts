@@ -1,5 +1,4 @@
-
-import { bergetClient } from './client';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface DocumentChunk {
   id: string;
@@ -183,8 +182,13 @@ class BergetDocumentProcessor {
   }
 
   private async performDocumentAnalysis(file: File, documentType: 'quarterly' | 'board') {
-    // Use Berget.ai for document analysis
-    const { data, error } = await bergetClient.processDocument(file, documentType);
+    // Use Berget.ai via Supabase Function for document analysis
+    const { data, error } = await supabase.functions.invoke('berget-api-proxy', {
+      body: {
+        action: 'processDocument',
+        payload: { file, documentType }
+      }
+    });
     
     if (error) {
       throw new Error(`Document analysis failed: ${error.message}`);
@@ -192,10 +196,10 @@ class BergetDocumentProcessor {
 
     return {
       documentType,
-      pageCount: data.pageCount || 1,
-      hasFinancialData: data.hasFinancialData || false,
-      language: data.language || 'en',
-      structure: data.structure || 'standard'
+      pageCount: data?.pageCount || 1,
+      hasFinancialData: data?.hasFinancialData || false,
+      language: data?.language || 'en',
+      structure: data?.structure || 'standard'
     };
   }
 
@@ -226,9 +230,14 @@ class BergetDocumentProcessor {
   }
 
   private async performContentExtraction(chunks: DocumentChunk[], documentType: 'quarterly' | 'board') {
-    // Use Berget.ai for parallel content extraction
+    // Use Berget.ai via Supabase Function for parallel content extraction
     const extractionPromises = chunks.map(async (chunk) => {
-      const { data, error } = await bergetClient.generateContent([chunk], 'summary');
+      const { data, error } = await supabase.functions.invoke('berget-api-proxy', {
+        body: {
+          action: 'generateContent',
+          payload: { chunks: [chunk], contentType: 'summary' }
+        }
+      });
       
       if (error) {
         console.warn(`Content extraction failed for chunk ${chunk.id}:`, error);
@@ -252,19 +261,24 @@ class BergetDocumentProcessor {
   }
 
   private async generateScripts(extractedData: any, documentType: 'quarterly' | 'board') {
-    const { data, error } = await bergetClient.generateContent(
-      [extractedData], 
-      documentType === 'quarterly' ? 'video' : 'summary'
-    );
+    const { data, error } = await supabase.functions.invoke('berget-api-proxy', {
+      body: {
+        action: 'generateContent',
+        payload: {
+          data: [extractedData],
+          contentType: documentType === 'quarterly' ? 'video' : 'summary'
+        }
+      }
+    });
 
     if (error) {
       throw new Error(`Script generation failed: ${error.message}`);
     }
 
     return {
-      video: data.videoScript || this.generateFallbackScript(extractedData, 'video', documentType),
-      audio: data.audioScript || this.generateFallbackScript(extractedData, 'audio', documentType),
-      executive_summary: data.summary || this.generateFallbackScript(extractedData, 'summary', documentType)
+      video: data?.videoScript || this.generateFallbackScript(extractedData, 'video', documentType),
+      audio: data?.audioScript || this.generateFallbackScript(extractedData, 'audio', documentType),
+      executive_summary: data?.summary || this.generateFallbackScript(extractedData, 'summary', documentType)
     };
   }
 

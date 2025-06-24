@@ -1,7 +1,7 @@
 
 import { useEffect } from 'react';
-import { bergetClient } from '@/integrations/berget/client';
-import { useAuth } from '@/contexts/BergetAuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar } from '@/types/avatar';
 
@@ -14,13 +14,12 @@ export const useAvatarRealtime = (
   useEffect(() => {
     if (!user) return;
 
-    // Set up WebSocket connection for real-time avatar updates via Berget.ai
-    const websocket = bergetClient.connectWebSocket(`/avatars/${user.id}`);
-    
-    if (websocket) {
-      websocket.onmessage = (event) => {
+    // Set up real-time updates via Supabase realtime
+    const channel = supabase
+      .channel(`avatars_${user.id}`)
+      .on('broadcast', { event: 'avatar_update' }, (payload) => {
         try {
-          const update = JSON.parse(event.data);
+          const update = payload.payload;
           console.log('Real-time avatar update:', update);
           
           if (update.type === 'AVATAR_CREATED') {
@@ -65,19 +64,13 @@ export const useAvatarRealtime = (
             setAvatars(prev => prev.filter(avatar => avatar.id !== deletedAvatar.id));
           }
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error('Error parsing real-time message:', error);
         }
-      };
-
-      websocket.onerror = (error) => {
-        console.error('WebSocket error:', error);
-      };
-    }
+      })
+      .subscribe();
 
     return () => {
-      if (websocket) {
-        websocket.close();
-      }
+      supabase.removeChannel(channel);
     };
   }, [user, toast, setAvatars]);
 };

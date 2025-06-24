@@ -17,8 +17,16 @@ import {
   Volume2,
   Pause
 } from 'lucide-react';
-import { VOICE_PRESETS } from '@/integrations/elevenlabs/client';
-import { usePodcastGeneration } from '@/hooks/usePodcastGeneration';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+// Voice presets (moved from deleted client)
+const VOICE_PRESETS = {
+  professional_male: '9BWtsMINqrJLrRacOk9x',
+  professional_female: 'EXAVITQu4vr4xnSDxMaL',
+  executive_male: 'JBFqnCBsd6RMkjVDRZzb',
+  analyst_female: 'cgSgspJ2msm6clMCkdW9'
+};
 
 interface PodcastGenerationProps {
   projectId: string;
@@ -38,8 +46,9 @@ const PodcastGeneration = ({
   const [podcastLength, setPodcastLength] = useState('medium');
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
-
-  const { isGenerating, generatedAudioUrl, generatePodcast, downloadPodcast } = usePodcastGeneration();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const voiceOptions = [
     { id: VOICE_PRESETS.professional_male, name: 'Professional Male (Aria)', description: 'Clear, authoritative voice for business content' },
@@ -61,14 +70,57 @@ const PodcastGeneration = ({
       ];
 
   const handleGeneratePodcast = async () => {
-    const audioUrl = await generatePodcast(scriptText, {
-      voiceId: selectedVoice,
-      speed: speechSpeed[0],
-      targetLength: podcastLength as 'short' | 'medium' | 'long'
-    });
+    if (!scriptText.trim()) {
+      toast({
+        title: "No Script",
+        description: "Please provide a script to generate the podcast",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    if (audioUrl) {
+    setIsGenerating(true);
+
+    try {
+      console.log('Generating podcast with ElevenLabs via Supabase Function...');
+
+      const { data: audioData, error: audioError } = await supabase.functions.invoke('generate-podcast', {
+        body: {
+          text: scriptText,
+          voice: selectedVoice,
+          projectId: projectId
+        }
+      });
+
+      if (audioError) {
+        throw new Error(`Podcast generation failed: ${audioError.message}`);
+      }
+
+      if (!audioData?.success) {
+        throw new Error(`Podcast error: ${audioData?.error || 'Unknown error'}`);
+      }
+
+      // Convert base64 to blob URL for playback
+      const audioBlob = new Blob([Uint8Array.from(atob(audioData.audioContent), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      setGeneratedAudioUrl(audioUrl);
       onPodcastGenerated?.(audioUrl);
+
+      toast({
+        title: "Podcast Generated!",
+        description: "Your podcast is ready to listen to",
+      });
+
+    } catch (error) {
+      console.error('Podcast generation failed:', error);
+      toast({
+        title: "Generation Failed",
+        description: `Failed to generate podcast: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -95,7 +147,12 @@ const PodcastGeneration = ({
   const handleDownload = () => {
     if (generatedAudioUrl) {
       const fileName = `${marketType === 'ir' ? 'investor-briefing' : 'board-briefing'}-podcast.mp3`;
-      downloadPodcast(generatedAudioUrl, fileName);
+      const link = document.createElement('a');
+      link.href = generatedAudioUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 

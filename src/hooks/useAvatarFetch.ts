@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { bergetClient } from '@/integrations/berget/client';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar } from '@/types/avatar';
 
@@ -10,8 +10,12 @@ export const useAvatarFetch = () => {
 
   const fetchAvatars = async () => {
     try {
-      // Use Berget.ai API to fetch avatars
-      const { data, error } = await bergetClient.getAvatars();
+      // Use Supabase Function to fetch avatars from Berget.ai
+      const { data, error } = await supabase.functions.invoke('berget-api-proxy', {
+        body: {
+          action: 'getAvatars'
+        }
+      });
 
       if (error) throw error;
       
