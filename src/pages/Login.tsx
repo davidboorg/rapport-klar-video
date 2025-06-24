@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAuth } from "@/contexts/BergetAuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { Play, Eye, EyeOff, Shield, AlertCircle, Wifi, WifiOff } from "lucide-react";
@@ -17,21 +17,7 @@ const Login = () => {
   const [error, setError] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  // Get auth context with error handling
-  let authContext;
-  try {
-    authContext = useAuth();
-  } catch (err) {
-    console.error('Auth context error:', err);
-    authContext = {
-      login: async () => ({ error: { message: 'Authentication service unavailable' } }),
-      loading: false,
-      isOnline: navigator.onLine
-    };
-  }
-
-  const { login, loading, isOnline } = authContext;
+  const { login, loading, isOnline } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +39,7 @@ const Login = () => {
       return;
     }
 
-    console.log('Attempting login with:', { email, password: '***' });
+    console.log('Attempting login with Supabase auth:', { email, password: '***' });
 
     const { error: loginError } = await login(email, password);
     
