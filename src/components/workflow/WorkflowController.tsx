@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import UploadStep from './UploadStep';
 import ProcessingStep from './ProcessingStep';
@@ -74,13 +73,31 @@ const WorkflowController: React.FC = () => {
         throw new Error(`Kunde inte uppdatera projekt: ${updateError.message}`);
       }
 
-      setStatus('Bearbetar dokument med Berget AI...');
+      setStatus('Extraherar PDF innehåll...');
 
-      // Call Supabase function to process with Berget AI
+      // First extract PDF content
+      const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-content', {
+        body: {
+          pdfUrl: publicUrl,
+          projectId: project.id
+        }
+      });
+
+      if (extractionError) {
+        throw new Error(`PDF extraktion misslyckades: ${extractionError.message}`);
+      }
+
+      if (!extractionData?.success || !extractionData?.content) {
+        throw new Error(`PDF extraktion fel: ${extractionData?.error || 'Kunde inte extrahera innehåll'}`);
+      }
+
+      setStatus('Bearbetar dokument med AI...');
+
+      // Now call AI analysis with the extracted text content
       const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-financial-data', {
         body: {
           projectId: project.id,
-          pdfUrl: publicUrl
+          pdfText: extractionData.content // Pass the extracted text content
         }
       });
 
