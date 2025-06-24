@@ -30,17 +30,33 @@ serve(async (req) => {
       )
     }
 
+    // Get the API key from environment variables (Supabase secrets)
+    const heygenApiKey = Deno.env.get('HEYGEN_API_KEY');
+    
+    if (!heygenApiKey) {
+      console.error('HEYGEN_API_KEY not found in environment variables');
+      return new Response(
+        JSON.stringify({ error: 'HEYGEN_API_KEY not configured in Supabase environment variables' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
     // Update avatar status to processing
     await supabase
       .from('user_avatars')
       .update({ status: 'processing' })
       .eq('id', avatarId)
 
+    console.log(`Creating HeyGen avatar for avatar ID: ${avatarId}`);
+
     // Call HeyGen API to create avatar
     const heygenResponse = await fetch('https://api.heygen.com/v2/avatars/instant_avatar', {
       method: 'POST',
       headers: {
-        'X-API-Key': Deno.env.get('HEYGEN_API_KEY') ?? '',
+        'X-API-Key': heygenApiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -80,6 +96,8 @@ serve(async (req) => {
         preview_video_url: heygenData.data.preview_video_url
       })
       .eq('id', avatarId)
+
+    console.log('HeyGen avatar created successfully');
 
     return new Response(
       JSON.stringify({ 

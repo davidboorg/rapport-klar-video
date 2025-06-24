@@ -14,24 +14,55 @@ serve(async (req) => {
   }
 
   try {
-    const { endpoint, method = 'GET', body, headers = {} } = await req.json();
+    const { action, payload } = await req.json();
     
-    // Get the API key from the configured secret
+    // Get the API key from environment variables (Supabase secrets)
     const bergetApiKey = Deno.env.get('BERGET_API_KEY');
     
     if (!bergetApiKey) {
-      console.error('No Berget API key found in environment variables');
-      throw new Error('BERGET_API_KEY not configured');
+      console.error('BERGET_API_KEY not found in environment variables');
+      throw new Error('BERGET_API_KEY not configured in Supabase environment variables');
     }
 
     const bergetApiUrl = "https://api.berget.ai/v1";
     
-    console.log(`Proxying ${method} request to Berget API: ${endpoint}`);
+    console.log(`Processing Berget API request - Action: ${action}`);
+
+    let endpoint = '';
+    let method = 'GET';
+    let body = null;
+
+    // Route different actions to appropriate Berget API endpoints
+    switch (action) {
+      case 'getAvatars':
+        endpoint = '/avatars';
+        method = 'GET';
+        break;
+      
+      case 'createAvatar':
+        endpoint = '/avatars';
+        method = 'POST';
+        body = payload;
+        break;
+      
+      case 'updateAvatar':
+        endpoint = `/avatars/${payload.avatarId}`;
+        method = 'PUT';
+        body = { status: payload.status };
+        break;
+      
+      case 'deleteAvatar':
+        endpoint = `/avatars/${payload.avatarId}`;
+        method = 'DELETE';
+        break;
+      
+      default:
+        throw new Error(`Unknown action: ${action}`);
+    }
 
     const requestHeaders = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${bergetApiKey}`,
-      ...headers,
     };
 
     const requestOptions: RequestInit = {
@@ -42,6 +73,8 @@ serve(async (req) => {
     if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
       requestOptions.body = JSON.stringify(body);
     }
+
+    console.log(`Making request to Berget API: ${method} ${endpoint}`);
 
     const response = await fetch(`${bergetApiUrl}${endpoint}`, requestOptions);
     
