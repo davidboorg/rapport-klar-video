@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAvatars, Avatar } from '@/hooks/useAvatars';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
