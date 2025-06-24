@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navbar from "@/components/Navbar";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/BergetAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { 
   User, 

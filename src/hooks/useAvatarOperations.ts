@@ -15,7 +15,7 @@ export const useAvatarOperations = () => {
       const { data, error } = await bergetClient.createAvatar({
         user_id: user.id,
         name,
-        status: 'creating'
+        status: 'creating' as const
       });
 
       if (error) throw error;
@@ -57,7 +57,7 @@ export const useAvatarOperations = () => {
     }
   };
 
-  const updateAvatarStatus = async (avatarId: string, status: string) => {
+  const updateAvatarStatus = async (avatarId: string, status: Avatar['status']) => {
     try {
       const { error } = await bergetClient.updateAvatar(avatarId, { status });
 
