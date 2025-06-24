@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import UploadStep from './UploadStep';
 import ProcessingStep from './ProcessingStep';
 import ScriptReviewStep from './ScriptReviewStep';
-import AudioGenerationStep from './AudioGenerationStep';
+import PodcastGeneration from '../content/PodcastGeneration';
 import VideoGenerationStep from './VideoGenerationStep';
 import DownloadStep from './DownloadStep';
 import StatusIndicator from './StatusIndicator';
@@ -147,63 +146,21 @@ const WorkflowController: React.FC = () => {
   };
 
   const handleScriptApprove = async (approvedScript: string) => {
-    try {
-      setScript(approvedScript);
-      setStatus('Genererar podcast med ElevenLabs...');
-      setStep('audio');
+    setScript(approvedScript);
+    setStatus('Redo att generera podcast med ElevenLabs');
+    setStep('audio');
 
-      // Call our generate-podcast Supabase function with valid ElevenLabs voice
-      const { data: audioData, error: audioError } = await supabase.functions.invoke('generate-podcast', {
-        body: {
-          text: approvedScript,
-          voice: '9BWtsMINqrJLrRacOk9x', // Use Aria voice (valid ElevenLabs voice ID)
-          projectId: projectId
-        }
-      });
-
-      if (audioError) {
-        throw new Error(`Podcast-generering misslyckades: ${audioError.message}`);
-      }
-
-      if (!audioData?.success) {
-        throw new Error(`Podcast-fel: ${audioData?.error || 'Okänt fel'}`);
-      }
-
-      // Convert base64 to blob URL for playback
-      const audioBlob = new Blob([Uint8Array.from(atob(audioData.audioContent), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
-      setAudioUrl(audioUrl);
-      setStatus('Podcast klar för nedladdning');
-
-      toast({
-        title: "Podcast Genererad!",
-        description: "Din podcast är redo att lyssna på och ladda ner.",
-      });
-
-      // Skip directly to download since we're not doing video yet
-      setTimeout(() => {
-        setStep('download');
-        setStatus('Klar för nedladdning');
-      }, 1000);
-
-    } catch (error) {
-      console.error('Audio generation error:', error);
-      setStatus(`Fel: ${error instanceof Error ? error.message : 'Okänt fel'}`);
-      
-      toast({
-        title: "Podcast-fel",
-        description: error instanceof Error ? error.message : 'Kunde inte generera podcast',
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "Manus godkänt!",
+      description: "Nu kan du generera podcast med avancerade ElevenLabs-inställningar.",
+    });
   };
 
-  const handleAudioReady = () => {
-    setStep('video');
-    setStatus('Video-steg (kommer snart)...');
+  const handlePodcastGenerated = (podcastUrl: string) => {
+    setAudioUrl(podcastUrl);
+    setStatus('Podcast genererad och redo för nedladdning');
     
-    // Skip video for now and go directly to download
+    // Skip video step and go directly to download
     setTimeout(() => {
       setStep('download');
       setStatus('Klar för nedladdning');
@@ -249,8 +206,13 @@ const WorkflowController: React.FC = () => {
       {step === 'scriptReview' && script && (
         <ScriptReviewStep script={script} onApprove={handleScriptApprove} />
       )}
-      {step === 'audio' && script && (
-        <AudioGenerationStep script={script} audioUrl={audioUrl} onAudioReady={handleAudioReady} />
+      {step === 'audio' && script && projectId && (
+        <PodcastGeneration
+          projectId={projectId}
+          scriptText={script}
+          marketType="ir"
+          onPodcastGenerated={handlePodcastGenerated}
+        />
       )}
       {step === 'video' && script && (
         <VideoGenerationStep script={script} videoUrl={videoUrl} />
