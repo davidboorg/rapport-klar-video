@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/BergetAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/components/Navbar';
 import WorkflowController from '@/components/workflow/WorkflowController';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,7 +43,7 @@ const Dashboard = () => {
         {/* Welcome Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            Welcome back, {user.firstName || user.email?.split('@')[0]}!
+            Welcome back, {user.email?.split('@')[0]}!
           </h1>
           <p className="text-slate-600">
             Manage your ReportFlow projects and create professional videos from your financial reports.
