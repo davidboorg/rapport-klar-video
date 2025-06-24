@@ -1,38 +1,13 @@
 
-// Compatibility layer for Supabase - all functionality moved to Berget.ai
-import { bergetClient } from '@/integrations/berget/client';
+import { createClient } from '@supabase/supabase-js'
 
-// Mock Supabase-like interface for compatibility with existing code
-export const supabase = {
-  from: (table: string) => ({
-    select: (columns?: string) => ({
-      eq: (column: string, value: any) => ({
-        single: () => Promise.resolve({ data: null, error: { message: 'Functionality moved to Berget.ai - use bergetClient instead' } }),
-        maybeSingle: () => Promise.resolve({ data: null, error: { message: 'Functionality moved to Berget.ai - use bergetClient instead' } }),
-        order: (column: string, options?: any) => Promise.resolve({ data: [], error: { message: 'Functionality moved to Berget.ai - use bergetClient instead' } })
-      }),
-      order: (column: string, options?: any) => Promise.resolve({ data: [], error: { message: 'Functionality moved to Berget.ai - use bergetClient instead' } })
-    }),
-    insert: (data: any) => ({
-      select: () => ({
-        single: () => Promise.resolve({ data: null, error: { message: 'Functionality moved to Berget.ai - use bergetClient instead' } })
-      })
-    }),
-    update: (data: any) => ({
-      eq: (column: string, value: any) => Promise.resolve({ data: null, error: { message: 'Functionality moved to Berget.ai - use bergetClient instead' } })
-    }),
-    delete: () => ({
-      eq: (column: string, value: any) => Promise.resolve({ data: null, error: { message: 'Functionality moved to Berget.ai - use bergetClient instead' } })
-    }),
-    upsert: (data: any) => Promise.resolve({ data: null, error: { message: 'Functionality moved to Berget.ai - use bergetClient instead' } })
-  }),
-  functions: {
-    invoke: (functionName: string, options?: any) => 
-      Promise.resolve({ data: null, error: { message: 'Edge functions moved to Berget.ai - use bergetClient instead' } })
-  },
-  channel: (name: string) => ({
-    on: (event: string, config: any, callback: Function) => ({ subscribe: () => {} }),
-    subscribe: () => {}
-  }),
-  removeChannel: (channel: any) => {}
-};
+const supabaseUrl = 'https://qpveeqvzvukolfagasne.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwdmVlcXZ6dnVrb2xmYWdhc25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxMjEzOTcsImV4cCI6MjA2NDY5NzM5N30.rnEQz2aeCFoEPtBGXj6ydg4oKTY8ftX7d4TjrJXMUC4'
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: localStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+})

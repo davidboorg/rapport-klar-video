@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAuth } from "@/contexts/BergetAuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { Play, Eye, EyeOff, CheckCircle, Shield, AlertCircle, Wifi, WifiOff } from "lucide-react";
@@ -84,7 +84,7 @@ const Register = () => {
     } else {
       toast({
         title: "Account created!",
-        description: "Welcome to ReportFlow - your account is EU-compliant and secure",
+        description: "Welcome to ReportFlow - check your email to verify your account",
       });
       navigate("/dashboard");
     }
