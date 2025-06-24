@@ -12,7 +12,6 @@ import Projects from "./pages/Projects";
 import ProjectEditor from "./pages/ProjectEditor";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
-import Templates from "./pages/Templates";
 import Avatars from "./pages/Avatars";
 import AvatarSetup from "./pages/AvatarSetup";
 import NotFound from "./pages/NotFound";
@@ -41,7 +40,6 @@ function App() {
               <Route path="/projects/:projectId" element={<ProjectEditor />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/templates" element={<Templates />} />
               <Route path="/avatars" element={<Avatars />} />
               <Route path="/avatars/create" element={<AvatarSetup />} />
               <Route path="*" element={<NotFound />} />
