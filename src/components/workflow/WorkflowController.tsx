@@ -46,7 +46,7 @@ const WorkflowController: React.FC = () => {
       setProjectId(project.id);
       setStatus('Laddar upp fil...');
 
-      // Upload file to Supabase storage (you'll need to create this bucket)
+      // Upload file to the documents bucket
       const fileName = `${project.id}/${uploadedFile.name}`;
       const { error: uploadError } = await supabase.storage
         .from('documents')
@@ -159,6 +159,12 @@ const WorkflowController: React.FC = () => {
         title: "Podcast Genererad!",
         description: "Din podcast är redo att lyssna på och ladda ner.",
       });
+
+      // Skip directly to download since we're not doing video yet
+      setTimeout(() => {
+        setStep('download');
+        setStatus('Klar för nedladdning');
+      }, 1000);
 
     } catch (error) {
       console.error('Audio generation error:', error);
