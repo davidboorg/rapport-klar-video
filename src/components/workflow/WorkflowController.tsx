@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import UploadStep from './UploadStep';
 import ProcessingStep from './ProcessingStep';
@@ -28,13 +27,16 @@ const WorkflowController: React.FC = () => {
       setStatus('Skapar projekt...');
       setStep('processing');
 
-      // Create a new project in Supabase
+      // Create a new project in Supabase with demo user ID
+      const demoUserId = '00000000-0000-0000-0000-000000000000'; // Demo UUID for anonymous users
+      
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
           name: `Demo: ${uploadedFile.name}`,
           description: 'Demo workflow project',
-          status: 'processing'
+          status: 'processing',
+          user_id: demoUserId // Add demo user ID for RLS-disabled demo
         })
         .select()
         .single();
