@@ -16,9 +16,8 @@ serve(async (req) => {
   try {
     const { endpoint, method = 'GET', body, headers = {} } = await req.json();
     
-    // Try to get the API key from the stored secret
-    const bergetApiKey = Deno.env.get('sk_ber_3jnGf3YG1X4MHcpoY4ZRBuvDTZfHWmqz7EIeR_2eddbe6f6174d835') || 
-                         Deno.env.get('BERGET_API_KEY');
+    // Get the API key from the configured secret
+    const bergetApiKey = Deno.env.get('BERGET_API_KEY');
     
     if (!bergetApiKey) {
       console.error('No Berget API key found in environment variables');
