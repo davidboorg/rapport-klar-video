@@ -3,7 +3,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-interface ProcessingTask {
+export interface ProcessingTask {
   id: string;
   title: string;
   status: 'pending' | 'processing' | 'completed' | 'error';
