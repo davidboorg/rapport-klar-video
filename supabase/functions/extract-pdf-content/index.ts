@@ -25,7 +25,6 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
@@ -50,82 +49,25 @@ serve(async (req) => {
         throw new Error('PDF file is too large for processing. Please use a file smaller than 50MB.');
       }
 
-      // Try to use a simple text extraction approach first
-      console.log('Attempting text extraction using OpenAI for analysis...');
+      console.log('Attempting text extraction using pdf-parse...');
       
-      // Convert to base64 for OpenAI but with smaller chunks and better error handling
-      const pdfBytes = new Uint8Array(pdfArrayBuffer);
+      // Use dynamic import for pdf-parse from npm via esm.sh
+      const pdfParse = await import('https://esm.sh/pdf-parse@1.1.1');
       
-      // For very large files, we'll truncate to first 5MB for analysis
-      const maxAnalysisSize = 5 * 1024 * 1024; // 5MB
-      const bytesToAnalyze = pdfBytes.length > maxAnalysisSize ? pdfBytes.slice(0, maxAnalysisSize) : pdfBytes;
+      // Extract text using pdf-parse
+      const pdfBuffer = new Uint8Array(pdfArrayBuffer);
+      const pdfData = await pdfParse.default(pdfBuffer);
       
-      let base64Pdf = '';
-      const chunkSize = 100000; // Smaller chunks: 100KB
+      extractedText = pdfData.text;
+      extractionMethod = 'pdf-parse';
       
-      for (let i = 0; i < bytesToAnalyze.length; i += chunkSize) {
-        const chunk = bytesToAnalyze.slice(i, i + chunkSize);
-        const chunkString = Array.from(chunk, byte => String.fromCharCode(byte)).join('');
-        base64Pdf += btoa(chunkString);
-      }
-      
-      console.log('PDF converted to base64, length:', base64Pdf.length);
-
-      if (openAIApiKey) {
-        console.log('Using OpenAI to analyze PDF content...');
-        
-        const analysisResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openAIApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o',
-            messages: [
-              {
-                role: 'system',
-                content: 'Du är en expert på att extrahera och sammanfatta finansiell information från PDF-rapporter. Extrahera all viktig text och finansiell data från detta dokument. Fokusera på siffror, företagsnamn, rapportperiod, intäkter, vinster, och annan finansiell data.'
-              },
-              {
-                role: 'user',
-                content: [
-                  {
-                    type: 'text',
-                    text: 'Analysera detta PDF-dokument och extrahera all viktig finansiell information. Returnera all text du kan läsa från dokumentet, särskilt företagsnamn, rapportperiod, finansiella siffror och nyckeltal.'
-                  },
-                  {
-                    type: 'image_url',
-                    image_url: {
-                      url: `data:application/pdf;base64,${base64Pdf}`
-                    }
-                  }
-                ]
-              }
-            ],
-            max_tokens: 4000,
-            temperature: 0.1
-          }),
-        });
-
-        if (analysisResponse.ok) {
-          const analysisData = await analysisResponse.json();
-          extractedText = analysisData.choices[0].message.content;
-          extractionMethod = 'openai_pdf_analysis';
-          
-          console.log('Successfully analyzed PDF with OpenAI');
-          console.log('Extracted text length:', extractedText.length);
-          console.log('First 500 chars:', extractedText.substring(0, 500));
-        } else {
-          console.log('OpenAI analysis failed, using fallback method');
-          throw new Error('OpenAI analysis failed');
-        }
-      } else {
-        throw new Error('OpenAI API key not available');
-      }
+      console.log('Successfully extracted text with pdf-parse');
+      console.log('Extracted text length:', extractedText.length);
+      console.log('Pages:', pdfData.numpages);
+      console.log('First 500 chars:', extractedText.substring(0, 500));
 
     } catch (extractionError) {
-      console.error('Primary extraction method failed:', extractionError);
+      console.error('PDF extraction failed:', extractionError);
       
       // Robust fallback that provides meaningful context
       extractedText = `
@@ -145,6 +87,7 @@ Dokumentet kommer att bearbetas för att extrahera verkliga finansiella data och
 
 Filstorlek: ${extractionError.message?.includes('size') ? 'Stor fil' : 'Standard storlek'}
 Status: Redo för djupanalys med AI-system
+Felmeddelande: ${extractionError.message}
 `;
       
       extractionMethod = 'structured_fallback';
