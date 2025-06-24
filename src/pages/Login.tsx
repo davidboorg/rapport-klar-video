@@ -15,9 +15,23 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const { login, loading, isOnline } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Get auth context with error handling
+  let authContext;
+  try {
+    authContext = useAuth();
+  } catch (err) {
+    console.error('Auth context error:', err);
+    authContext = {
+      login: async () => ({ error: { message: 'Authentication service unavailable' } }),
+      loading: false,
+      isOnline: navigator.onLine
+    };
+  }
+
+  const { login, loading, isOnline } = authContext;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,9 +53,12 @@ const Login = () => {
       return;
     }
 
+    console.log('Attempting login with:', { email, password: '***' });
+
     const { error: loginError } = await login(email, password);
     
     if (loginError) {
+      console.error('Login error received:', loginError);
       setError(loginError.message || "Login failed. Please try again.");
       
       // Show different toast messages based on error type
@@ -65,6 +82,7 @@ const Login = () => {
         });
       }
     } else {
+      console.log('Login successful, navigating to dashboard');
       toast({
         title: "Welcome back!",
         description: "You have been logged in successfully",
