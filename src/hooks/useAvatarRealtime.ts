@@ -1,7 +1,7 @@
 
 import { useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { bergetClient } from '@/integrations/berget/client';
+import { useAuth } from '@/contexts/BergetAuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar } from '@/types/avatar';
 
@@ -14,33 +14,28 @@ export const useAvatarRealtime = (
   useEffect(() => {
     if (!user) return;
 
-    // Set up real-time subscription for avatar updates
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_avatars',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log('Real-time avatar update:', payload);
+    // Set up WebSocket connection for real-time avatar updates via Berget.ai
+    const websocket = bergetClient.connectWebSocket(`/avatars/${user.id}`);
+    
+    if (websocket) {
+      websocket.onmessage = (event) => {
+        try {
+          const update = JSON.parse(event.data);
+          console.log('Real-time avatar update:', update);
           
-          if (payload.eventType === 'INSERT') {
+          if (update.type === 'AVATAR_CREATED') {
             const newAvatar = { 
-              ...payload.new as Avatar, 
+              ...update.data, 
               progress: 5 // Start with 5% progress
             };
             setAvatars(prev => [newAvatar, ...prev]);
             console.log('New avatar created with initial progress:', newAvatar);
             toast({
-              title: "Ny avatar",
-              description: `${newAvatar.name} har lagts till`,
+              title: "New Avatar",
+              description: `${newAvatar.name} has been added`,
             });
-          } else if (payload.eventType === 'UPDATE') {
-            const updatedAvatar = payload.new as Avatar;
+          } else if (update.type === 'AVATAR_UPDATED') {
+            const updatedAvatar = update.data;
             setAvatars(prev => prev.map(avatar => 
               avatar.id === updatedAvatar.id ? { 
                 ...updatedAvatar, 
@@ -55,26 +50,34 @@ export const useAvatarRealtime = (
             // Show toast for status changes
             if (updatedAvatar.status === 'completed') {
               toast({
-                title: "Avatar färdig!",
-                description: `${updatedAvatar.name} är nu redo för användning`,
+                title: "Avatar Ready!",
+                description: `${updatedAvatar.name} is now ready for use`,
               });
             } else if (updatedAvatar.status === 'failed') {
               toast({
-                title: "Avatar misslyckades",
-                description: `Ett fel uppstod när ${updatedAvatar.name} skapades`,
+                title: "Avatar Failed",
+                description: `An error occurred while creating ${updatedAvatar.name}`,
                 variant: "destructive",
               });
             }
-          } else if (payload.eventType === 'DELETE') {
-            const deletedAvatar = payload.old as Avatar;
+          } else if (update.type === 'AVATAR_DELETED') {
+            const deletedAvatar = update.data;
             setAvatars(prev => prev.filter(avatar => avatar.id !== deletedAvatar.id));
           }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
         }
-      )
-      .subscribe();
+      };
+
+      websocket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (websocket) {
+        websocket.close();
+      }
     };
   }, [user, toast, setAvatars]);
 };

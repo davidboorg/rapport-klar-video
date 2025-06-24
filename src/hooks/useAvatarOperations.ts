@@ -1,6 +1,6 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { bergetClient } from '@/integrations/berget/client';
+import { useAuth } from '@/contexts/BergetAuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar } from '@/types/avatar';
 
@@ -12,30 +12,25 @@ export const useAvatarOperations = () => {
     if (!user) return null;
 
     try {
-      const { data, error } = await supabase
-        .from('user_avatars')
-        .insert({
-          user_id: user.id,
-          name,
-          status: 'creating'
-        })
-        .select()
-        .single();
+      const { data, error } = await bergetClient.createAvatar({
+        user_id: user.id,
+        name,
+        status: 'creating'
+      });
 
       if (error) throw error;
 
-      // No need to manually fetchAvatars() since real-time will handle it
       toast({
-        title: "Avatar skapad",
-        description: `${name} har skapats och är redo för träning`,
+        title: "Avatar Created",
+        description: `${name} has been created and is ready for training`,
       });
 
       return data;
     } catch (error) {
       console.error('Error creating avatar:', error);
       toast({
-        title: "Fel",
-        description: "Kunde inte skapa avatar",
+        title: "Error",
+        description: "Could not create avatar",
         variant: "destructive",
       });
       return null;
@@ -44,23 +39,19 @@ export const useAvatarOperations = () => {
 
   const deleteAvatar = async (avatarId: string) => {
     try {
-      const { error } = await supabase
-        .from('user_avatars')
-        .delete()
-        .eq('id', avatarId);
+      const { error } = await bergetClient.deleteAvatar(avatarId);
 
       if (error) throw error;
 
-      // No need to manually fetchAvatars() since real-time will handle it
       toast({
-        title: "Avatar borttagen",
-        description: "Avataren har tagits bort",
+        title: "Avatar Deleted",
+        description: "The avatar has been removed",
       });
     } catch (error) {
       console.error('Error deleting avatar:', error);
       toast({
-        title: "Fel",
-        description: "Kunde inte ta bort avatar",
+        title: "Error",
+        description: "Could not delete avatar",
         variant: "destructive",
       });
     }
@@ -68,13 +59,9 @@ export const useAvatarOperations = () => {
 
   const updateAvatarStatus = async (avatarId: string, status: string) => {
     try {
-      const { error } = await supabase
-        .from('user_avatars')
-        .update({ status })
-        .eq('id', avatarId);
+      const { error } = await bergetClient.updateAvatar(avatarId, { status });
 
       if (error) throw error;
-      // No need to manually fetchAvatars() since real-time will handle it
     } catch (error) {
       console.error('Error updating avatar status:', error);
     }
@@ -83,33 +70,31 @@ export const useAvatarOperations = () => {
   const refreshAvatarData = async (avatarId: string) => {
     try {
       toast({
-        title: "Uppdaterar avatar-data",
-        description: "Hämtar senaste information från HeyGen...",
+        title: "Updating Avatar Data",
+        description: "Fetching latest information from Berget.ai...",
       });
 
-      const { data, error } = await supabase.functions.invoke('refresh-avatar-data', {
-        body: { avatarId }
-      });
+      const { data, error } = await bergetClient.refreshAvatar(avatarId);
 
       if (error) throw error;
 
       if (data?.success) {
         toast({
-          title: "Avatar-data uppdaterad",
-          description: "Senaste information har hämtats från HeyGen",
+          title: "Avatar Data Updated",
+          description: "Latest information has been fetched from Berget.ai",
         });
       } else {
         toast({
-          title: "Ingen uppdatering tillgänglig",
-          description: "HeyGen har ingen ny information för denna avatar",
+          title: "No Update Available",
+          description: "Berget.ai has no new information for this avatar",
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error('Error refreshing avatar data:', error);
       toast({
-        title: "Fel vid uppdatering",
-        description: "Kunde inte hämta uppdaterad avatar-data",
+        title: "Update Error",
+        description: "Could not fetch updated avatar data",
         variant: "destructive",
       });
     }

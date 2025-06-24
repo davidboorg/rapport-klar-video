@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { bergetClient } from '@/integrations/berget/client';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar } from '@/types/avatar';
 
@@ -10,10 +10,8 @@ export const useAvatarFetch = () => {
 
   const fetchAvatars = async () => {
     try {
-      const { data, error } = await supabase
-        .from('user_avatars')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Use Berget.ai API to fetch avatars
+      const { data, error } = await bergetClient.getAvatars();
 
       if (error) throw error;
       
@@ -41,8 +39,8 @@ export const useAvatarFetch = () => {
     } catch (error) {
       console.error('Error fetching avatars:', error);
       toast({
-        title: "Fel",
-        description: "Kunde inte hämta avatarer",
+        title: "Error",
+        description: "Could not fetch avatars",
         variant: "destructive",
       });
       return [];

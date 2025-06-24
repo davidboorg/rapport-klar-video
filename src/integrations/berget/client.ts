@@ -1,3 +1,4 @@
+
 // Berget.ai API client configuration
 export interface BergetConfig {
   apiUrl: string;
@@ -21,13 +22,63 @@ export interface BergetSession {
   user: BergetUser;
 }
 
+export interface BergetAvatar {
+  id: string;
+  user_id: string;
+  name: string;
+  status: 'creating' | 'processing' | 'completed' | 'failed';
+  created_at: string;
+  updated_at: string;
+  avatar_url?: string;
+  progress?: number;
+}
+
+export interface BergetProject {
+  id: string;
+  user_id: string;
+  name: string;
+  description?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
 class BergetClient {
   private config: BergetConfig;
+  private websockets: Map<string, WebSocket> = new Map();
 
   constructor(config: BergetConfig) {
     this.config = config;
   }
 
+  private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<{ data: any; error: any }> {
+    try {
+      const session = this.getStoredSession();
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.accessToken || this.config.apiKey}`,
+        ...options.headers,
+      };
+
+      const response = await fetch(`${this.config.apiUrl}${endpoint}`, {
+        ...options,
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return { data: null, error: { message: errorText || 'Request failed', status: response.status } };
+      }
+
+      const data = await response.json();
+      return { data, error: null };
+    } catch (error) {
+      console.error('API request failed:', error);
+      return { data: null, error: { message: 'Network error', originalError: error } };
+    }
+  }
+
+  // Authentication methods
   async login(email: string, password: string): Promise<{ data: BergetSession | null; error: any }> {
     try {
       console.log('Attempting login to Berget.ai API...');
@@ -47,7 +98,6 @@ class BergetClient {
         const errorText = await response.text();
         console.error('Login failed with response:', errorText);
         
-        // Handle specific error cases
         if (response.status === 401) {
           return { data: null, error: { message: 'Invalid email or password' } };
         }
@@ -68,7 +118,6 @@ class BergetClient {
     } catch (error) {
       console.error('Network error during login:', error);
       
-      // Handle network errors specifically
       if (error instanceof TypeError && error.message.includes('fetch')) {
         return { 
           data: null, 
@@ -152,6 +201,9 @@ class BergetClient {
       console.error('Logout error:', error);
     } finally {
       localStorage.removeItem('berget_session');
+      // Close all WebSocket connections
+      this.websockets.forEach(ws => ws.close());
+      this.websockets.clear();
     }
   }
 
@@ -184,7 +236,63 @@ class BergetClient {
     }
   }
 
-  // Document processing methods for Phase 2
+  // Avatar methods
+  async getAvatars(): Promise<{ data: BergetAvatar[] | null; error: any }> {
+    return this.makeRequest('/avatars');
+  }
+
+  async createAvatar(avatarData: Partial<BergetAvatar>): Promise<{ data: BergetAvatar | null; error: any }> {
+    return this.makeRequest('/avatars', {
+      method: 'POST',
+      body: JSON.stringify(avatarData),
+    });
+  }
+
+  async updateAvatar(avatarId: string, updates: Partial<BergetAvatar>): Promise<{ data: BergetAvatar | null; error: any }> {
+    return this.makeRequest(`/avatars/${avatarId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteAvatar(avatarId: string): Promise<{ data: null; error: any }> {
+    return this.makeRequest(`/avatars/${avatarId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async refreshAvatar(avatarId: string): Promise<{ data: any; error: any }> {
+    return this.makeRequest(`/avatars/${avatarId}/refresh`, {
+      method: 'POST',
+    });
+  }
+
+  // Project methods
+  async getProjects(): Promise<{ data: BergetProject[] | null; error: any }> {
+    return this.makeRequest('/projects');
+  }
+
+  async createProject(projectData: Partial<BergetProject>): Promise<{ data: BergetProject | null; error: any }> {
+    return this.makeRequest('/projects', {
+      method: 'POST',
+      body: JSON.stringify(projectData),
+    });
+  }
+
+  async updateProject(projectId: string, updates: Partial<BergetProject>): Promise<{ data: BergetProject | null; error: any }> {
+    return this.makeRequest(`/projects/${projectId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteProject(projectId: string): Promise<{ data: null; error: any }> {
+    return this.makeRequest(`/projects/${projectId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Document processing methods
   async processDocument(file: File, documentType: 'quarterly' | 'board'): Promise<{ data: any; error: any }> {
     try {
       const formData = new FormData();
@@ -213,30 +321,29 @@ class BergetClient {
   }
 
   async generateContent(chunks: any[], contentType: 'video' | 'audio' | 'summary'): Promise<{ data: any; error: any }> {
+    return this.makeRequest('/content/generate', {
+      method: 'POST',
+      body: JSON.stringify({
+        chunks,
+        contentType,
+        euCompliant: true,
+      }),
+    });
+  }
+
+  // WebSocket connection for real-time updates
+  connectWebSocket(endpoint: string): WebSocket | null {
     try {
       const session = this.getStoredSession();
-      const response = await fetch(`${this.config.apiUrl}/content/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.accessToken || this.config.apiKey}`,
-        },
-        body: JSON.stringify({
-          chunks,
-          contentType,
-          euCompliant: true,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        return { data: null, error };
-      }
-
-      const result = await response.json();
-      return { data: result, error: null };
+      const wsUrl = this.config.apiUrl.replace('https://', 'wss://').replace('http://', 'ws://');
+      const websocket = new WebSocket(`${wsUrl}${endpoint}?token=${session?.accessToken || this.config.apiKey}`);
+      
+      this.websockets.set(endpoint, websocket);
+      
+      return websocket;
     } catch (error) {
-      return { data: null, error };
+      console.error('WebSocket connection failed:', error);
+      return null;
     }
   }
 
@@ -254,7 +361,7 @@ class BergetClient {
   }
 }
 
-// Initialize Berget.ai client with real API key
+// Initialize Berget.ai client with production configuration
 const BERGET_API_URL = "https://api.berget.ai/v1";
 const BERGET_API_KEY = "sk_ber_3jnGf3YG1X4MHcpoY4ZRBuvDTZfHWmqz7EIeR_2eddbe6f6174d835";
 

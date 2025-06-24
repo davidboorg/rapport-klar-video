@@ -1,5 +1,5 @@
 
-// Replacement for SupabaseAuthContext using Berget.ai
+// Compatibility layer for components that still reference Supabase auth
 import React, { createContext, useContext } from "react";
 import { useAuth as useBergetAuth } from "@/contexts/BergetAuthContext";
 

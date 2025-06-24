@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useAuth } from '@/contexts/BergetAuthContext';
 import { useAvatarProgress } from './useAvatarProgress';
 import { useAvatarRealtime } from './useAvatarRealtime';
 import { useAvatarOperations } from './useAvatarOperations';
