@@ -8,44 +8,45 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Function to chunk text and extract meaningful sections
-const extractFinancialSections = (text: string): string => {
-  console.log('Extracting financial sections from text of length:', text.length);
+// Optimized function to extract only the most important financial sections
+const extractKeyFinancialData = (text: string): string => {
+  console.log('Extracting key financial data from text of length:', text.length);
   
-  // Split text into smaller chunks and look for financial keywords
-  const financialKeywords = [
-    'omsättning', 'intäkter', 'revenue', 'rörelseresultat', 'EBIT', 'EBITDA',
-    'nettoresultat', 'vinst', 'förlust', 'miljoner', 'MSEK', 'MEUR', 'miljoner kronor',
-    'tillväxt', 'procent', '%', 'Q1', 'Q2', 'Q3', 'Q4', 'kvartal', 'helår',
-    'balansräkning', 'tillgångar', 'eget kapital', 'skulder', 'kassaflöde',
-    'framtidsutsikter', 'prognos', 'guidning', 'marknad', 'konkurrens'
+  // Focus on the most important financial keywords
+  const criticalKeywords = [
+    'omsättning', 'intäkter', 'revenue', 'rörelseresultat', 'EBIT', 
+    'nettoresultat', 'vinst', 'förlust', 'miljoner', 'MSEK', 'MEUR',
+    'tillväxt', 'procent', '%', 'Q1', 'Q2', 'Q3', 'Q4', 'kvartal'
   ];
   
-  // Split text into paragraphs and sentences
-  const paragraphs = text.split(/\n\s*\n|\. /).filter(p => p.length > 20);
-  const relevantSections: string[] = [];
+  // Split into sentences and find the most relevant ones
+  const sentences = text.split(/[.!?]+/).filter(s => s.length > 30);
+  const relevantSentences: string[] = [];
   
-  // Extract paragraphs containing financial keywords
-  for (const paragraph of paragraphs) {
-    const lowerParagraph = paragraph.toLowerCase();
-    const hasFinancialKeywords = financialKeywords.some(keyword => 
-      lowerParagraph.includes(keyword.toLowerCase())
-    );
+  for (const sentence of sentences) {
+    const lowerSentence = sentence.toLowerCase();
+    const keywordCount = criticalKeywords.filter(keyword => 
+      lowerSentence.includes(keyword.toLowerCase())
+    ).length;
     
-    if (hasFinancialKeywords && paragraph.length > 50) {
-      relevantSections.push(paragraph.trim());
+    // Only include sentences with multiple financial keywords
+    if (keywordCount >= 2 && sentence.length < 300) {
+      relevantSentences.push(sentence.trim());
     }
+    
+    // Stop when we have enough relevant content
+    if (relevantSentences.length >= 8) break;
   }
   
-  // If we found relevant sections, use them. Otherwise, use first part of text
+  // If we found good sentences, use them. Otherwise, use a smaller sample
   let extractedText = '';
-  if (relevantSections.length > 0) {
-    extractedText = relevantSections.slice(0, 15).join('\n\n'); // Take first 15 relevant sections
-    console.log('Found', relevantSections.length, 'financial sections');
+  if (relevantSentences.length > 0) {
+    extractedText = relevantSentences.join('. ');
+    console.log('Found', relevantSentences.length, 'key financial sentences');
   } else {
-    // Fallback: take readable portions from the beginning
-    extractedText = text.substring(0, 15000); // Limit to ~15k characters
-    console.log('No financial sections found, using first 15k characters');
+    // Fallback: take smaller chunk from beginning
+    extractedText = text.substring(0, 3000);
+    console.log('Using fallback: first 3k characters');
   }
   
   return extractedText;
@@ -59,7 +60,7 @@ serve(async (req) => {
   try {
     const { projectId, pdfText } = await req.json();
     
-    console.log('Starting financial analysis for project:', projectId);
+    console.log('Starting cost-optimized financial analysis for project:', projectId);
     console.log('PDF text length received:', pdfText?.length || 0);
 
     if (!projectId || !pdfText || pdfText.length < 50) {
@@ -75,61 +76,27 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    // Extract only relevant financial sections to reduce token count
-    const relevantText = extractFinancialSections(pdfText);
-    console.log('Reduced text length from', pdfText.length, 'to', relevantText.length, 'characters');
+    // Extract only the most critical financial content to minimize tokens
+    const keyContent = extractKeyFinancialData(pdfText);
+    console.log('Reduced text from', pdfText.length, 'to', keyContent.length, 'characters');
 
-    // Enhanced financial data extraction with stronger instructions
-    console.log('Performing intelligent financial analysis...');
+    // Simplified and shorter analysis prompt to reduce costs
+    console.log('Performing cost-optimized AI analysis...');
     
     const analysisPrompt = `
-Du är en expert finansanalytiker. Analysera denna text från en finansiell rapport MYCKET NOGGRANT.
-
-VIKTIGT: Svara ENDAST med giltig JSON. Ingen annan text före eller efter JSON.
-
-Hitta och extrahera VERKLIG finansiell information från texten. Om du ser "fallback" eller "generisk" text, ignorera den och leta efter RIKTIGA siffror, företagsnamn och finansiell data.
-
-JSON-struktur (fyll i med VERKLIGA data från rapporten):
+Analysera denna finansiella text och returnera JSON:
 
 {
-  "company_name": "VERKLIGT företagsnamn från rapporten",
-  "report_period": "VERKLIG period som Q1 2024, Q2 2024, etc.",
-  "report_type": "Quarterly eller Annual",
-  "currency": "SEK, USD, EUR eller valuta som används",
+  "company_name": "Företagsnamn från texten",
+  "report_period": "Period som Q1 2024",
   "financial_metrics": {
-    "revenue": "Faktiska intäkter/omsättning med siffror",
-    "operating_income": "Verkligt rörelseresultat med siffror", 
-    "net_income": "Riktig nettovinst/förlust med siffror",
-    "growth_rate": "Faktisk tillväxt i procent",
-    "ebitda": "EBITDA om tillgängligt",
-    "total_assets": "Totala tillgångar om tillgängligt",
-    "equity": "Eget kapital om tillgängligt"
+    "revenue": "Omsättning med siffror",
+    "growth_rate": "Tillväxt i procent"
   },
-  "business_highlights": [
-    "VERKLIGA affärshändelser från rapporten",
-    "FAKTISKA produktlanseringar eller avtal"
-  ],
-  "challenges_mentioned": [
-    "RIKTIGA utmaningar som nämns",
-    "VERKLIGA risker som diskuteras"
-  ],
-  "management_outlook": "VERKLIGA ledningskommentarer",
-  "market_context": "FAKTISK marknadssituation",
-  "future_guidance": "RIKTIG framtidsguidning",
-  "data_quality": "high om verklig data hittades, low om mest fallback"
+  "data_quality": "high om verkliga siffror, low annars"
 }
 
-SÖK IGENOM TEXTEN efter:
-- Siffror med "miljoner", "MSEK", "MEUR", "miljoner kronor"  
-- Procentsatser för tillväxt
-- Företagsnamn (ofta i början av rapporten)
-- Datum och perioder
-- Verkliga produktnamn och affärshändelser
-
-Om du INTE hittar verkliga finansiella data, sätt "data_quality": "low" och använd "Ej tillgänglig i extraherad text".
-
-Text att analysera:
-${relevantText}
+Text: ${keyContent}
 `;
 
     const analysisResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -139,19 +106,15 @@ ${relevantText}
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', // Switch to smaller, faster model to avoid rate limits
+        model: 'gpt-4o-mini',
         messages: [
-          {
-            role: 'system',
-            content: 'Du är en finansiell expert som analyserar rapporter och returnerar ENDAST JSON. Hitta verkliga finansiella data, inte generisk text.'
-          },
           {
             role: 'user',
             content: analysisPrompt
           }
         ],
         temperature: 0.1,
-        max_tokens: 3000 // Reduced from 4000 to stay within limits
+        max_tokens: 1500 // Reduced from 3000 to save costs
       }),
     });
 
@@ -162,12 +125,12 @@ ${relevantText}
     }
 
     const analysisData = await analysisResponse.json();
-    console.log('Financial analysis completed');
+    console.log('Cost-optimized analysis completed');
 
     let extractedData;
     try {
       const content = analysisData.choices[0].message.content.trim();
-      console.log('Raw analysis response preview:', content.substring(0, 500));
+      console.log('Raw analysis response preview:', content.substring(0, 300));
       
       // Clean JSON extraction
       let jsonContent = content.replace(/```json\n?|\n?```/g, '').trim();
@@ -185,95 +148,22 @@ ${relevantText}
       
     } catch (parseError) {
       console.error('JSON parsing error:', parseError);
-      console.error('Content that failed to parse:', analysisData.choices[0].message.content);
-      throw new Error('Failed to parse financial analysis results');
-    }
-
-    // Only generate scripts if we have reasonable data quality
-    let parsedScripts = null;
-    
-    if (extractedData.data_quality !== 'low') {
-      console.log('Generating professional scripts based on extracted data...');
-      
-      const scriptPrompt = `
-Baserat på denna VERKLIGA finansiella data, skapa professionella manus.
-
-Data: ${JSON.stringify(extractedData, null, 2)}
-
-Returnera ENDAST denna JSON-struktur:
-
-{
-  "script_alternatives": [
-    {
-      "type": "executive_summary",
-      "title": "Kvartalssammanfattning - ${extractedData.company_name}",
-      "duration": "2-3 minuter",
-      "tone": "Professionell och koncis",
-      "target_audience": "Investerare och analytiker",
-      "script": "Professionellt manus baserat på VERKLIGA siffror och data. Använd specifika siffror från rapporten."
-    },
-    {
-      "type": "detailed_analysis", 
-      "title": "Fördjupad Analys - ${extractedData.company_name}",
-      "duration": "4-5 minuter",
-      "tone": "Analytisk och detaljerad",
-      "target_audience": "Professionella investerare",
-      "script": "Djupgående analys med VERKLIGA finansiella nyckeltal och trender."
-    }
-  ]
-}
-`;
-
-      const scriptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIApiKey}`,
-          'Content-Type': 'application/json',
+      // Fallback data structure for cost savings
+      extractedData = {
+        company_name: 'Okänt företag',
+        report_period: 'Okänd period',
+        financial_metrics: {
+          revenue: 'Ej tillgänglig',
+          growth_rate: 'Ej tillgänglig'
         },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini', // Use smaller model here too
-          messages: [
-            {
-              role: 'system',
-              content: 'Skapa professionella manus baserat på verkliga finansiella data. Svara ENDAST med JSON.'
-            },
-            {
-              role: 'user',
-              content: scriptPrompt
-            }
-          ],
-          temperature: 0.2,
-          max_tokens: 3000 // Reduced token limit
-        }),
-      });
-
-      if (scriptResponse.ok) {
-        const scriptData = await scriptResponse.json();
-        
-        try {
-          let scriptContent = scriptData.choices[0].message.content.trim();
-          scriptContent = scriptContent.replace(/```json\n?|\n?```/g, '').trim();
-          
-          const jsonStart = scriptContent.indexOf('{');
-          const jsonEnd = scriptContent.lastIndexOf('}') + 1;
-          
-          if (jsonStart >= 0 && jsonEnd > jsonStart) {
-            scriptContent = scriptContent.substring(jsonStart, jsonEnd);
-          }
-          
-          parsedScripts = JSON.parse(scriptContent);
-          console.log('Generated professional scripts successfully');
-          
-        } catch (scriptParseError) {
-          console.error('Script parsing error:', scriptParseError);
-          parsedScripts = null;
-        }
-      }
-    } else {
-      console.log('Low data quality detected, skipping script generation');
+        data_quality: 'low'
+      };
     }
 
-    // Save the financial data
+    // Skip expensive script generation to save costs - let the basic script handle it
+    console.log('Skipping script generation to reduce costs');
+
+    // Save minimal financial data
     const { error: updateError } = await supabase
       .from('projects')
       .update({ 
@@ -287,23 +177,7 @@ Returnera ENDAST denna JSON-struktur:
       console.error('Error updating project:', updateError);
     }
 
-    if (parsedScripts?.script_alternatives) {
-      const { error: contentError } = await supabase
-        .from('generated_content')
-        .upsert({
-          project_id: projectId,
-          script_alternatives: parsedScripts.script_alternatives,
-          script_text: parsedScripts.script_alternatives[0]?.script || '',
-          generation_status: 'completed',
-          updated_at: new Date().toISOString(),
-        });
-
-      if (contentError) {
-        console.error('Error saving scripts:', contentError);
-      }
-    }
-
-    console.log('Analysis completed for:', extractedData.company_name);
+    console.log('Cost-optimized analysis completed for:', extractedData.company_name);
     console.log('Data quality:', extractedData.data_quality);
 
     return new Response(
@@ -313,8 +187,8 @@ Returnera ENDAST denna JSON-struktur:
         period: extractedData.report_period,
         data_quality: extractedData.data_quality,
         financial_data: extractedData,
-        scripts_generated: parsedScripts ? 'Yes' : 'No',
-        message: 'Optimerad finansiell analys med smart textextraktion'
+        scripts_generated: 'No', // Force basic script generation
+        message: 'Kostnadsoptimerad finansiell analys'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -323,12 +197,12 @@ Returnera ENDAST denna JSON-struktur:
     );
 
   } catch (error) {
-    console.error('Error in financial analysis function:', error);
+    console.error('Error in cost-optimized financial analysis:', error);
     
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'Unknown error occurred during financial analysis'
+        error: error.message || 'Unknown error occurred during analysis'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
