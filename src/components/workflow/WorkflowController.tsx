@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import UploadStep from './UploadStep';
 import ProcessingStep from './ProcessingStep';
@@ -151,11 +152,11 @@ const WorkflowController: React.FC = () => {
       setStatus('Genererar podcast med ElevenLabs...');
       setStep('audio');
 
-      // Call our generate-podcast Supabase function (no direct API access)
+      // Call our generate-podcast Supabase function with valid ElevenLabs voice
       const { data: audioData, error: audioError } = await supabase.functions.invoke('generate-podcast', {
         body: {
           text: approvedScript,
-          voice: 'alloy', // Default voice
+          voice: '9BWtsMINqrJLrRacOk9x', // Use Aria voice (valid ElevenLabs voice ID)
           projectId: projectId
         }
       });
