@@ -1,4 +1,3 @@
-
 // Berget.ai API client configuration
 export interface BergetConfig {
   apiUrl: string;
@@ -31,6 +30,8 @@ class BergetClient {
 
   async login(email: string, password: string): Promise<{ data: BergetSession | null; error: any }> {
     try {
+      console.log('Attempting login to Berget.ai API...');
+      
       const response = await fetch(`${this.config.apiUrl}/auth/login`, {
         method: 'POST',
         headers: {
@@ -40,21 +41,56 @@ class BergetClient {
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('Login response status:', response.status);
+
       if (!response.ok) {
-        const error = await response.json();
-        return { data: null, error };
+        const errorText = await response.text();
+        console.error('Login failed with response:', errorText);
+        
+        // Handle specific error cases
+        if (response.status === 401) {
+          return { data: null, error: { message: 'Invalid email or password' } };
+        }
+        if (response.status === 404) {
+          return { data: null, error: { message: 'Service temporarily unavailable' } };
+        }
+        if (response.status >= 500) {
+          return { data: null, error: { message: 'Server error. Please try again later.' } };
+        }
+        
+        return { data: null, error: { message: 'Login failed. Please check your credentials.' } };
       }
 
       const session = await response.json();
       localStorage.setItem('berget_session', JSON.stringify(session));
+      console.log('Login successful');
       return { data: session, error: null };
     } catch (error) {
-      return { data: null, error };
+      console.error('Network error during login:', error);
+      
+      // Handle network errors specifically
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        return { 
+          data: null, 
+          error: { 
+            message: 'Unable to connect to authentication service. Please check your internet connection.' 
+          } 
+        };
+      }
+      
+      return { 
+        data: null, 
+        error: { 
+          message: 'Login failed due to network error. Please try again.' 
+        } 
+      };
     }
   }
 
   async register(email: string, password: string, userData: { firstName: string; lastName: string; company: string }): Promise<{ data: BergetSession | null; error: any }> {
     try {
+      console.log('Attempting registration to Berget.ai API...');
+      
       const response = await fetch(`${this.config.apiUrl}/auth/register`, {
         method: 'POST',
         headers: {
@@ -70,16 +106,34 @@ class BergetClient {
         }),
       });
 
+      console.log('Registration response status:', response.status);
+
       if (!response.ok) {
-        const error = await response.json();
-        return { data: null, error };
+        const errorText = await response.text();
+        console.error('Registration failed with response:', errorText);
+        
+        if (response.status === 409) {
+          return { data: null, error: { message: 'An account with this email already exists' } };
+        }
+        if (response.status === 400) {
+          return { data: null, error: { message: 'Invalid registration data. Please check your information.' } };
+        }
+        
+        return { data: null, error: { message: 'Registration failed. Please try again.' } };
       }
 
       const session = await response.json();
       localStorage.setItem('berget_session', JSON.stringify(session));
+      console.log('Registration successful');
       return { data: session, error: null };
     } catch (error) {
-      return { data: null, error };
+      console.error('Network error during registration:', error);
+      return { 
+        data: null, 
+        error: { 
+          message: 'Registration failed due to network error. Please try again.' 
+        } 
+      };
     }
   }
 
