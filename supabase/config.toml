@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.berget-api-proxy]
 verify_jwt = true
+
+[functions.elevenlabs-proxy]
+verify_jwt = true

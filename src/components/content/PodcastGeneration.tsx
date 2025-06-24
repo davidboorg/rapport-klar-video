@@ -14,8 +14,11 @@ import {
   CheckCircle,
   Settings,
   User,
-  Volume2
+  Volume2,
+  Pause
 } from 'lucide-react';
+import { VOICE_PRESETS } from '@/integrations/elevenlabs/client';
+import { usePodcastGeneration } from '@/hooks/usePodcastGeneration';
 
 interface PodcastGenerationProps {
   projectId: string;
@@ -30,17 +33,19 @@ const PodcastGeneration = ({
   marketType, 
   onPodcastGenerated 
 }: PodcastGenerationProps) => {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedPodcastUrl, setGeneratedPodcastUrl] = useState<string | null>(null);
-  const [selectedVoice, setSelectedVoice] = useState('professional-male');
+  const [selectedVoice, setSelectedVoice] = useState(VOICE_PRESETS.professional_male);
   const [speechSpeed, setSpeechSpeed] = useState([1.0]);
   const [podcastLength, setPodcastLength] = useState('medium');
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+
+  const { isGenerating, generatedAudioUrl, generatePodcast, downloadPodcast } = usePodcastGeneration();
 
   const voiceOptions = [
-    { id: 'professional-male', name: 'Professional Male', description: 'Clear, authoritative voice for business content' },
-    { id: 'professional-female', name: 'Professional Female', description: 'Engaging, confident voice for presentations' },
-    { id: 'executive-male', name: 'Executive Male', description: 'Deep, commanding voice for board briefings' },
-    { id: 'analyst-female', name: 'Financial Analyst', description: 'Precise, analytical voice for detailed reports' }
+    { id: VOICE_PRESETS.professional_male, name: 'Professional Male (Aria)', description: 'Clear, authoritative voice for business content' },
+    { id: VOICE_PRESETS.professional_female, name: 'Professional Female (Sarah)', description: 'Engaging, confident voice for presentations' },
+    { id: VOICE_PRESETS.executive_male, name: 'Executive Male (George)', description: 'Deep, commanding voice for board briefings' },
+    { id: VOICE_PRESETS.analyst_female, name: 'Financial Analyst (Jessica)', description: 'Precise, analytical voice for detailed reports' }
   ];
 
   const lengthOptions = marketType === 'ir' 
@@ -56,24 +61,45 @@ const PodcastGeneration = ({
       ];
 
   const handleGeneratePodcast = async () => {
-    setIsGenerating(true);
-    
-    try {
-      // Simulate podcast generation process
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      const mockPodcastUrl = `https://example.com/podcast/${projectId}.mp3`;
-      setGeneratedPodcastUrl(mockPodcastUrl);
-      onPodcastGenerated?.(mockPodcastUrl);
-      
-    } catch (error) {
-      console.error('Failed to generate podcast:', error);
-    } finally {
-      setIsGenerating(false);
+    const audioUrl = await generatePodcast(scriptText, {
+      voiceId: selectedVoice,
+      speed: speechSpeed[0],
+      targetLength: podcastLength as 'short' | 'medium' | 'long'
+    });
+
+    if (audioUrl) {
+      onPodcastGenerated?.(audioUrl);
     }
   };
 
-  if (generatedPodcastUrl) {
+  const handlePlayPause = () => {
+    if (!generatedAudioUrl) return;
+
+    if (!audioElement) {
+      const audio = new Audio(generatedAudioUrl);
+      audio.onended = () => setIsPlaying(false);
+      setAudioElement(audio);
+      audio.play();
+      setIsPlaying(true);
+    } else {
+      if (isPlaying) {
+        audioElement.pause();
+        setIsPlaying(false);
+      } else {
+        audioElement.play();
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  const handleDownload = () => {
+    if (generatedAudioUrl) {
+      const fileName = `${marketType === 'ir' ? 'investor-briefing' : 'board-briefing'}-podcast.mp3`;
+      downloadPodcast(generatedAudioUrl, fileName);
+    }
+  };
+
+  if (generatedAudioUrl) {
     return (
       <Card>
         <CardHeader>
@@ -95,18 +121,13 @@ const PodcastGeneration = ({
                   {marketType === 'ir' ? 'Investor Briefing Podcast' : 'Board Meeting Briefing'}
                 </h4>
                 <p className="text-sm text-slate-600">
-                  Duration: 12:34 • Voice: {voiceOptions.find(v => v.id === selectedVoice)?.name}
+                  Generated with ElevenLabs • Voice: {voiceOptions.find(v => v.id === selectedVoice)?.name}
                 </p>
               </div>
-              <Button size="sm">
-                <Play className="w-4 h-4 mr-2" />
-                Play
+              <Button size="sm" onClick={handlePlayPause}>
+                {isPlaying ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
+                {isPlaying ? 'Pause' : 'Play'}
               </Button>
-            </div>
-            
-            {/* Progress bar placeholder */}
-            <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-blue-600 h-2 rounded-full w-1/3"></div>
             </div>
           </div>
 
@@ -117,7 +138,7 @@ const PodcastGeneration = ({
               <div>
                 <h4 className="font-medium text-green-900">Podcast Ready!</h4>
                 <p className="text-sm text-green-700">
-                  High-quality audio generated with professional narration
+                  High-quality audio generated with professional AI narration
                 </p>
               </div>
             </div>
@@ -126,7 +147,7 @@ const PodcastGeneration = ({
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2">
-            <Button className="flex-1">
+            <Button onClick={handleDownload} className="flex-1">
               <Download className="w-4 h-4 mr-2" />
               Download MP3
             </Button>
@@ -134,7 +155,7 @@ const PodcastGeneration = ({
               <Share2 className="w-4 h-4 mr-2" />
               Share Podcast
             </Button>
-            <Button variant="outline" className="flex-1">
+            <Button variant="outline" onClick={handleGeneratePodcast} className="flex-1">
               <Settings className="w-4 h-4 mr-2" />
               Regenerate
             </Button>
@@ -247,7 +268,7 @@ const PodcastGeneration = ({
               <div>
                 <p className="text-sm font-medium">Ready to generate podcast</p>
                 <p className="text-xs text-slate-600">
-                  Estimated time: 2-3 minutes • Target: {lengthOptions.find(l => l.id === podcastLength)?.name}
+                  Using ElevenLabs AI • Target: {lengthOptions.find(l => l.id === podcastLength)?.name}
                 </p>
               </div>
             </div>
