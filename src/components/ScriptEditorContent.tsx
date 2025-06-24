@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -91,8 +90,8 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
         .maybeSingle();
 
       if (!contentError && contentData) {
-        if (contentData.script_alternatives) {
-          setScriptAlternatives(contentData.script_alternatives);
+        if (contentData.script_alternatives && Array.isArray(contentData.script_alternatives)) {
+          setScriptAlternatives(contentData.script_alternatives as ScriptAlternative[]);
         }
         
         if (contentData.script_text && !initialScript) {
@@ -134,8 +133,11 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
     setSelectedFile(file);
     setShowProcessing(true);
 
+    // Map marketType to the correct API parameter
+    const documentType: 'quarterly' | 'board' = marketType === 'ir' ? 'quarterly' : 'board';
+
     // Start the advanced processing pipeline
-    const result = await processDocument(file, marketType);
+    const result = await processDocument(file, documentType);
     
     if (result.success) {
       // Refresh project data after successful processing
