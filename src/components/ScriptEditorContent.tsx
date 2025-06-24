@@ -7,7 +7,7 @@ import { useScriptEditorUpload } from "@/hooks/useScriptEditorUpload";
 import AdvancedProcessingViewer from "./processing/AdvancedProcessingViewer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Brain, FileText, Film, Mic, Upload } from "lucide-react";
+import { Brain, FileText, Film, Mic, Upload, Shield } from "lucide-react";
 import VideoGeneration from "./VideoGeneration";
 import PodcastGeneration from "./content/PodcastGeneration";
 import UploadTab from "./script-editor/UploadTab";
@@ -120,10 +120,13 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
         <Card>
           <CardContent className="pt-6">
             <div className="text-center mb-6">
-              <Brain className="w-12 h-12 mx-auto text-blue-600 mb-4" />
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Brain className="w-12 h-12 text-blue-600" />
+                <Shield className="w-8 h-8 text-green-600" />
+              </div>
               <h3 className="text-lg font-medium mb-2">Advanced AI Processing</h3>
               <p className="text-gray-600">
-                Your document is being processed using Berget.ai's advanced EU-compliant AI system.
+                Your document is being processed using Berget.ai's advanced EU-compliant AI system with intelligent document chunking and multi-stage analysis.
               </p>
             </div>
           </CardContent>

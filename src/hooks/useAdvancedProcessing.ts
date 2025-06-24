@@ -1,8 +1,8 @@
 
 import { useState, useCallback } from 'react';
-import { bergetClient } from '@/integrations/berget/client';
+import { useToast } from './use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { bergetDocumentProcessor, ProcessingStage } from '@/integrations/berget/documentProcessor';
 
 export interface ProcessingTask {
   id: string;
@@ -10,196 +10,128 @@ export interface ProcessingTask {
   description: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   progress: number;
-  startTime?: Date;
-  endTime?: Date;
-  result?: any;
-  error?: string;
+  details?: string;
 }
 
 export const useAdvancedProcessing = (projectId: string) => {
-  const [tasks, setTasks] = useState<ProcessingTask[]>([
-    {
-      id: 'document-upload',
-      name: 'Document Upload',
-      description: 'Uploading document to Berget.ai secure servers',
-      status: 'pending',
-      progress: 0
-    },
-    {
-      id: 'content-extraction',
-      name: 'Content Extraction',
-      description: 'Extracting and parsing document content',
-      status: 'pending',
-      progress: 0
-    },
-    {
-      id: 'ai-analysis',
-      name: 'AI Analysis',
-      description: 'Performing deep AI analysis of financial data',
-      status: 'pending',
-      progress: 0
-    },
-    {
-      id: 'content-generation',
-      name: 'Content Generation',
-      description: 'Generating personalized content variants',
-      status: 'pending',
-      progress: 0
-    }
-  ]);
-
+  const [tasks, setTasks] = useState<ProcessingTask[]>([]);
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [overallProgress, setOverallProgress] = useState(0);
   const { toast } = useToast();
 
-  const updateTaskStatus = useCallback((taskId: string, updates: Partial<ProcessingTask>) => {
-    setTasks(prev => prev.map(task => 
-      task.id === taskId ? { ...task, ...updates } : task
-    ));
+  const updateProgress = useCallback((stages: ProcessingStage[]) => {
+    // Convert Berget.ai stages to our task format
+    const newTasks: ProcessingTask[] = stages.map(stage => ({
+      id: stage.id,
+      name: stage.name,
+      description: stage.description,
+      status: stage.status,
+      progress: stage.progress,
+      details: stage.error || undefined
+    }));
+
+    setTasks(newTasks);
+
+    // Calculate overall progress
+    const totalProgress = stages.reduce((sum, stage) => sum + stage.progress, 0);
+    const overallProg = totalProgress / stages.length;
+    setOverallProgress(overallProg);
+
+    // Update current task index
+    const processingIndex = stages.findIndex(stage => stage.status === 'processing');
+    const completedCount = stages.filter(stage => stage.status === 'completed').length;
+    
+    if (processingIndex !== -1) {
+      setCurrentTaskIndex(processingIndex);
+    } else if (completedCount === stages.length) {
+      setCurrentTaskIndex(stages.length - 1);
+    }
   }, []);
 
-  const updateOverallProgress = useCallback(() => {
-    setTasks(prev => {
-      const totalProgress = prev.reduce((sum, task) => sum + task.progress, 0);
-      const overall = totalProgress / prev.length;
-      setOverallProgress(overall);
-      return prev;
-    });
-  }, []);
-
-  const processDocument = useCallback(async (file: File, documentType: 'quarterly' | 'board') => {
+  const processDocument = useCallback(async (
+    file: File, 
+    documentType: 'quarterly' | 'board'
+  ) => {
     setIsProcessing(true);
     setCurrentTaskIndex(0);
+    setOverallProgress(0);
 
     try {
-      // Task 1: Document Upload
-      updateTaskStatus('document-upload', { 
-        status: 'processing', 
-        startTime: new Date(),
-        progress: 10 
+      console.log(`Starting advanced processing for ${documentType} document:`, file.name);
+
+      // Show initial toast
+      toast({
+        title: "Starting Advanced Processing",
+        description: `Processing ${documentType} document with Berget.ai EU-compliant AI...`,
       });
 
-      const { data: uploadResult, error: uploadError } = await bergetClient.processDocument(file, documentType);
-      
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`);
-      }
-
-      updateTaskStatus('document-upload', { 
-        status: 'completed', 
-        progress: 100,
-        endTime: new Date(),
-        result: uploadResult 
-      });
-
-      // Task 2: Content Extraction
-      setCurrentTaskIndex(1);
-      updateTaskStatus('content-extraction', { 
-        status: 'processing', 
-        startTime: new Date(),
-        progress: 20 
-      });
-
-      // Simulate content extraction progress
-      for (let i = 20; i <= 100; i += 20) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        updateTaskStatus('content-extraction', { progress: i });
-      }
-
-      updateTaskStatus('content-extraction', { 
-        status: 'completed', 
-        endTime: new Date() 
-      });
-
-      // Task 3: AI Analysis
-      setCurrentTaskIndex(2);
-      updateTaskStatus('ai-analysis', { 
-        status: 'processing', 
-        startTime: new Date(),
-        progress: 15 
-      });
-
-      // Call Berget.ai for AI analysis
-      const { data: analysisResult, error: analysisError } = await bergetClient.generateContent(
-        [uploadResult], 
-        'summary'
+      // Process document with Berget.ai
+      const result = await bergetDocumentProcessor.processDocument(
+        file,
+        documentType,
+        updateProgress
       );
 
-      if (analysisError) {
-        throw new Error(`AI Analysis failed: ${analysisError.message}`);
+      if (!result.success) {
+        throw new Error('Document processing failed');
       }
 
-      updateTaskStatus('ai-analysis', { 
-        status: 'completed', 
-        progress: 100,
-        endTime: new Date(),
-        result: analysisResult 
-      });
+      console.log('Processing completed successfully:', result);
 
-      // Task 4: Content Generation
-      setCurrentTaskIndex(3);
-      updateTaskStatus('content-generation', { 
-        status: 'processing', 
-        startTime: new Date(),
-        progress: 25 
-      });
-
-      // Generate multiple content variants
-      const contentTypes: Array<'video' | 'audio' | 'summary'> = ['video', 'audio', 'summary'];
-      const generationResults = [];
-
-      for (const contentType of contentTypes) {
-        const { data: contentResult, error: contentError } = await bergetClient.generateContent(
-          [analysisResult], 
-          contentType
-        );
-
-        if (!contentError) {
-          generationResults.push(contentResult);
-        }
-
-        updateTaskStatus('content-generation', { 
-          progress: 25 + (generationResults.length * 25) 
-        });
-      }
-
-      updateTaskStatus('content-generation', { 
-        status: 'completed', 
-        progress: 100,
-        endTime: new Date(),
-        result: generationResults 
-      });
-
-      // Update project in database
-      await supabase
+      // Update Supabase with results
+      const { error: projectError } = await supabase
         .from('projects')
-        .update({ 
+        .update({
+          financial_data: result.financialData,
           status: 'completed',
-          financial_data: analysisResult,
           updated_at: new Date().toISOString()
         })
         .eq('id', projectId);
 
+      if (projectError) {
+        console.error('Error updating project:', projectError);
+      }
+
+      // Update or create generated content
+      const { error: contentError } = await supabase
+        .from('generated_content')
+        .upsert({
+          project_id: projectId,
+          script_text: result.scripts.video,
+          script_alternatives: result.alternatives as any,
+          generation_status: 'completed',
+          updated_at: new Date().toISOString()
+        });
+
+      if (contentError) {
+        console.error('Error updating generated content:', contentError);
+      }
+
       toast({
         title: "Processing Complete!",
-        description: "Your document has been analyzed and content generated successfully.",
+        description: `Document processed successfully in ${(result.processingTime / 1000).toFixed(1)}s with EU-compliant AI.`,
       });
 
-      return { success: true, data: { analysisResult, generationResults } };
+      return {
+        success: true,
+        data: result,
+        processingTime: result.processingTime
+      };
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Advanced processing failed:', error);
       
-      // Mark current task as failed
-      const currentTask = tasks[currentTaskIndex];
-      if (currentTask) {
-        updateTaskStatus(currentTask.id, { 
-          status: 'failed', 
-          error: errorMessage,
-          endTime: new Date() 
-        });
-      }
+      const errorMessage = error instanceof Error ? error.message : 'Unknown processing error';
+      
+      // Update project status to failed
+      await supabase
+        .from('projects')
+        .update({
+          status: 'failed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', projectId);
 
       toast({
         title: "Processing Failed",
@@ -207,19 +139,21 @@ export const useAdvancedProcessing = (projectId: string) => {
         variant: "destructive",
       });
 
-      return { success: false, error: errorMessage };
+      return {
+        success: false,
+        error: errorMessage
+      };
+
     } finally {
       setIsProcessing(false);
-      updateOverallProgress();
     }
-  }, [projectId, tasks, currentTaskIndex, updateTaskStatus, updateOverallProgress, toast]);
+  }, [projectId, toast, updateProgress]);
 
   return {
     tasks,
     currentTaskIndex,
     isProcessing,
     overallProgress,
-    processDocument,
-    updateTaskStatus
+    processDocument
   };
 };

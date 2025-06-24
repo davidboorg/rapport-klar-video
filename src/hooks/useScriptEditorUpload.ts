@@ -29,13 +29,27 @@ export const useScriptEditorUpload = (projectId: string) => {
       return;
     }
 
+    if (file.size > 50 * 1024 * 1024) { // 50MB limit
+      toast({
+        title: "File Too Large",
+        description: "Please upload a file smaller than 50MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSelectedFile(file);
     setShowProcessing(true);
 
     // Map marketType to the correct API parameter
     const documentType: 'quarterly' | 'board' = marketType === 'ir' ? 'quarterly' : 'board';
 
-    // Start the advanced processing pipeline
+    toast({
+      title: "Starting Upload",
+      description: `Uploading ${file.name} for advanced processing...`,
+    });
+
+    // Start the advanced processing pipeline with Berget.ai
     const result = await processDocument(file, documentType);
     
     return result;
