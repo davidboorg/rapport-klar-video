@@ -1,6 +1,7 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.10';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,345 +16,191 @@ serve(async (req) => {
   try {
     const { pdfUrl, projectId } = await req.json();
     
-    if (!pdfUrl || !projectId) {
-      throw new Error('PDF URL and project ID are required');
-    }
-
     console.log('Starting PDF content extraction from:', pdfUrl);
     console.log('Project ID:', projectId);
 
-    // Initialize Supabase client
+    if (!pdfUrl || !projectId) {
+      throw new Error('Missing pdfUrl or projectId');
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Supabase configuration missing');
-    }
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Try multiple approaches to get the file path
-    let filePath = pdfUrl;
     let extractedText = '';
-    let method = 'unknown';
-    
-    // Clean up the file path
-    if (pdfUrl.includes('/storage/v1/object/public/pdf-uploads/')) {
-      const urlParts = pdfUrl.split('/storage/v1/object/public/pdf-uploads/');
-      filePath = urlParts[1];
-    } else if (pdfUrl.includes('pdf-uploads/')) {
-      const urlParts = pdfUrl.split('pdf-uploads/');
-      filePath = urlParts[1];
-    } else if (pdfUrl.startsWith('uploaded/')) {
-      filePath = pdfUrl;
-    }
-    
-    if (filePath.startsWith('/')) {
-      filePath = filePath.substring(1);
-    }
-
-    console.log('Attempting to download file from path:', filePath);
+    let extractionMethod = 'unknown';
 
     try {
-      // Try to download from storage
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from('pdf-uploads')
-        .download(filePath);
+      // Try to fetch the PDF directly from the URL
+      console.log('Attempting direct PDF fetch from:', pdfUrl);
+      const pdfResponse = await fetch(pdfUrl);
+      
+      if (!pdfResponse.ok) {
+        throw new Error(`Failed to fetch PDF: ${pdfResponse.status} ${pdfResponse.statusText}`);
+      }
 
-      if (downloadError) {
-        console.error('Storage download error:', downloadError);
+      const pdfArrayBuffer = await pdfResponse.arrayBuffer();
+      const pdfBytes = new Uint8Array(pdfArrayBuffer);
+      
+      console.log('PDF downloaded successfully, size:', pdfBytes.length, 'bytes');
+
+      // Try to extract text using a simple text extraction approach
+      // Convert PDF bytes to text (this is a simplified approach)
+      try {
+        const textDecoder = new TextDecoder('utf-8', { fatal: false });
+        const rawText = textDecoder.decode(pdfBytes);
         
-        // Try alternative bucket name
-        const { data: altFileData, error: altDownloadError } = await supabase.storage
-          .from('pdfs')
-          .download(filePath);
-          
-        if (altDownloadError) {
-          console.error('Alternative storage download also failed:', altDownloadError);
-          throw new Error('Could not find PDF file in storage');
+        // Extract readable text from PDF content
+        // Look for text objects and streams
+        const textMatches = rawText.match(/\(([^)]+)\)/g) || [];
+        const streamMatches = rawText.match(/stream\s*([\s\S]*?)\s*endstream/gi) || [];
+        
+        let extractedContent = '';
+        
+        // Extract text from parentheses (common PDF text format)
+        textMatches.forEach(match => {
+          const text = match.slice(1, -1); // Remove parentheses
+          if (text.length > 2 && /[a-zA-Z0-9]/.test(text)) {
+            extractedContent += text + ' ';
+          }
+        });
+
+        // Try to extract from streams
+        streamMatches.forEach(match => {
+          const streamContent = match.replace(/^stream\s*|\s*endstream$/gi, '');
+          // Simple text extraction from stream
+          const readable = streamContent.replace(/[^\x20-\x7E\n\r\t]/g, ' ');
+          if (readable.length > 10) {
+            extractedContent += readable + ' ';
+          }
+        });
+
+        // Clean up the extracted text
+        extractedText = extractedContent
+          .replace(/\s+/g, ' ')
+          .replace(/[^\w\såäöÅÄÖ.,!?:;()-]/g, ' ')
+          .trim();
+
+        if (extractedText.length > 100) {
+          extractionMethod = 'direct_text_extraction';
+          console.log('Successfully extracted text using direct method, length:', extractedText.length);
         } else {
-          console.log('Successfully downloaded from alternative bucket');
-          const pdfBuffer = await altFileData.arrayBuffer();
-          extractedText = await extractTextFromPDF(pdfBuffer);
-          method = 'extraction_alt_bucket';
+          throw new Error('Direct extraction yielded insufficient text');
         }
-      } else {
-        console.log('Successfully downloaded from main bucket');
-        const pdfBuffer = await fileData.arrayBuffer();
-        extractedText = await extractTextFromPDF(pdfBuffer);
-        method = 'extraction_main_bucket';
+
+      } catch (directError) {
+        console.log('Direct text extraction failed:', directError.message);
+        
+        // Fallback: Use OCR-like approach with OpenAI Vision API
+        try {
+          const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+          if (!openAIApiKey) {
+            throw new Error('OpenAI API key not available for OCR fallback');
+          }
+
+          // Convert first few pages to base64 and use OpenAI Vision
+          const base64Pdf = btoa(String.fromCharCode(...pdfBytes.slice(0, 50000))); // First 50KB for analysis
+          
+          const ocrResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openAIApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o',
+              messages: [
+                {
+                  role: 'user',
+                  content: [
+                    {
+                      type: 'text',
+                      text: 'Extract all text content from this PDF document. Return only the extracted text, no explanations or formatting.'
+                    },
+                    {
+                      type: 'image_url',
+                      image_url: {
+                        url: `data:application/pdf;base64,${base64Pdf}`
+                      }
+                    }
+                  ]
+                }
+              ],
+              max_tokens: 4000
+            }),
+          });
+
+          if (ocrResponse.ok) {
+            const ocrData = await ocrResponse.json();
+            extractedText = ocrData.choices[0].message.content;
+            extractionMethod = 'openai_vision_ocr';
+            console.log('Successfully extracted text using OpenAI Vision OCR, length:', extractedText.length);
+          } else {
+            throw new Error('OpenAI Vision OCR failed');
+          }
+
+        } catch (ocrError) {
+          console.log('OCR extraction also failed:', ocrError.message);
+          throw new Error('All extraction methods failed');
+        }
       }
-    } catch (storageError) {
-      console.error('All storage download attempts failed:', storageError);
-      console.log('Falling back to enhanced mock content');
-      extractedText = generateEnhancedMockContent(filePath || 'financial-report.pdf');
-      method = 'enhanced_mock_fallback';
+
+    } catch (fetchError) {
+      console.error('PDF fetch error:', fetchError);
+      throw new Error(`Could not fetch PDF: ${fetchError.message}`);
     }
 
-    // Validate content length
-    if (!extractedText || extractedText.length < 200) {
-      console.warn('Extracted text too short, using enhanced mock content');
-      extractedText = generateEnhancedMockContent(filePath || 'financial-report.pdf');
-      method = 'enhanced_mock_short_content';
+    // Validate extracted content
+    if (!extractedText || extractedText.length < 50) {
+      throw new Error('Insufficient text extracted from PDF');
     }
 
-    console.log(`Final extracted text length: ${extractedText.length} characters using method: ${method}`);
+    // Clean and validate the extracted text
+    const cleanedText = extractedText
+      .replace(/\s+/g, ' ')
+      .trim()
+      .substring(0, 50000); // Limit to 50k characters for processing
 
-    return new Response(JSON.stringify({
-      success: true,
-      content: extractedText,
-      metadata: {
-        extractedAt: new Date().toISOString(),
-        contentLength: extractedText.length,
-        sourceUrl: pdfUrl,
-        filePath: filePath,
-        method: method
+    console.log('Final extracted text length:', cleanedText.length, 'characters using method:', extractionMethod);
+
+    // Update project with extracted content
+    const { error: updateError } = await supabase
+      .from('projects')
+      .update({ 
+        status: 'extracted',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', projectId);
+
+    if (updateError) {
+      console.error('Error updating project status:', updateError);
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        content: cleanedText,
+        method: extractionMethod,
+        length: cleanedText.length
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
       }
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    );
 
   } catch (error) {
-    console.error('Error in PDF extraction:', error);
+    console.error('Error in extract-pdf-content function:', error);
     
-    // Generate enhanced mock content as final fallback
-    const mockContent = generateEnhancedMockContent('delarsrapport-q1-2025.pdf');
-    
-    return new Response(JSON.stringify({
-      success: true,
-      content: mockContent,
-      metadata: {
-        extractedAt: new Date().toISOString(),
-        contentLength: mockContent.length,
-        method: 'final_fallback_mock',
-        originalError: error.message
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error.message || 'Unknown error occurred during PDF extraction'
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
       }
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    );
   }
 });
-
-// Enhanced PDF text extraction function
-async function extractTextFromPDF(pdfBuffer: ArrayBuffer): Promise<string> {
-  const uint8Array = new Uint8Array(pdfBuffer);
-  let extractedText = '';
-  
-  try {
-    // Convert to string and look for text patterns
-    const decoder = new TextDecoder('utf-8', { fatal: false });
-    const content = decoder.decode(uint8Array);
-    
-    // More sophisticated text extraction patterns
-    const patterns = [
-      // Stream content
-      /stream\s*([\s\S]*?)\s*endstream/gi,
-      // Text showing operators
-      /\((.*?)\)\s*Tj/gi,
-      /\[(.*?)\]\s*TJ/gi,
-      // Direct text content
-      /BT\s*([\s\S]*?)\s*ET/gi,
-    ];
-    
-    for (const pattern of patterns) {
-      const matches = content.match(pattern);
-      if (matches) {
-        for (const match of matches) {
-          // Clean up the extracted text
-          let text = match
-            .replace(/stream\s*|\s*endstream/gi, '')
-            .replace(/BT\s*|\s*ET/gi, '')
-            .replace(/\((.*?)\)\s*Tj/gi, '$1')
-            .replace(/\[(.*?)\]\s*TJ/gi, '$1')
-            .replace(/[<>]/g, ' ')
-            .replace(/\\[nrtf]/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-          
-          // Filter out control characters and keep meaningful text
-          text = text.replace(/[^\w\s\.,\-\%\(\)åäöÅÄÖ€$£¥]/g, ' ');
-          
-          if (text.length > 10 && text.match(/[a-öA-ÖÀ-ÿ0-9]/)) {
-            extractedText += text + ' ';
-          }
-        }
-      }
-    }
-    
-    // If extraction is still poor, try byte-by-byte readable text search
-    if (extractedText.length < 500) {
-      const readableText = extractReadableText(uint8Array);
-      if (readableText.length > extractedText.length) {
-        extractedText = readableText;
-      }
-    }
-    
-    console.log(`Enhanced PDF extraction completed: ${extractedText.length} characters`);
-    
-    if (extractedText.length < 200) {
-      throw new Error('Insufficient meaningful text extracted from PDF');
-    }
-    
-    return extractedText.trim();
-    
-  } catch (error) {
-    console.error('Enhanced PDF parsing error:', error);
-    throw new Error('Could not parse PDF content with enhanced methods');
-  }
-}
-
-// Extract readable text from PDF bytes
-function extractReadableText(uint8Array: Uint8Array): string {
-  let text = '';
-  let currentWord = '';
-  
-  for (let i = 0; i < uint8Array.length; i++) {
-    const byte = uint8Array[i];
-    
-    // Check if byte represents a readable character
-    if ((byte >= 32 && byte <= 126) || (byte >= 192 && byte <= 255)) {
-      const char = String.fromCharCode(byte);
-      
-      // Build words from readable characters
-      if (char.match(/[a-öA-ÖÀ-ÿ0-9]/)) {
-        currentWord += char;
-      } else if (char.match(/[\s\.,\-\(\)]/)) {
-        if (currentWord.length > 2) {
-          text += currentWord + char;
-        }
-        currentWord = '';
-      }
-    } else {
-      // End current word on non-readable byte
-      if (currentWord.length > 2) {
-        text += currentWord + ' ';
-      }
-      currentWord = '';
-    }
-  }
-  
-  // Add final word
-  if (currentWord.length > 2) {
-    text += currentWord;
-  }
-  
-  // Clean up the text
-  return text
-    .replace(/\s+/g, ' ')
-    .replace(/[^\w\s\.,\-\%\(\)åäöÅÄÖ€$£¥]/g, ' ')
-    .trim();
-}
-
-// Enhanced mock content generator
-function generateEnhancedMockContent(filename: string): string {
-  const currentYear = new Date().getFullYear();
-  const quarter = 'Q1';
-  
-  return `
-DELÅRSRAPPORT ${quarter} ${currentYear}
-KONCERNEN RAPPORTERAR STARK UTVECKLING
-
-VERKSTÄLLANDE DIREKTÖRENS KOMMENTAR
-
-Jag är mycket nöjd med att presentera vårt utmärkta resultat för första kvartalet ${currentYear}. Koncernen har levererat en imponerande prestation med tillväxt inom alla affärsområden och fortsatt stark lönsamhetsutveckling.
-
-Under kvartalet har vi genomfört flera strategiska initiativ som stärker vår marknadsposition och skapar värde för våra aktieägare. Vår digitala transformation fortsätter att generera positiva effekter på både effektivitet och kundupplevelse.
-
-FINANSIELLA NYCKELTAL ${quarter} ${currentYear}
-
-INTÄKTER OCH LÖNSAMHET
-Nettoomsättning: 4 567 miljoner kronor (4 123 miljoner kronor föregående år)
-Organisk tillväxt: 10,8% jämfört med motsvarande period föregående år
-Valutajusterad tillväxt: 9,2%
-Tillväxten driven av stark efterfrågan inom kärnverksamheten
-
-EBITDA: 1 234 miljoner kronor (1 089 miljoner kronor föregående år)
-EBITDA-marginal: 27,0% (26,4% föregående år)
-Förbättring av rörelsemarginaler genom operationell excellens
-Skalfördelar och effektiviseringsinitiativ bidrar positivt
-
-Rörelseresultat (EBIT): 890 miljoner kronor (756 miljoner kronor föregående år)
-Rörelsemarginal: 19,5% (18,3% föregående år)
-Stark underliggande lönsamhetsutveckling
-Fortsatt fokus på kostnadsoptimering
-
-Resultat efter skatt: 634 miljoner kronor (542 miljoner kronor föregående år)
-Resultat per aktie: 3,45 kronor (2,95 kronor föregående år)
-Avkastning på eget kapital: 18,2%
-
-KASSAFLÖDE OCH FINANSIELL STÄLLNING
-
-Kassaflöde från den löpande verksamheten: 987 miljoner kronor (823 miljoner kronor föregående år)
-Stark kassagenerering med förbättrad working capital-hantering
-Kassakonvertering: 80% (76% föregående år)
-
-Investeringar: 345 miljoner kronor (298 miljoner kronor föregående år)
-Strategiska satsningar inom digitalisering och innovation
-Fortsatta investeringar i produktionskapacitet
-
-Nettoskuld: 2 456 miljoner kronor (2 789 miljoner kronor föregående år)
-Nettoskuld/EBITDA: 2,0x (2,6x föregående år)
-Förstärkt balansräkning ger finansiell flexibilitet
-
-OPERATIONELLA HÖJDPUNKTER
-
-MARKNADSUTVECKLING
-- Marknadsandel ökade till 23,5% (22,1% föregående år)
-- Lansering av fyra nya produktlinjer under kvartalet
-- Expansion inom premiumsegmentet visar stark utveckling
-- Kundnöjdhetsindex på historiskt höga nivåer: 8,7/10
-
-INNOVATION OCH UTVECKLING
-- FoU-investeringar ökade med 15% till 89 miljoner kronor
-- Tre nya patent registrerade inom kärnteknologi
-- Samarbetsavtal tecknat med ledande tech-företag
-- Digitaliseringsinitiativ implementerade i 85% av verksamheten
-
-HÅLLBARHET OCH ANSVAR
-- Koldioxidutsläpp minskade med 18% jämfört med föregående år
-- Förnybar energi utgör nu 78% av total energiförbrukning
-- Medarbetarengagemang ökade till 8,4/10 i årets undersökning
-- Säkerhetsindex förbättrades med 12%
-
-FRAMTIDSUTSIKTER
-
-MARKNADSFÖRUTSÄTTNINGAR
-Vi ser fortsatt positiva marknadsförutsättningar med stark efterfrågan inom våra kärnområden. Makroekonomiska faktorer följs noga, men vår starka marknadsposition ger oss goda förutsättningar att navigera eventuella utmaningar.
-
-STRATEGISKA PRIORITERINGAR 2025
-1. Accelerera den digitala transformationen
-2. Expandera inom högtillväxtmarknader
-3. Stärka innovation och produktutveckling
-4. Fortsätta hållbarhetsresan mot klimatneutralitet
-
-FINANSIELLA PROGNOSER
-För helåret ${currentYear} förväntar vi oss:
-- Nettoomsättning: 18,5-19,2 miljarder kronor
-- EBITDA-marginal: 26-28%
-- Investeringar: 1,2-1,4 miljarder kronor
-- Stark kassaflödesgenerering
-
-VD AVSLUTANDE KOMMENTAR
-
-"Första kvartalet ${currentYear} bekräftar styrkan i vår strategi och vårt teams förmåga att leverera exceptionella resultat. Vi har en stark grund att bygga vidare på och ser fram emot att fortsätta skapa värde för alla våra intressenter."
-
-Med vår robusta finansiella ställning, innovationskraft och engagerade medarbetare är vi väl positionerade för fortsatt framgång.
-
-RISKFAKTORER OCH OSÄKERHETER
-- Geopolitisk osäkerhet och dess påverkan på globala leveranskedjor
-- Valutafluktuationer och råvaruprisförändringar
-- Regulatoriska förändringar inom nyckelmarknader
-- Konkurrensintensitet och nya marknadstrender
-
-SLUTSATS
-
-${quarter} ${currentYear} har varit ett framgångsrikt kvartal som demonstrerar koncernens operationella excellens och strategiska fokus. Vi fortsätter att leverera stark tillväxt och lönsamhet samtidigt som vi bygger för framtiden genom innovation och hållbara affärspraktiker.
-
----
-Denna rapport innehåller framtidsinriktade uttalanden som är föremål för risker och osäkerheter.
-Rapporten har upprättats enligt gällande redovisningsprinciper och granskats av revisorerna.
-
-Datum: ${new Date().toLocaleDateString('sv-SE')}
-Källa: Koncernrapport ${quarter} ${currentYear}
-  `.trim();
-}
