@@ -1,7 +1,6 @@
 
 import { useState, useCallback } from 'react';
 import { useToast } from './use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { bergetDocumentProcessor, ProcessingStage } from '@/integrations/berget/documentProcessor';
 
 export interface ProcessingTask {
@@ -21,7 +20,6 @@ export const useAdvancedProcessing = (projectId: string) => {
   const { toast } = useToast();
 
   const updateProgress = useCallback((stages: ProcessingStage[]) => {
-    // Convert Berget.ai stages to our task format
     const newTasks: ProcessingTask[] = stages.map(stage => ({
       id: stage.id,
       name: stage.name,
@@ -33,12 +31,10 @@ export const useAdvancedProcessing = (projectId: string) => {
 
     setTasks(newTasks);
 
-    // Calculate overall progress
     const totalProgress = stages.reduce((sum, stage) => sum + stage.progress, 0);
     const overallProg = totalProgress / stages.length;
     setOverallProgress(overallProg);
 
-    // Update current task index
     const processingIndex = stages.findIndex(stage => stage.status === 'processing');
     const completedCount = stages.filter(stage => stage.status === 'completed').length;
     
@@ -60,13 +56,11 @@ export const useAdvancedProcessing = (projectId: string) => {
     try {
       console.log(`Starting advanced processing for ${documentType} document:`, file.name);
 
-      // Show initial toast
       toast({
         title: "Starting Advanced Processing",
         description: `Processing ${documentType} document with Berget.ai EU-compliant AI...`,
       });
 
-      // Process document with Berget.ai
       const result = await bergetDocumentProcessor.processDocument(
         file,
         documentType,
@@ -78,35 +72,6 @@ export const useAdvancedProcessing = (projectId: string) => {
       }
 
       console.log('Processing completed successfully:', result);
-
-      // Update Supabase with results
-      const { error: projectError } = await supabase
-        .from('projects')
-        .update({
-          financial_data: result.financialData,
-          status: 'completed',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', projectId);
-
-      if (projectError) {
-        console.error('Error updating project:', projectError);
-      }
-
-      // Update or create generated content
-      const { error: contentError } = await supabase
-        .from('generated_content')
-        .upsert({
-          project_id: projectId,
-          script_text: result.scripts.video,
-          script_alternatives: result.alternatives as any,
-          generation_status: 'completed',
-          updated_at: new Date().toISOString()
-        });
-
-      if (contentError) {
-        console.error('Error updating generated content:', contentError);
-      }
 
       toast({
         title: "Processing Complete!",
@@ -124,15 +89,6 @@ export const useAdvancedProcessing = (projectId: string) => {
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown processing error';
       
-      // Update project status to failed
-      await supabase
-        .from('projects')
-        .update({
-          status: 'failed',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', projectId);
-
       toast({
         title: "Processing Failed",
         description: errorMessage,

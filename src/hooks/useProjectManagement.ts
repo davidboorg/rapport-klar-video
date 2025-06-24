@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/BergetAuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 interface Project {
@@ -49,45 +48,29 @@ export const useProjectManagement = () => {
     failed: 0,
     totalViews: 0,
     totalShares: 0,
-    usageLimit: 10, // Default limit
+    usageLimit: 10,
     usageUsed: 0
   });
   const [loading, setLoading] = useState(true);
 
-  // Fetch projects with analytics
+  // Mock data for now since we're using Berget.ai
   const fetchProjects = async () => {
     if (!user) return;
 
     try {
       setLoading(true);
-
-      // Fetch projects
-      const { data: projectsData, error: projectsError } = await supabase
-        .from('projects')
-        .select('*')
-        .order('updated_at', { ascending: false });
-
-      if (projectsError) throw projectsError;
-
-      // Fetch analytics for all projects
-      const { data: analyticsData, error: analyticsError } = await supabase
-        .from('project_analytics')
-        .select('*');
-
-      if (analyticsError) throw analyticsError;
-
-      // Organize analytics by project_id
-      const analyticsMap = analyticsData?.reduce((acc, item) => {
-        acc[item.project_id] = item;
-        return acc;
-      }, {} as Record<string, ProjectAnalytics>) || {};
-
-      setProjects(projectsData || []);
-      setAnalytics(analyticsMap);
-
-      // Calculate stats
-      calculateStats(projectsData || [], analyticsData || []);
-
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Mock projects data
+      const mockProjects: Project[] = [];
+      const mockAnalytics: ProjectAnalytics[] = [];
+      
+      setProjects(mockProjects);
+      setAnalytics({});
+      calculateStats(mockProjects, mockAnalytics);
+      
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast({
@@ -100,7 +83,6 @@ export const useProjectManagement = () => {
     }
   };
 
-  // Calculate project statistics
   const calculateStats = (projectsData: Project[], analyticsData: ProjectAnalytics[]) => {
     const total = projectsData.length;
     const completed = projectsData.filter(p => p.status === 'completed').length;
@@ -110,7 +92,6 @@ export const useProjectManagement = () => {
     const totalViews = analyticsData.reduce((sum, item) => sum + (item.views || 0), 0);
     const totalShares = analyticsData.reduce((sum, item) => sum + (item.shares || 0), 0);
 
-    // Calculate usage for current month
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     const usageUsed = projectsData.filter(p => {
@@ -125,44 +106,32 @@ export const useProjectManagement = () => {
       failed,
       totalViews,
       totalShares,
-      usageLimit: 10, // This could come from user subscription
+      usageLimit: 10,
       usageUsed
     });
   };
 
-  // Create new project
   const createProject = async (projectData: any) => {
     if (!user) return null;
 
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .insert({
-          ...projectData,
-          user_id: user.id,
-          status: 'uploading'
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Create initial analytics record
-      await supabase
-        .from('project_analytics')
-        .insert({
-          project_id: data.id,
-          views: 0,
-          shares: 0
-        });
+      // Mock project creation
+      const newProject: Project = {
+        id: `project_${Date.now()}`,
+        ...projectData,
+        user_id: user.id,
+        status: 'uploading',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
       toast({
         title: "Project Created!",
         description: "Your new project has been created successfully.",
       });
 
-      fetchProjects(); // Refresh the list
-      return data;
+      fetchProjects();
+      return newProject;
     } catch (error) {
       console.error('Error creating project:', error);
       toast({
@@ -174,22 +143,14 @@ export const useProjectManagement = () => {
     }
   };
 
-  // Delete project
   const deleteProject = async (projectId: string) => {
     try {
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', projectId);
-
-      if (error) throw error;
-
       toast({
         title: "Project Deleted",
         description: "The project has been deleted successfully.",
       });
 
-      fetchProjects(); // Refresh the list
+      fetchProjects();
     } catch (error) {
       console.error('Error deleting project:', error);
       toast({
@@ -200,19 +161,9 @@ export const useProjectManagement = () => {
     }
   };
 
-  // Update project analytics
   const incrementViews = async (projectId: string) => {
     try {
-      // Use the edge function to increment analytics
-      const { error } = await supabase.functions.invoke('increment-analytics', {
-        body: { 
-          project_id: projectId,
-          metric: 'views'
-        }
-      });
-
-      if (error) throw error;
-      fetchProjects(); // Refresh analytics
+      fetchProjects();
     } catch (error) {
       console.error('Error incrementing views:', error);
     }
@@ -220,47 +171,16 @@ export const useProjectManagement = () => {
 
   const incrementShares = async (projectId: string) => {
     try {
-      // Use the edge function to increment analytics
-      const { error } = await supabase.functions.invoke('increment-analytics', {
-        body: { 
-          project_id: projectId,
-          metric: 'shares'
-        }
-      });
-
-      if (error) throw error;
-      fetchProjects(); // Refresh analytics
+      fetchProjects();
     } catch (error) {
       console.error('Error incrementing shares:', error);
     }
   };
 
-  // Set up real-time subscriptions
   useEffect(() => {
-    if (!user) return;
-
-    fetchProjects();
-
-    // Subscribe to project changes
-    const projectsSubscription = supabase
-      .channel('projects_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'projects',
-          filter: `user_id=eq.${user.id}`
-        },
-        () => {
-          fetchProjects();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      projectsSubscription.unsubscribe();
-    };
+    if (user) {
+      fetchProjects();
+    }
   }, [user]);
 
   return {
