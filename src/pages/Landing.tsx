@@ -32,9 +32,15 @@ const Landing = () => {
         </div>
       </header>
 
-      {/* Hero Section - Balanced Dual Messaging */}
+      {/* Hero Section - Balanced Dual Messaging with Security USP */}
       <section className="py-20 px-6 bg-gradient-to-br from-blue-50 to-white">
         <div className="container mx-auto text-center max-w-7xl">
+          {/* Security Trust Indicator */}
+          <div className="flex items-center justify-center space-x-3 mb-6">
+            <Shield className="w-6 h-6 text-green-600" />
+            <span className="text-lg font-semibold text-green-700">EU-compliant • GDPR secure • Swedish technology</span>
+          </div>
+          
           {/* Primary Headline */}
           <h1 className="text-6xl md:text-7xl font-bold text-slate-900 mb-6 leading-tight">
             AI Content Engine for
@@ -97,9 +103,13 @@ const Landing = () => {
             </Card>
           </div>
 
-          {/* Unified CTA */}
+          {/* Unified CTA with Security */}
           <div className="bg-white rounded-2xl p-8 shadow-lg mb-12 max-w-5xl mx-auto">
-            <h3 className="text-3xl font-bold text-slate-900 mb-6">One Platform, Two Revolutionary Applications</h3>
+            <h3 className="text-3xl font-bold text-slate-900 mb-4">One Platform, Two Revolutionary Applications</h3>
+            <div className="flex items-center justify-center space-x-2 mb-6">
+              <Shield className="w-5 h-5 text-green-600" />
+              <span className="text-green-700">Powered by secure EU infrastructure</span>
+            </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/market-selection">
                 <Button size="lg" className="bg-blue-700 hover:bg-blue-800 text-lg px-8 py-4">
@@ -122,12 +132,16 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Content Generation Showcase - Central Focus */}
+      {/* Content Generation Showcase - Central Focus with Security */}
       <section className="py-20 px-6 bg-slate-50" id="platform">
         <div className="container mx-auto max-w-7xl">
           <div className="text-center mb-16">
-            <h2 className="text-5xl font-bold text-slate-900 mb-6">AI Content Engine Powers Both Markets</h2>
-            <p className="text-xl text-slate-600">One Upload → Multiple Professional Formats</p>
+            <h2 className="text-5xl font-bold text-slate-900 mb-6">Secure AI Content Engine Powers Both Markets</h2>
+            <p className="text-xl text-slate-600">One Upload → Multiple Professional Formats → EU-compliant Processing</p>
+            <div className="flex items-center justify-center space-x-2 mt-4">
+              <Shield className="w-5 h-5 text-green-600" />
+              <span className="text-green-600">Processed in Swedish data centers with GDPR compliance</span>
+            </div>
           </div>
 
           {/* Content Transformation Visual */}
@@ -138,7 +152,7 @@ const Landing = () => {
                 <FileText className="w-12 h-12 text-slate-600" />
                 <div className="text-center">
                   <h4 className="text-xl font-semibold text-slate-800">Financial Report</h4>
-                  <p className="text-slate-600">Input</p>
+                  <p className="text-slate-600">Secure Upload</p>
                 </div>
               </div>
 
@@ -147,8 +161,8 @@ const Landing = () => {
                 <ArrowRight className="w-8 h-8 text-blue-600" />
                 <Brain className="w-12 h-12 text-blue-600" />
                 <div className="text-center">
-                  <h4 className="text-xl font-semibold text-blue-800">AI Processing</h4>
-                  <p className="text-blue-600">Intelligent analysis & generation</p>
+                  <h4 className="text-xl font-semibold text-blue-800">Berget.ai Processing</h4>
+                  <p className="text-blue-600">EU-compliant intelligent analysis</p>
                 </div>
                 <ArrowRight className="w-8 h-8 text-blue-600" />
               </div>
@@ -179,13 +193,13 @@ const Landing = () => {
             </div>
           </div>
 
-          {/* Processing Power */}
+          {/* Processing Power with Security Focus */}
           <div className="grid md:grid-cols-4 gap-8">
             {[
-              { name: "OpenAI GPT-4", desc: "Intelligent content analysis and script generation", icon: "🧠" },
-              { name: "ElevenLabs", desc: "Professional voice cloning and narration", icon: "🎤" },
-              { name: "HeyGen", desc: "Executive avatar creation and video production", icon: "👤" },
-              { name: "Advanced PDF", desc: "Extract insights from any financial document", icon: "📄" }
+              { name: "Berget.ai LLMs", desc: "Secure EU-based language models for financial analysis", icon: "🧠" },
+              { name: "EU Voice Technology", desc: "Professional voice cloning with data residency", icon: "🎤" },
+              { name: "Secure Video Generation", desc: "Executive avatar creation in compliant infrastructure", icon: "👤" },
+              { name: "GDPR PDF Processing", desc: "Extract insights while maintaining data protection", icon: "📄" }
             ].map((tech, index) => (
               <Card key={index} className="p-6 hover:shadow-lg transition-shadow text-center">
                 <div className="text-4xl mb-4">{tech.icon}</div>

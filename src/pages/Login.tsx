@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
+import { useAuth } from "@/contexts/BergetAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
-import { Play, Eye, EyeOff } from "lucide-react";
+import { Play, Eye, EyeOff, Shield } from "lucide-react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -48,7 +48,7 @@ const Login = () => {
     } else {
       toast({
         title: "Welcome back!",
-        description: "You have been logged in successfully",
+        description: "You have been logged in securely with Berget.ai",
       });
       navigate("/dashboard");
     }
@@ -65,7 +65,11 @@ const Login = () => {
             <h1 className="text-2xl font-bold text-slate-900">ReportFlow</h1>
           </Link>
           <h2 className="text-3xl font-bold text-slate-900 mb-2">Welcome back</h2>
-          <p className="text-slate-600">Sign in to your account to continue</p>
+          <p className="text-slate-600">Sign in to your secure EU account</p>
+          <div className="flex items-center justify-center space-x-2 mt-2">
+            <Shield className="w-4 h-4 text-green-600" />
+            <span className="text-sm text-green-600">EU-compliant & GDPR secure</span>
+          </div>
         </div>
 
         <Card className="border-0 shadow-lg">

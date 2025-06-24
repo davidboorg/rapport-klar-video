@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
+import { useAuth } from "@/contexts/BergetAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
-import { Play, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Play, Eye, EyeOff, CheckCircle, Shield } from "lucide-react";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -75,9 +75,9 @@ const Register = () => {
     } else {
       toast({
         title: "Account created!",
-        description: "Check your email to confirm your account",
+        description: "Welcome to ReportFlow - your account is EU-compliant and secure",
       });
-      navigate("/login");
+      navigate("/dashboard");
     }
   };
 
@@ -95,8 +95,12 @@ const Register = () => {
             </div>
             <h1 className="text-2xl font-bold text-slate-900">ReportFlow</h1>
           </Link>
-          <h2 className="text-3xl font-bold text-slate-900 mb-2">Create your account</h2>
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">Create your secure account</h2>
           <p className="text-slate-600">Start creating professional videos from your financial reports</p>
+          <div className="flex items-center justify-center space-x-2 mt-2">
+            <Shield className="w-4 h-4 text-green-600" />
+            <span className="text-sm text-green-600">EU data centers • GDPR compliant • Financial-grade security</span>
+          </div>
         </div>
 
         <Card className="border-0 shadow-lg">
@@ -106,6 +110,10 @@ const Register = () => {
               <div className="flex items-center space-x-1">
                 <CheckCircle className="w-4 h-4 text-green-600" />
                 <span>14-day free trial</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <span>EU-compliant</span>
               </div>
               <div className="flex items-center space-x-1">
                 <CheckCircle className="w-4 h-4 text-green-600" />
@@ -243,7 +251,7 @@ const Register = () => {
                 className="w-full h-11 bg-blue-600 hover:bg-blue-700"
                 disabled={loading}
               >
-                {loading ? "Creating account..." : "Create account"}
+                {loading ? "Creating account..." : "Create secure account"}
               </Button>
             </form>
 
