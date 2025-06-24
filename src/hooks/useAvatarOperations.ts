@@ -1,6 +1,6 @@
 
 import { bergetClient } from '@/integrations/berget/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/BergetAuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar } from '@/types/avatar';
 
