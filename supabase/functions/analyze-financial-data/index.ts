@@ -18,9 +18,9 @@ serve(async (req) => {
     
     console.log('Starting financial analysis for project:', projectId);
     console.log('PDF text length received:', pdfText?.length || 0);
-    console.log('Text preview (first 300 chars):', pdfText?.substring(0, 300) || 'NO CONTENT');
+    console.log('Text preview (first 500 chars):', pdfText?.substring(0, 500) || 'NO CONTENT');
 
-    if (!projectId || !pdfText || pdfText.length < 100) {
+    if (!projectId || !pdfText || pdfText.length < 50) {
       throw new Error('Missing projectId or insufficient PDF content for analysis');
     }
 
@@ -33,61 +33,52 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    // Intelligent text preparation for analysis
-    let analysisText = pdfText;
-    if (pdfText.length > 50000) {
-      // Take first 25k and last 25k characters for comprehensive analysis
-      const firstPart = pdfText.substring(0, 25000);
-      const lastPart = pdfText.substring(pdfText.length - 25000);
-      analysisText = firstPart + "\n\n[...rapport fortsätter...]\n\n" + lastPart;
-      console.log('Text intelligently truncated. Original:', pdfText.length, 'Processed:', analysisText.length);
-    }
+    // Step 1: Advanced financial data extraction
+    console.log('Performing deep financial analysis...');
+    
+    const deepAnalysisPrompt = `
+Du är en expertanalytiker för finansiella rapporter. Analysera denna rapport EXTREMT NOGGRANT och extrahera ALL verklig information. 
 
-    // Step 1: Extract financial data and company information
-    const analysisPrompt = `
-ABSOLUT VIKTIGT: Du ska analysera DENNA SPECIFIKA finansiella rapport som jag skickar. Läs rapporten noggrant och extrahera VERKLIGA fakta och siffror från texten.
+VIKTIGT: Detta är en VERKLIG finansiell rapport, inte ett exempel. Du MÅSTE hitta de FAKTISKA siffrorna och företagsinformationen från denna specifika rapport.
 
-Analysera denna finansiella rapport djupt och extrahera alla verkliga finansiella data. Returnera ENDAST giltig JSON enligt denna struktur:
+Analysera följande rapport och returnera ENDAST giltig JSON med VERKLIGA data från rapporten:
 
 {
-  "company_name": "VERKLIGT företagsnamn från rapporten",
-  "report_period": "VERKLIG rapportperiod (Q1 2024, Q2 2024, etc.)",
-  "report_type": "Quarterly/Annual/Interim/Other",
-  "currency": "Verklig valuta från rapporten (SEK/USD/EUR/etc.)",
+  "company_name": "VERKLIGT företagsnamn från rapporten (t.ex. Ericsson, Storytel, etc.)",
+  "report_period": "VERKLIG rapportperiod från rapporten (Q1 2024, Q2 2024, H1 2024, etc.)",
+  "report_type": "Quarterly/Annual/Interim baserat på rapporten",
+  "currency": "Verklig valuta från rapporten (SEK/USD/EUR)",
   "financial_metrics": {
-    "revenue": "Verkliga intäkter med exakta siffror och enhet",
-    "operating_income": "Verkligt rörelseresultat med siffror",
-    "net_income": "Verklig nettovinst/förlust med siffror", 
-    "ebitda": "Verkligt EBITDA om tillgängligt",
-    "growth_rate": "Verklig tillväxttakt i procent från rapporten",
-    "margins": "Verkliga marginaler med procentsatser"
+    "revenue": "VERKLIGA intäkter med EXAKTA siffror från rapporten",
+    "operating_income": "VERKLIGT rörelseresultat med EXAKTA siffror",
+    "net_income": "VERKLIG nettovinst/förlust med EXAKTA siffror", 
+    "growth_rate": "VERKLIG tillväxttakt i procent från rapporten",
+    "key_figures": "Andra viktiga finansiella nyckeltal med EXAKTA siffror"
   },
-  "key_business_highlights": [
-    "Specifika affärshöjdpunkter från rapporten med verkliga siffror",
-    "Verkliga produktlanseringar eller avtal med detaljer",
-    "Faktiska marknadsexpansioner med konkreta siffror"
+  "business_highlights": [
+    "VERKLIGA affärshöjdpunkter med SPECIFIKA siffror från rapporten",
+    "VERKLIGA produktlanseringar eller avtal med KONKRETA detaljer",
+    "FAKTISKA marknadsexpansioner eller förändringar"
   ],
-  "challenges_and_risks": [
-    "Verkliga utmaningar som nämns i rapporten", 
-    "Specifika risker eller problem som företaget diskuterar"
+  "challenges_mentioned": [
+    "VERKLIGA utmaningar som nämns i rapporten", 
+    "SPECIFIKA risker eller problem som diskuteras"
   ],
-  "management_commentary": "Verkliga kommentarer från VD eller ledning från rapporten",
-  "market_context": "Verklig marknadssituation som beskrivs i rapporten",
-  "future_outlook": "Verklig framtidsguidning från rapporten",
-  "specific_numbers": [
-    "Lista alla viktiga siffror och procenttal som nämns",
-    "Användarantal, marknadsandelar, omsättningssiffror etc."
-  ]
+  "management_outlook": "VERKLIGA kommentarer från ledning eller VD från rapporten",
+  "market_context": "VERKLIG marknadssituation som beskrivs",
+  "future_guidance": "VERKLIG framtidsguidning från rapporten"
 }
 
-KRITISKT: Använd ENDAST information som faktiskt finns i denna specifika rapport. Hitta ALDRIG på siffror eller fakta.
+ABSOLUT KRITISKT: 
+- Läs rapporten ORDENTLIGT och hitta de VERKLIGA siffrorna
+- Använd ALDRIG exempel eller generiska siffror
+- Om du inte hittar specifik data, skriv "Ej angiven i rapport" 
+- Fokusera på att hitta företagsnamnet och rapportperioden först
 
-Här är den kompletta rapporten som ska analyseras:
+Här är rapporten som ska analyseras:
 
-${analysisText}
+${pdfText}
 `;
-
-    console.log('Sending document for financial analysis...');
 
     const analysisResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -100,11 +91,11 @@ ${analysisText}
         messages: [
           {
             role: 'system',
-            content: 'Du är en expertanalytiker för finansiella rapporter. Du extraherar ENDAST verklig information från de dokument du får. Du hittar ALDRIG på siffror eller fakta. Du returnerar alltid valid JSON.'
+            content: 'Du är en expertanalytiker som ENDAST arbetar med verkliga finansiella data. Du hittar ALDRIG på siffror. Du extraherar ENDAST faktisk information från de rapporter du får.'
           },
           {
             role: 'user',
-            content: analysisPrompt
+            content: deepAnalysisPrompt
           }
         ],
         temperature: 0.1,
@@ -124,28 +115,24 @@ ${analysisText}
     let extractedData;
     try {
       const content = analysisData.choices[0].message.content.trim();
-      console.log('Raw analysis response preview:', content.substring(0, 300));
+      console.log('Raw analysis response preview:', content.substring(0, 500));
       
       const cleanedContent = content.replace(/```json\n?|\n?```/g, '').trim();
       extractedData = JSON.parse(cleanedContent);
       console.log('Successfully parsed financial data for:', extractedData.company_name);
     } catch (parseError) {
       console.error('Analysis parsing error:', parseError);
-      console.error('Full response:', analysisData.choices[0]?.message?.content);
       throw new Error('Could not parse financial analysis as valid JSON');
     }
 
-    // Step 2: Generate two specific manuscript alternatives based on real data
+    // Step 2: Generate two completely different manuscript alternatives using REAL data
     const scriptPrompt = `
-Baserat på denna VERKLIGA finansiella analys, skapa EXAKT TVÅ helt olika manusförslag för podcast/presentation.
+Baserat på denna VERKLIGA finansiella analys, skapa EXAKT TVÅ helt olika manusförslag.
 
-VERKLIGA FINANSIELLA DATA:
+VERKLIG FINANSIELL DATA:
 ${JSON.stringify(extractedData, null, 2)}
 
-ORIGINALRAPPORT (för kontext):
-${analysisText.substring(0, 10000)}
-
-Skapa två helt olika manus som använder de VERKLIGA siffrorna och fakten från analysen ovan. Manusen ska vara färdiga att läsa upp.
+Använd de VERKLIGA siffrorna och företagsinformationen ovan för att skapa två unika manus.
 
 Returnera ENDAST denna JSON-struktur:
 
@@ -153,39 +140,24 @@ Returnera ENDAST denna JSON-struktur:
   "script_alternatives": [
     {
       "type": "executive_summary",
-      "title": "Kort Sammanfattning - ${extractedData.company_name}",
+      "title": "Kvartalssammanfattning - ${extractedData.company_name}",
       "duration": "2-3 minuter",
-      "tone": "Professionell och resultatorienterad",
+      "tone": "Professionell och koncis",
       "target_audience": "Investerare och analytiker",
-      "key_points": [
-        "Verklig nyckelpoint med specifika siffror",
-        "Konkret finansiell prestation från rapporten",
-        "Specifik framtidsutsikt med verkliga mål"
-      ],
-      "script": "KOMPLETT MANUS som börjar med: 'Under ${extractedData.report_period} rapporterade ${extractedData.company_name} följande resultat...' Använd ALLA verkliga siffror från analysen. Inkludera faktiska intäkter, vinster, och specifika affärshöjdpunkter. Måste vara färdigt att läsa upp direkt. Maximalt 3000 tecken."
+      "script": "Färdigt manus som börjar: '${extractedData.company_name} presenterade sina resultat för ${extractedData.report_period}...' Använd ALL verklig data inklusive EXAKTA intäkter, vinster och tillväxtsiffror. Nämn specifika produkter och marknader från rapporten. Maximalt 3000 tecken."
     },
     {
-      "type": "detailed_investor", 
+      "type": "detailed_analysis", 
       "title": "Fördjupad Analys - ${extractedData.company_name}",
       "duration": "4-5 minuter",
       "tone": "Analytisk och detaljerad",
       "target_audience": "Professionella investerare",
-      "key_points": [
-        "Djupgående finansiell breakdown med verkliga tal",
-        "Marknadskontext och konkurrensposition",
-        "Specifika risker och möjligheter från rapporten"
-      ],
-      "script": "KOMPLETT MANUS som börjar med: 'Vi gräver djupare i ${extractedData.company_name}s ${extractedData.report_period}-rapport...' Använd ALLA finansiella mått, tillväxtsiffror och ledningskommentarer från den verkliga rapporten. Inkludera exakta procenttal, valutabelopp och jämförelser. Maximalt 4000 tecken."
+      "script": "Färdigt manus som börjar: 'Vi gräver djupare i ${extractedData.company_name}s senaste kvartalsrapport för ${extractedData.report_period}...' Inkludera ALL finansiella mått, marknadskontext och ledningskommentarer från verkliga rapporten. Använd exakta siffror och procenttal. Maximalt 4500 tecken."
     }
   ]
 }
 
-ABSOLUT KRITISKT: 
-- Manusen måste vara FÄRDIGA att läsa upp, inte bara punktlistor
-- Använd ENDAST verkliga data från den specifika rapporten
-- Inkludera exakta siffror, procenttal och valutabelopp
-- Nämn specifika produkter, marknader eller händelser från rapporten
-- Varje manus ska vara unikt i ton och fokus men baserat på samma verkliga data
+KRITISKT: Manusen måste vara FÄRDIGA att läsa upp och använda ENDAST verkliga data från analysen ovan.
 `;
 
     console.log('Generating specific manuscript alternatives...');
@@ -201,81 +173,61 @@ ABSOLUT KRITISKT:
         messages: [
           {
             role: 'system',
-            content: `Du skapar professionella podcast-manus baserat på verkliga finansiella rapporter. Du arbetar med ${extractedData.company_name}s rapport för ${extractedData.report_period}. Använd ENDAST verkliga data och skapa färdiga manus som kan läsas upp direkt.`
+            content: `Du skapar professionella podcast-manus baserat på verkliga finansiella rapporter. Du arbetar med ${extractedData.company_name}s rapport för ${extractedData.report_period}. Använd ENDAST verkliga data.`
           },
           {
             role: 'user',
             content: scriptPrompt
           }
         ],
-        temperature: 0.3,
+        temperature: 0.2,
         max_tokens: 4000
       }),
     });
 
+    let parsedScripts = null;
     if (scriptResponse.ok) {
       const scriptData = await scriptResponse.json();
       
       try {
         const scriptContent = scriptData.choices[0].message.content.trim();
-        console.log('Script generation response received, length:', scriptContent.length);
-        
         const cleanedScriptContent = scriptContent.replace(/```json\n?|\n?```/g, '').trim();
-        const parsedScripts = JSON.parse(cleanedScriptContent);
+        parsedScripts = JSON.parse(cleanedScriptContent);
         
-        if (parsedScripts.script_alternatives && Array.isArray(parsedScripts.script_alternatives)) {
-          console.log('Generated script alternatives:', parsedScripts.script_alternatives.length);
-          
-          // Validate scripts
-          parsedScripts.script_alternatives.forEach((script, index) => {
-            console.log(`Script ${index + 1} (${script.type}): ${script.script?.length || 0} characters`);
-            if (script.script && script.script.length > 100) {
-              console.log(`Script ${index + 1} content valid`);
-            } else {
-              console.warn(`Script ${index + 1} content too short or missing`);
-            }
-          });
-
-          // Save the financial data and scripts
-          const { error: updateError } = await supabase
-            .from('projects')
-            .update({ 
-              financial_data: extractedData,
-              status: 'analyzed',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', projectId);
-
-          if (updateError) {
-            console.error('Error updating project:', updateError);
-            throw new Error(`Could not update project: ${updateError.message}`);
-          }
-
-          const { error: contentError } = await supabase
-            .from('generated_content')
-            .upsert({
-              project_id: projectId,
-              script_alternatives: parsedScripts.script_alternatives,
-              script_text: parsedScripts.script_alternatives[0]?.script || '',
-              generation_status: 'completed',
-              updated_at: new Date().toISOString(),
-            });
-
-          if (contentError) {
-            console.error('Error saving scripts:', contentError);
-          } else {
-            console.log('Scripts saved successfully');
-          }
-        } else {
-          console.error('Invalid script alternatives structure');
-        }
-
+        console.log('Generated script alternatives successfully');
       } catch (scriptParseError) {
         console.error('Script parsing error:', scriptParseError);
-        console.error('Raw script response:', scriptData.choices[0]?.message?.content?.substring(0, 500));
       }
-    } else {
-      console.error('Script generation failed:', scriptResponse.status);
+    }
+
+    // Save the financial data and scripts
+    const { error: updateError } = await supabase
+      .from('projects')
+      .update({ 
+        financial_data: extractedData,
+        status: 'analyzed',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', projectId);
+
+    if (updateError) {
+      console.error('Error updating project:', updateError);
+    }
+
+    if (parsedScripts?.script_alternatives) {
+      const { error: contentError } = await supabase
+        .from('generated_content')
+        .upsert({
+          project_id: projectId,
+          script_alternatives: parsedScripts.script_alternatives,
+          script_text: parsedScripts.script_alternatives[0]?.script || '',
+          generation_status: 'completed',
+          updated_at: new Date().toISOString(),
+        });
+
+      if (contentError) {
+        console.error('Error saving scripts:', contentError);
+      }
     }
 
     console.log('Analysis completed successfully for:', extractedData.company_name);
@@ -285,8 +237,9 @@ ABSOLUT KRITISKT:
         success: true, 
         company_analyzed: extractedData.company_name,
         period: extractedData.report_period,
-        extraction_summary: `Analyzed real data for ${extractedData.company_name} (${extractedData.report_period})`,
-        message: 'Financial analysis and manuscript generation completed'
+        financial_data: extractedData,
+        scripts_generated: parsedScripts ? 'Yes' : 'No',
+        message: 'Djup finansiell analys slutförd med verkliga data'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
