@@ -14,11 +14,14 @@ serve(async (req) => {
   }
 
   try {
-    const { text, voice = 'alloy', projectId } = await req.json();
+    const { text, voice = '9BWtsMINqrJLrRacOk9x', projectId, voiceSettings } = await req.json();
     
     if (!text) {
       return new Response(
-        JSON.stringify({ error: 'Text är required för podcast-generering' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'Text är required för podcast-generering' 
+        }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -36,7 +39,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false,
-          error: 'ElevenLabs API key not configured. Try ELEVENLABS_API_KEY_NEW or ELEVENLABS_KEY' 
+          error: 'ElevenLabs API key not configured. Kontakta support.' 
         }),
         { 
           status: 500, 
@@ -47,8 +50,18 @@ serve(async (req) => {
 
     console.log(`Generating podcast for project ${projectId} with voice ${voice}`);
 
+    // Prepare voice settings with defaults
+    const defaultVoiceSettings = {
+      stability: 0.5,
+      similarity_boost: 0.75,
+      style: 0.0,
+      use_speaker_boost: true
+    };
+
+    const finalVoiceSettings = { ...defaultVoiceSettings, ...voiceSettings };
+
     // Call ElevenLabs API for text-to-speech
-    const elevenLabsResponse = await fetch('https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM', {
+    const elevenLabsResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}`, {
       method: 'POST',
       headers: {
         'Accept': 'audio/mpeg',
@@ -58,10 +71,7 @@ serve(async (req) => {
       body: JSON.stringify({
         text: text,
         model_id: 'eleven_multilingual_v2',
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.5
-        }
+        voice_settings: finalVoiceSettings
       }),
     });
 
@@ -90,7 +100,8 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         audioContent: base64Audio,
-        projectId: projectId
+        projectId: projectId,
+        voiceSettings: finalVoiceSettings
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
