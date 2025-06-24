@@ -282,7 +282,7 @@ export type Database = {
           report_type: string | null
           status: Database["public"]["Enums"]["project_status"]
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           company_logo_url?: string | null
@@ -297,7 +297,7 @@ export type Database = {
           report_type?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           company_logo_url?: string | null
@@ -312,7 +312,7 @@ export type Database = {
           report_type?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
