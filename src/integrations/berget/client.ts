@@ -2,7 +2,6 @@
 // Berget.ai API client configuration
 export interface BergetConfig {
   apiUrl: string;
-  apiKey: string;
 }
 
 export interface BergetUser {
@@ -51,29 +50,28 @@ class BergetClient {
     this.config = config;
   }
 
-  private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<{ data: any; error: any }> {
+  private async makeSecureRequest(endpoint: string, options: RequestInit = {}): Promise<{ data: any; error: any }> {
     try {
-      const session = this.getStoredSession();
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.accessToken || this.config.apiKey}`,
-        ...options.headers,
-      };
-
-      const response = await fetch(`${this.config.apiUrl}${endpoint}`, {
-        ...options,
-        headers,
+      // Use Supabase Edge Function for secure API calls to Berget
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { data, error } = await supabase.functions.invoke('berget-api-proxy', {
+        body: {
+          endpoint,
+          method: options.method || 'GET',
+          body: options.body ? JSON.parse(options.body as string) : undefined,
+          headers: options.headers
+        }
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        return { data: null, error: { message: errorText || 'Request failed', status: response.status } };
+      if (error) {
+        console.error('Berget API proxy error:', error);
+        return { data: null, error };
       }
 
-      const data = await response.json();
       return { data, error: null };
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('Secure request failed:', error);
       return { data: null, error: { message: 'Network error', originalError: error } };
     }
   }
@@ -81,51 +79,35 @@ class BergetClient {
   // Authentication methods
   async login(email: string, password: string): Promise<{ data: BergetSession | null; error: any }> {
     try {
-      console.log('Attempting login to Berget.ai API...');
+      console.log('Attempting login to Berget.ai API via secure proxy...');
       
-      const response = await fetch(`${this.config.apiUrl}/auth/login`, {
+      const result = await this.makeSecureRequest('/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.apiKey}`,
-        },
         body: JSON.stringify({ email, password }),
       });
 
-      console.log('Login response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Login failed with response:', errorText);
+      if (result.error) {
+        console.error('Login failed:', result.error);
         
-        if (response.status === 401) {
+        if (result.error.status === 401) {
           return { data: null, error: { message: 'Invalid email or password' } };
         }
-        if (response.status === 404) {
+        if (result.error.status === 404) {
           return { data: null, error: { message: 'Service temporarily unavailable' } };
         }
-        if (response.status >= 500) {
+        if (result.error.status >= 500) {
           return { data: null, error: { message: 'Server error. Please try again later.' } };
         }
         
         return { data: null, error: { message: 'Login failed. Please check your credentials.' } };
       }
 
-      const session = await response.json();
+      const session = result.data;
       localStorage.setItem('berget_session', JSON.stringify(session));
       console.log('Login successful');
       return { data: session, error: null };
     } catch (error) {
       console.error('Network error during login:', error);
-      
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        return { 
-          data: null, 
-          error: { 
-            message: 'Unable to connect to authentication service. Please check your internet connection.' 
-          } 
-        };
-      }
       
       return { 
         data: null, 
@@ -138,14 +120,10 @@ class BergetClient {
 
   async register(email: string, password: string, userData: { firstName: string; lastName: string; company: string }): Promise<{ data: BergetSession | null; error: any }> {
     try {
-      console.log('Attempting registration to Berget.ai API...');
+      console.log('Attempting registration to Berget.ai API via secure proxy...');
       
-      const response = await fetch(`${this.config.apiUrl}/auth/register`, {
+      const result = await this.makeSecureRequest('/auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.apiKey}`,
-        },
         body: JSON.stringify({
           email,
           password,
@@ -155,23 +133,20 @@ class BergetClient {
         }),
       });
 
-      console.log('Registration response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Registration failed with response:', errorText);
+      if (result.error) {
+        console.error('Registration failed:', result.error);
         
-        if (response.status === 409) {
+        if (result.error.status === 409) {
           return { data: null, error: { message: 'An account with this email already exists' } };
         }
-        if (response.status === 400) {
+        if (result.error.status === 400) {
           return { data: null, error: { message: 'Invalid registration data. Please check your information.' } };
         }
         
         return { data: null, error: { message: 'Registration failed. Please try again.' } };
       }
 
-      const session = await response.json();
+      const session = result.data;
       localStorage.setItem('berget_session', JSON.stringify(session));
       console.log('Registration successful');
       return { data: session, error: null };
@@ -190,11 +165,8 @@ class BergetClient {
     try {
       const session = this.getStoredSession();
       if (session) {
-        await fetch(`${this.config.apiUrl}/auth/logout`, {
+        await this.makeSecureRequest('/auth/logout', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.accessToken}`,
-          },
         });
       }
     } catch (error) {
@@ -214,21 +186,16 @@ class BergetClient {
         return { data: null, error: { message: 'No refresh token available' } };
       }
 
-      const response = await fetch(`${this.config.apiUrl}/auth/refresh`, {
+      const result = await this.makeSecureRequest('/auth/refresh', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.apiKey}`,
-        },
         body: JSON.stringify({ refreshToken: session.refreshToken }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        return { data: null, error };
+      if (result.error) {
+        return { data: null, error: result.error };
       }
 
-      const newSession = await response.json();
+      const newSession = result.data;
       localStorage.setItem('berget_session', JSON.stringify(newSession));
       return { data: newSession, error: null };
     } catch (error) {
@@ -238,56 +205,56 @@ class BergetClient {
 
   // Avatar methods
   async getAvatars(): Promise<{ data: BergetAvatar[] | null; error: any }> {
-    return this.makeRequest('/avatars');
+    return this.makeSecureRequest('/avatars');
   }
 
   async createAvatar(avatarData: Partial<BergetAvatar>): Promise<{ data: BergetAvatar | null; error: any }> {
-    return this.makeRequest('/avatars', {
+    return this.makeSecureRequest('/avatars', {
       method: 'POST',
       body: JSON.stringify(avatarData),
     });
   }
 
   async updateAvatar(avatarId: string, updates: Partial<BergetAvatar>): Promise<{ data: BergetAvatar | null; error: any }> {
-    return this.makeRequest(`/avatars/${avatarId}`, {
+    return this.makeSecureRequest(`/avatars/${avatarId}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
   }
 
   async deleteAvatar(avatarId: string): Promise<{ data: null; error: any }> {
-    return this.makeRequest(`/avatars/${avatarId}`, {
+    return this.makeSecureRequest(`/avatars/${avatarId}`, {
       method: 'DELETE',
     });
   }
 
   async refreshAvatar(avatarId: string): Promise<{ data: any; error: any }> {
-    return this.makeRequest(`/avatars/${avatarId}/refresh`, {
+    return this.makeSecureRequest(`/avatars/${avatarId}/refresh`, {
       method: 'POST',
     });
   }
 
   // Project methods
   async getProjects(): Promise<{ data: BergetProject[] | null; error: any }> {
-    return this.makeRequest('/projects');
+    return this.makeSecureRequest('/projects');
   }
 
   async createProject(projectData: Partial<BergetProject>): Promise<{ data: BergetProject | null; error: any }> {
-    return this.makeRequest('/projects', {
+    return this.makeSecureRequest('/projects', {
       method: 'POST',
       body: JSON.stringify(projectData),
     });
   }
 
   async updateProject(projectId: string, updates: Partial<BergetProject>): Promise<{ data: BergetProject | null; error: any }> {
-    return this.makeRequest(`/projects/${projectId}`, {
+    return this.makeSecureRequest(`/projects/${projectId}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
   }
 
   async deleteProject(projectId: string): Promise<{ data: null; error: any }> {
-    return this.makeRequest(`/projects/${projectId}`, {
+    return this.makeSecureRequest(`/projects/${projectId}`, {
       method: 'DELETE',
     });
   }
@@ -295,33 +262,39 @@ class BergetClient {
   // Document processing methods
   async processDocument(file: File, documentType: 'quarterly' | 'board'): Promise<{ data: any; error: any }> {
     try {
-      const formData = new FormData();
-      formData.append('document', file);
-      formData.append('type', documentType);
-
-      const session = this.getStoredSession();
-      const response = await fetch(`${this.config.apiUrl}/documents/process`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session?.accessToken || this.config.apiKey}`,
-        },
-        body: formData,
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Convert file to base64 for transmission
+      const reader = new FileReader();
+      const fileData = await new Promise<string>((resolve) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
       });
 
-      if (!response.ok) {
-        const error = await response.json();
+      const { data, error } = await supabase.functions.invoke('berget-api-proxy', {
+        body: {
+          endpoint: '/documents/process',
+          method: 'POST',
+          body: {
+            document: fileData,
+            type: documentType,
+            filename: file.name
+          }
+        }
+      });
+
+      if (error) {
         return { data: null, error };
       }
 
-      const result = await response.json();
-      return { data: result, error: null };
+      return { data, error: null };
     } catch (error) {
       return { data: null, error };
     }
   }
 
   async generateContent(chunks: any[], contentType: 'video' | 'audio' | 'summary'): Promise<{ data: any; error: any }> {
-    return this.makeRequest('/content/generate', {
+    return this.makeSecureRequest('/content/generate', {
       method: 'POST',
       body: JSON.stringify({
         chunks,
@@ -336,7 +309,7 @@ class BergetClient {
     try {
       const session = this.getStoredSession();
       const wsUrl = this.config.apiUrl.replace('https://', 'wss://').replace('http://', 'ws://');
-      const websocket = new WebSocket(`${wsUrl}${endpoint}?token=${session?.accessToken || this.config.apiKey}`);
+      const websocket = new WebSocket(`${wsUrl}${endpoint}?token=${session?.accessToken}`);
       
       this.websockets.set(endpoint, websocket);
       
@@ -363,9 +336,7 @@ class BergetClient {
 
 // Initialize Berget.ai client with production configuration
 const BERGET_API_URL = "https://api.berget.ai/v1";
-const BERGET_API_KEY = "sk_ber_3jnGf3YG1X4MHcpoY4ZRBuvDTZfHWmqz7EIeR_2eddbe6f6174d835";
 
 export const bergetClient = new BergetClient({
   apiUrl: BERGET_API_URL,
-  apiKey: BERGET_API_KEY,
 });

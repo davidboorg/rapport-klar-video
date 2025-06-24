@@ -8,3 +8,6 @@ jwt_expiry = 3600
 
 [functions.analyze-financial-data]
 verify_jwt = true
+
+[functions.berget-api-proxy]
+verify_jwt = true
