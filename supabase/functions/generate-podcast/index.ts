@@ -26,12 +26,15 @@ serve(async (req) => {
       );
     }
 
-    // Get ElevenLabs API key from environment
-    const elevenLabsApiKey = Deno.env.get('ELEVENLABS_API_KEY');
+    // Try multiple possible secret names for ElevenLabs API key
+    const elevenLabsApiKey = Deno.env.get('ELEVENLABS_API_KEY') || 
+                            Deno.env.get('ELEVENLABS_API_KEY_NEW') ||
+                            Deno.env.get('ELEVENLABS_KEY');
+    
     if (!elevenLabsApiKey) {
-      console.error('ElevenLabs API key not found');
+      console.error('ElevenLabs API key not found in any of the expected environment variables');
       return new Response(
-        JSON.stringify({ error: 'ElevenLabs API key not configured' }),
+        JSON.stringify({ error: 'ElevenLabs API key not configured. Try ELEVENLABS_API_KEY_NEW or ELEVENLABS_KEY' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }

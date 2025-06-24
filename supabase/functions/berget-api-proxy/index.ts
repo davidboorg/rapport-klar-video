@@ -16,12 +16,14 @@ serve(async (req) => {
   try {
     const { action, payload } = await req.json();
     
-    // Get the API key from environment variables (Supabase secrets)
-    const bergetApiKey = Deno.env.get('BERGET_API_KEY');
+    // Try multiple possible secret names for Berget API key
+    const bergetApiKey = Deno.env.get('BERGET_API_KEY') || 
+                        Deno.env.get('BERGET_API_KEY_NEW') ||
+                        Deno.env.get('BERGET_KEY');
     
     if (!bergetApiKey) {
-      console.error('BERGET_API_KEY not found in environment variables');
-      throw new Error('BERGET_API_KEY not configured in Supabase environment variables');
+      console.error('Berget API key not found in any of the expected environment variables');
+      throw new Error('Berget API key not configured. Try BERGET_API_KEY_NEW or BERGET_KEY');
     }
 
     const bergetApiUrl = "https://api.berget.ai/v1";

@@ -16,12 +16,14 @@ serve(async (req) => {
   try {
     const { endpoint, method = 'GET', body, headers = {} } = await req.json();
     
-    // Get the API key from environment variables (Supabase secrets)
-    const elevenLabsApiKey = Deno.env.get('ELEVENLABS_API_KEY');
+    // Try multiple possible secret names for ElevenLabs API key
+    const elevenLabsApiKey = Deno.env.get('ELEVENLABS_API_KEY') || 
+                            Deno.env.get('ELEVENLABS_API_KEY_NEW') ||
+                            Deno.env.get('ELEVENLABS_KEY');
     
     if (!elevenLabsApiKey) {
-      console.error('ELEVENLABS_API_KEY not found in environment variables');
-      throw new Error('ELEVENLABS_API_KEY not configured in Supabase environment variables');
+      console.error('ElevenLabs API key not found in any of the expected environment variables');
+      throw new Error('ElevenLabs API key not configured. Try ELEVENLABS_API_KEY_NEW or ELEVENLABS_KEY');
     }
 
     const elevenLabsApiUrl = "https://api.elevenlabs.io/v1";

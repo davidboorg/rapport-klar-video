@@ -74,13 +74,15 @@ serve(async (req) => {
       )
     }
 
-    // Get the API key from environment variables (Supabase secrets)
-    const heygenApiKey = Deno.env.get('HEYGEN_API_KEY')
+    // Try multiple possible secret names for HeyGen API key
+    const heygenApiKey = Deno.env.get('HEYGEN_API_KEY') || 
+                        Deno.env.get('HEYGEN_API_KEY_NEW') ||
+                        Deno.env.get('HEYGEN_KEY');
     
     if (!heygenApiKey) {
-      console.error('HEYGEN_API_KEY not found in environment variables')
+      console.error('HeyGen API key not found in any of the expected environment variables')
       return new Response(
-        JSON.stringify({ error: 'HEYGEN_API_KEY not configured in Supabase environment variables' }),
+        JSON.stringify({ error: 'HeyGen API key not configured. Try HEYGEN_API_KEY_NEW or HEYGEN_KEY' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
