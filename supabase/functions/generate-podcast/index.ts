@@ -90,9 +90,20 @@ serve(async (req) => {
       );
     }
 
-    // Convert audio response to base64
-    const audioBuffer = await elevenLabsResponse.arrayBuffer();
-    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+    // Convert audio response to ArrayBuffer and then to base64
+    const audioArrayBuffer = await elevenLabsResponse.arrayBuffer();
+    const audioUint8Array = new Uint8Array(audioArrayBuffer);
+    
+    // Use a more efficient method to convert to base64
+    const chunks = [];
+    const chunkSize = 8192; // Process in chunks to avoid stack overflow
+    
+    for (let i = 0; i < audioUint8Array.length; i += chunkSize) {
+      const chunk = audioUint8Array.slice(i, i + chunkSize);
+      chunks.push(String.fromCharCode.apply(null, Array.from(chunk)));
+    }
+    
+    const base64Audio = btoa(chunks.join(''));
 
     console.log(`Podcast generated successfully for project ${projectId}`);
 
