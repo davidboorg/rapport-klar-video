@@ -34,7 +34,10 @@ serve(async (req) => {
     if (!elevenLabsApiKey) {
       console.error('ElevenLabs API key not found in any of the expected environment variables');
       return new Response(
-        JSON.stringify({ error: 'ElevenLabs API key not configured. Try ELEVENLABS_API_KEY_NEW or ELEVENLABS_KEY' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'ElevenLabs API key not configured. Try ELEVENLABS_API_KEY_NEW or ELEVENLABS_KEY' 
+        }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -66,7 +69,10 @@ serve(async (req) => {
       const errorText = await elevenLabsResponse.text();
       console.error('ElevenLabs API error:', errorText);
       return new Response(
-        JSON.stringify({ error: `ElevenLabs API fel: ${errorText}` }),
+        JSON.stringify({ 
+          success: false,
+          error: `ElevenLabs API fel: ${errorText}` 
+        }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -76,14 +82,14 @@ serve(async (req) => {
 
     // Convert audio response to base64
     const audioBuffer = await elevenLabsResponse.arrayBuffer();
-    const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
 
     console.log(`Podcast generated successfully for project ${projectId}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        audioContent: audioBase64,
+        audioContent: base64Audio,
         projectId: projectId
       }),
       { 
