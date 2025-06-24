@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/BergetAuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
 import { Play, Settings, User, LogOut, Menu } from "lucide-react";
 import {
@@ -31,11 +31,9 @@ const Navbar = () => {
     setMobileMenuOpen(false);
   };
 
-  // Get user display information from BergetUser properties
-  const firstName = user?.firstName || "";
-  const lastName = user?.lastName || "";
-  const company = user?.company || "";
+  // Get user display information from Supabase User properties
   const email = user?.email || "";
+  const userInitials = email ? email.substring(0, 2).toUpperCase() : "U";
 
   return (
     <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
@@ -78,7 +76,7 @@ const Navbar = () => {
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-blue-100 text-blue-600">
-                        {firstName?.[0]}{lastName?.[0]}
+                        {userInitials}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -87,16 +85,11 @@ const Navbar = () => {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {firstName} {lastName}
+                        {email.split('@')[0]}
                       </p>
                       <p className="text-xs leading-none text-slate-600">
                         {email}
                       </p>
-                      {company && (
-                        <p className="text-xs leading-none text-slate-500">
-                          {company}
-                        </p>
-                      )}
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -163,12 +156,12 @@ const Navbar = () => {
               <div className="flex items-center px-3">
                 <Avatar className="h-10 w-10">
                   <AvatarFallback className="bg-blue-100 text-blue-600">
-                    {firstName?.[0]}{lastName?.[0]}
+                    {userInitials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="ml-3">
                   <div className="text-base font-medium text-slate-800">
-                    {firstName} {lastName}
+                    {email.split('@')[0]}
                   </div>
                   <div className="text-sm font-medium text-slate-600">{email}</div>
                 </div>
