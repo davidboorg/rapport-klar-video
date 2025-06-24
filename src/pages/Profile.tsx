@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,11 +28,18 @@ const Profile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Extract user data from metadata with fallbacks
+  const firstName = user?.user_metadata?.firstName || user?.user_metadata?.first_name || "";
+  const lastName = user?.user_metadata?.lastName || user?.user_metadata?.last_name || "";
+  const company = user?.user_metadata?.company || "";
+  const subscription = user?.user_metadata?.subscription || "free";
+  
   const [formData, setFormData] = useState({
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
+    firstName,
+    lastName,
     email: user?.email || "",
-    company: user?.company || "",
+    company,
   });
 
   const handleSave = () => {
@@ -71,7 +79,7 @@ const Profile = () => {
     ]
   };
 
-  const currentFeatures = subscriptionFeatures[user?.subscription || 'free'];
+  const currentFeatures = subscriptionFeatures[subscription as keyof typeof subscriptionFeatures] || subscriptionFeatures.free;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -108,9 +116,9 @@ const Profile = () => {
                     <User className="w-10 h-10 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-medium">{user?.firstName} {user?.lastName}</h3>
+                    <h3 className="text-lg font-medium">{firstName} {lastName}</h3>
                     <p className="text-slate-600">{user?.email}</p>
-                    <p className="text-slate-500 text-sm">{user?.company}</p>
+                    <p className="text-slate-500 text-sm">{company}</p>
                   </div>
                   <Button variant="outline" size="sm">
                     <Upload className="w-4 h-4 mr-2" />
@@ -192,11 +200,11 @@ const Profile = () => {
                       Nuvarande plan
                     </div>
                     <Badge className={`${
-                      user?.subscription === 'enterprise' ? 'bg-purple-100 text-purple-700' :
-                      user?.subscription === 'pro' ? 'bg-blue-100 text-blue-700' :
+                      subscription === 'enterprise' ? 'bg-purple-100 text-purple-700' :
+                      subscription === 'pro' ? 'bg-blue-100 text-blue-700' :
                       'bg-gray-100 text-gray-700'
                     }`}>
-                      {user?.subscription?.toUpperCase() || 'FREE'}
+                      {subscription.toUpperCase()}
                     </Badge>
                   </CardTitle>
                 </CardHeader>
@@ -226,7 +234,7 @@ const Profile = () => {
                           </div>
                         </div>
                       </div>
-                      {user?.subscription !== 'enterprise' && (
+                      {subscription !== 'enterprise' && (
                         <Button className="w-full">
                           Uppgradera plan
                         </Button>
