@@ -130,6 +130,62 @@ class BergetClient {
     }
   }
 
+  // Document processing methods for Phase 2
+  async processDocument(file: File, documentType: 'quarterly' | 'board'): Promise<{ data: any; error: any }> {
+    try {
+      const formData = new FormData();
+      formData.append('document', file);
+      formData.append('type', documentType);
+
+      const session = this.getStoredSession();
+      const response = await fetch(`${this.config.apiUrl}/documents/process`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.accessToken || this.config.apiKey}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        return { data: null, error };
+      }
+
+      const result = await response.json();
+      return { data: result, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  }
+
+  async generateContent(chunks: any[], contentType: 'video' | 'audio' | 'summary'): Promise<{ data: any; error: any }> {
+    try {
+      const session = this.getStoredSession();
+      const response = await fetch(`${this.config.apiUrl}/content/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.accessToken || this.config.apiKey}`,
+        },
+        body: JSON.stringify({
+          chunks,
+          contentType,
+          euCompliant: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        return { data: null, error };
+      }
+
+      const result = await response.json();
+      return { data: result, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  }
+
   getStoredSession(): BergetSession | null {
     try {
       const stored = localStorage.getItem('berget_session');
@@ -144,9 +200,9 @@ class BergetClient {
   }
 }
 
-// Initialize Berget.ai client
+// Initialize Berget.ai client with real API key
 const BERGET_API_URL = "https://api.berget.ai/v1";
-const BERGET_API_KEY = "demo-key"; // This should be replaced with actual API key
+const BERGET_API_KEY = "sk_ber_3jnGf3YG1X4MHcpoY4ZRBuvDTZfHWmqz7EIeR_2eddbe6f6174d835";
 
 export const bergetClient = new BergetClient({
   apiUrl: BERGET_API_URL,
