@@ -1,12 +1,14 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import ProcessingWorkflow from "./ProcessingWorkflow";
+import { useAdvancedProcessing } from "@/hooks/useAdvancedProcessing";
+import AdvancedProcessingViewer from "./processing/AdvancedProcessingViewer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Brain, FileText, Film, Mic } from "lucide-react";
+import { Brain, FileText, Film, Mic, Upload } from "lucide-react";
 import FinancialDataDisplay from "./FinancialDataDisplay";
 import ScriptAlternativesDisplay from "./ScriptAlternativesDisplay";
 import VideoGeneration from "./VideoGeneration";
@@ -44,76 +46,31 @@ interface ScriptAlternative {
 const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: ScriptEditorContentProps) => {
   const [script, setScript] = useState(initialScript);
   const [isSaving, setSaving] = useState(false);
-  const [isProcessing, setProcessing] = useState(false);
   const [financialData, setFinancialData] = useState<FinancialData | null>(null);
   const [scriptAlternatives, setScriptAlternatives] = useState<ScriptAlternative[]>([]);
-  const [showProcessingWorkflow, setShowProcessingWorkflow] = useState(false);
-  const [dataLoadingState, setDataLoadingState] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [showProcessing, setShowProcessing] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [marketType, setMarketType] = useState<'ir' | 'board'>('ir');
   const { toast } = useToast();
 
-  const parseScriptAlternatives = (data: any): ScriptAlternative[] => {
-    if (!Array.isArray(data)) return [];
-    
-    return data.filter((item: any) => 
-      item && 
-      typeof item === 'object' &&
-      typeof item.type === 'string' &&
-      typeof item.title === 'string' &&
-      typeof item.duration === 'string' &&
-      typeof item.script === 'string' &&
-      typeof item.tone === 'string' &&
-      Array.isArray(item.key_points)
-    ).map((item: any) => ({
-      type: item.type as 'executive' | 'investor' | 'social',
-      title: item.title,
-      duration: item.duration,
-      script: item.script,
-      tone: item.tone,
-      key_points: item.key_points
-    }));
-  };
-
-  // Add market type detection
-  const [marketType, setMarketType] = useState<'ir' | 'board'>('ir');
+  // Use the new advanced processing hook
+  const {
+    tasks,
+    currentTaskIndex,
+    isProcessing,
+    overallProgress,
+    processDocument
+  } = useAdvancedProcessing(projectId);
 
   useEffect(() => {
-    // Detect market type from localStorage or project data
     const storedMarket = localStorage.getItem('selectedMarket') as 'ir' | 'board';
     if (storedMarket) {
       setMarketType(storedMarket);
     }
-  }, []);
-
-  useEffect(() => {
-    console.log('ScriptEditorContent: Initializing for project:', projectId);
     fetchProjectData();
-    
-    const subscription = supabase
-      .channel('project_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'projects',
-          filter: `id=eq.${projectId}`
-        },
-        (payload) => {
-          console.log('Project updated via realtime:', payload);
-          fetchProjectData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [projectId]);
 
   const fetchProjectData = async () => {
-    console.log('Fetching project data for:', projectId);
-    setDataLoadingState('loading');
-    
     try {
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
@@ -121,17 +78,8 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
         .eq('id', projectId)
         .single();
 
-      if (projectError) {
-        console.error('Project fetch error:', projectError);
-        throw projectError;
-      }
+      if (projectError) throw projectError;
       
-      console.log('Project data:', {
-        status: projectData.status,
-        hasPdfUrl: !!projectData.pdf_url,
-        hasFinancialData: !!projectData.financial_data
-      });
-
       if (projectData?.financial_data) {
         setFinancialData(projectData.financial_data as FinancialData);
       }
@@ -144,8 +92,7 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
 
       if (!contentError && contentData) {
         if (contentData.script_alternatives) {
-          const parsedAlternatives = parseScriptAlternatives(contentData.script_alternatives);
-          setScriptAlternatives(parsedAlternatives);
+          setScriptAlternatives(contentData.script_alternatives);
         }
         
         if (contentData.script_text && !initialScript) {
@@ -153,32 +100,47 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
         }
       }
 
+      // Show processing if we have a PDF but no processed data
       const hasProcessedData = !!(projectData?.financial_data || 
-        (contentData?.script_alternatives && Array.isArray(contentData.script_alternatives) && contentData.script_alternatives.length > 0));
+        (contentData?.script_alternatives && Array.isArray(contentData.script_alternatives)));
       
-      const shouldShowProcessing = (
-        (projectData?.pdf_url && !hasProcessedData) ||
-        projectData.status === 'processing'
-      );
-
-      if (shouldShowProcessing) {
-        setShowProcessingWorkflow(true);
-        setProcessing(projectData.status === 'processing');
-      } else {
-        setShowProcessingWorkflow(false);
-        setProcessing(false);
+      if (projectData?.pdf_url && !hasProcessedData) {
+        setShowProcessing(true);
       }
 
-      setDataLoadingState('loaded');
-
     } catch (error) {
-      console.error('Error in fetchProjectData:', error);
-      setDataLoadingState('error');
+      console.error('Error fetching project data:', error);
       toast({
         title: "Loading Error",
         description: "Could not load project data. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload a PDF file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedFile(file);
+    setShowProcessing(true);
+
+    // Start the advanced processing pipeline
+    const result = await processDocument(file, marketType);
+    
+    if (result.success) {
+      // Refresh project data after successful processing
+      await fetchProjectData();
+      setShowProcessing(false);
     }
   };
 
@@ -198,7 +160,7 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
 
       toast({
         title: "Script Saved",
-        description: "Your video script has been saved successfully.",
+        description: "Your script has been saved successfully.",
       });
 
       onScriptUpdate?.(script);
@@ -218,51 +180,30 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
     setScript(selectedScript.script);
     toast({
       title: "Script Selected",
-      description: `${selectedScript.title} has been selected as your video script.`,
+      description: `${selectedScript.title} has been selected.`,
     });
   };
 
-  const handleProcessingComplete = (result: { success: boolean; data?: any; error?: string }) => {
-    console.log('Processing completed with result:', result);
-    setProcessing(false);
-    
-    if (result.success) {
-      setTimeout(() => {
-        fetchProjectData();
-        setShowProcessingWorkflow(false);
-      }, 1000);
-      
-      toast({
-        title: "AI Processing Complete!",
-        description: "Your report has been analyzed and script suggestions are ready.",
-      });
-    } else {
-      setShowProcessingWorkflow(false);
-      toast({
-        title: "Processing Failed",
-        description: result.error || "Something went wrong during processing.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  if (dataLoadingState === 'loading') {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (showProcessingWorkflow) {
+  if (showProcessing) {
     return (
       <div className="space-y-6">
-        <ProcessingWorkflow 
-          projectId={projectId}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center mb-6">
+              <Brain className="w-12 h-12 mx-auto text-blue-600 mb-4" />
+              <h3 className="text-lg font-medium mb-2">Advanced AI Processing</h3>
+              <p className="text-gray-600">
+                Your document is being processed using Berget.ai's advanced EU-compliant AI system.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <AdvancedProcessingViewer
+          tasks={tasks}
+          currentTaskIndex={currentTaskIndex}
           isProcessing={isProcessing}
-          currentStep={0}
-          autoStart={!isProcessing}
-          onComplete={handleProcessingComplete}
+          overallProgress={overallProgress}
         />
       </div>
     );
@@ -270,25 +211,57 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="review" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="upload" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="upload" className="flex items-center gap-2">
+            <Upload className="w-4 h-4" />
+            Upload
+          </TabsTrigger>
           <TabsTrigger value="review" className="flex items-center gap-2">
             <Brain className="w-4 h-4" />
-            Review & Select
+            Review
           </TabsTrigger>
           <TabsTrigger value="script" className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
-            Edit Script
+            Script
           </TabsTrigger>
           <TabsTrigger value="podcast" className="flex items-center gap-2">
             <Mic className="w-4 h-4" />
-            Generate Podcast
+            Podcast
           </TabsTrigger>
           <TabsTrigger value="video" className="flex items-center gap-2">
             <Film className="w-4 h-4" />
-            Generate Video
+            Video
           </TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="upload">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center space-y-4">
+                <Upload className="w-16 h-16 mx-auto text-gray-400" />
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Upload Your Document</h3>
+                  <p className="text-gray-600 mb-4">
+                    Upload your {marketType === 'ir' ? 'quarterly report' : 'board briefing document'} for AI analysis
+                  </p>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="document-upload"
+                  />
+                  <label htmlFor="document-upload">
+                    <Button asChild className="cursor-pointer">
+                      <span>Choose PDF File</span>
+                    </Button>
+                  </label>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
         
         <TabsContent value="review">
           <div className="space-y-6">
@@ -307,13 +280,10 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
               <Card>
                 <CardContent className="pt-6 text-center">
                   <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="font-medium mb-2">No processed data available</h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Start processing to get AI-generated script suggestions.
+                  <h3 className="font-medium mb-2">No data available</h3>
+                  <p className="text-sm text-gray-600">
+                    Upload a document to get AI-generated analysis and scripts.
                   </p>
-                  <Button onClick={() => setShowProcessingWorkflow(true)}>
-                    Start Processing
-                  </Button>
                 </CardContent>
               </Card>
             )}
@@ -342,15 +312,6 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
                 <div className="flex gap-2">
                   <Button onClick={handleSave} disabled={isSaving}>
                     {isSaving ? 'Saving...' : 'Save Script'}
-                  </Button>
-                  <Button variant="outline" onClick={() => {
-                    if ('speechSynthesis' in window) {
-                      const utterance = new SpeechSynthesisUtterance(script);
-                      utterance.lang = 'en-US';
-                      speechSynthesis.speak(utterance);
-                    }
-                  }}>
-                    Preview
                   </Button>
                 </div>
               </div>
