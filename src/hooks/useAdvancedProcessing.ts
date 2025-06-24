@@ -6,9 +6,11 @@ import { useToast } from "@/hooks/use-toast";
 export interface ProcessingTask {
   id: string;
   title: string;
-  status: 'pending' | 'processing' | 'completed' | 'error';
+  name: string; // Add name property for display
+  status: 'pending' | 'processing' | 'completed' | 'error' | 'failed';
   progress: number;
   description: string;
+  details?: string; // Add optional details property for error messages
 }
 
 export const useAdvancedProcessing = (projectId: string) => {
@@ -16,6 +18,7 @@ export const useAdvancedProcessing = (projectId: string) => {
     {
       id: 'upload',
       title: 'Uploading Document',
+      name: 'Uploading Document',
       status: 'pending',
       progress: 0,
       description: 'Säker uppladdning till EU-baserad server'
@@ -23,6 +26,7 @@ export const useAdvancedProcessing = (projectId: string) => {
     {
       id: 'extract',
       title: 'Extracting Content',
+      name: 'Extracting Content',
       status: 'pending',
       progress: 0,
       description: 'Intelligent textextraktion med OCR'
@@ -30,6 +34,7 @@ export const useAdvancedProcessing = (projectId: string) => {
     {
       id: 'analyze',
       title: 'AI Analysis',
+      name: 'AI Analysis',
       status: 'pending',
       progress: 0,
       description: 'Finansiell analys med OpenAI GPT-4'
@@ -37,6 +42,7 @@ export const useAdvancedProcessing = (projectId: string) => {
     {
       id: 'generate',
       title: 'Generating Scripts',
+      name: 'Generating Scripts',
       status: 'pending',
       progress: 0,
       description: 'Skapar anpassade manuscriptförslag'
@@ -51,6 +57,12 @@ export const useAdvancedProcessing = (projectId: string) => {
   const updateTaskStatus = (taskId: string, status: ProcessingTask['status'], progress: number = 0) => {
     setTasks(prev => prev.map(task => 
       task.id === taskId ? { ...task, status, progress } : task
+    ));
+  };
+
+  const updateTaskError = (taskId: string, errorMessage: string) => {
+    setTasks(prev => prev.map(task => 
+      task.id === taskId ? { ...task, status: 'error', details: errorMessage } : task
     ));
   };
 
@@ -76,7 +88,7 @@ export const useAdvancedProcessing = (projectId: string) => {
         .upload(fileName, file);
 
       if (uploadError) {
-        updateTaskStatus('upload', 'error');
+        updateTaskError('upload', `Upload failed: ${uploadError.message}`);
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
@@ -108,8 +120,9 @@ export const useAdvancedProcessing = (projectId: string) => {
       });
 
       if (extractionError || !extractionData?.success) {
-        updateTaskStatus('extract', 'error');
-        throw new Error(`PDF extraction failed: ${extractionError?.message || extractionData?.error}`);
+        const errorMsg = extractionError?.message || extractionData?.error || 'PDF extraction failed';
+        updateTaskError('extract', errorMsg);
+        throw new Error(errorMsg);
       }
 
       updateTaskStatus('extract', 'completed', 100);
@@ -126,8 +139,9 @@ export const useAdvancedProcessing = (projectId: string) => {
       });
 
       if (analysisError || !analysisData?.success) {
-        updateTaskStatus('analyze', 'error');
-        throw new Error(`AI analysis failed: ${analysisError?.message || analysisData?.error}`);
+        const errorMsg = analysisError?.message || analysisData?.error || 'AI analysis failed';
+        updateTaskError('analyze', errorMsg);
+        throw new Error(errorMsg);
       }
 
       updateTaskStatus('analyze', 'completed', 100);
@@ -161,7 +175,8 @@ export const useAdvancedProcessing = (projectId: string) => {
       
       // Mark current task as error
       if (currentTaskIndex >= 0 && currentTaskIndex < tasks.length) {
-        updateTaskStatus(tasks[currentTaskIndex].id, 'error');
+        const taskId = tasks[currentTaskIndex].id;
+        updateTaskError(taskId, error instanceof Error ? error.message : 'Unknown error');
       }
 
       toast({
