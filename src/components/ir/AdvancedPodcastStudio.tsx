@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -77,7 +76,7 @@ const EXECUTIVE_VOICES = [
   }
 ];
 
-// Professional tone presets for different IR scenarios
+// Professional tone presets for different IR scenarios - FIXED VALUES
 const TONE_PRESETS = {
   'confident-growth': {
     name: 'Confident Growth',
@@ -104,7 +103,7 @@ const TONE_PRESETS = {
     description: 'Focused and detailed for complex financial discussions',
     stability: 0.6,
     similarity_boost: 0.7,
-    style: -0.2,
+    style: 0.1, // FIXED: Changed from -0.2 to 0.1 (within valid range 0.0-1.0)
     emotion: 'serious',
     icon: Brain,
     color: 'text-purple-600'
@@ -166,15 +165,15 @@ const AdvancedPodcastStudio: React.FC<AdvancedPodcastStudioProps> = ({
   
   const { toast } = useToast();
 
-  // Apply tone preset to settings
+  // Apply tone preset to settings with validation
   const applyTonePreset = (toneKey: string) => {
     const tone = TONE_PRESETS[toneKey];
     if (tone) {
       setCustomSettings(prev => ({
         ...prev,
-        stability: tone.stability,
-        similarity_boost: tone.similarity_boost,
-        style: tone.style
+        stability: Math.max(0, Math.min(1, tone.stability)),
+        similarity_boost: Math.max(0, Math.min(1, tone.similarity_boost)),
+        style: Math.max(0, Math.min(1, tone.style)) // Ensure style is between 0.0 and 1.0
       }));
     }
   };
@@ -221,13 +220,22 @@ const AdvancedPodcastStudio: React.FC<AdvancedPodcastStudioProps> = ({
 
       const selectedLang = LANGUAGES.find(l => l.code === selectedLanguage);
       
+      // Validate all settings before sending to API
+      const validatedSettings = {
+        stability: Math.max(0, Math.min(1, customSettings.stability)),
+        similarity_boost: Math.max(0, Math.min(1, customSettings.similarity_boost)),
+        style: Math.max(0, Math.min(1, customSettings.style)), // Critical fix: ensure style is valid
+        use_speaker_boost: customSettings.use_speaker_boost,
+        optimize_streaming_latency: customSettings.optimize_streaming_latency
+      };
+      
       const { data: audioData, error: audioError } = await supabase.functions.invoke('generate-podcast', {
         body: {
           text: scriptText,
           voice: selectedVoice,
           projectId: projectId,
           model_id: selectedLang?.model || 'eleven_multilingual_v2',
-          voiceSettings: customSettings
+          voiceSettings: validatedSettings
         }
       });
 
@@ -619,13 +627,12 @@ const AdvancedPodcastStudio: React.FC<AdvancedPodcastStudioProps> = ({
                   value={[customSettings.style]}
                   onValueChange={([value]) => setCustomSettings(prev => ({ ...prev, style: value }))}
                   max={1}
-                  min={-1}
+                  min={0} 
                   step={0.1}
                   className="w-full"
                 />
                 <div className="flex justify-between text-xs text-slate-500 mt-1">
                   <span>Conversational</span>
-                  <span>Neutral</span>
                   <span>Expressive</span>
                 </div>
               </div>
