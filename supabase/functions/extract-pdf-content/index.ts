@@ -8,78 +8,91 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Function to extract text from PDF using a more reliable method
+// Simple PDF text extraction that works in Deno
 const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> => {
-  console.log('Attempting PDF text extraction...');
+  console.log('Starting PDF text extraction with Deno-compatible method...');
   
   try {
-    // Try pdf2pic/pdf-parse with better configuration
-    const pdfParse = await import('https://esm.sh/pdf-parse@1.1.1');
-    const pdfBuffer = new Uint8Array(pdfArrayBuffer);
+    // Convert ArrayBuffer to Uint8Array for processing
+    const pdfBytes = new Uint8Array(pdfArrayBuffer);
+    const pdfString = new TextDecoder('latin1').decode(pdfBytes);
     
-    const options = {
-      pagerender: (pageData: any) => {
-        // Custom page rendering to extract text better
-        return pageData.getTextContent().then((textContent: any) => {
-          return textContent.items.map((item: any) => item.str).join(' ');
-        });
-      }
-    };
+    console.log('PDF converted to string, length:', pdfString.length);
     
-    const data = await pdfParse.default(pdfBuffer, options);
+    // Extract text using regex patterns for PDF content streams
+    let extractedText = '';
     
-    if (data.text && data.text.length > 50) {
-      console.log('PDF-parse successful, text length:', data.text.length);
-      return data.text;
-    }
+    // Pattern 1: Extract text from BT...ET blocks (text objects)
+    const textObjectPattern = /BT\s*(.*?)\s*ET/gs;
+    const textMatches = pdfString.matchAll(textObjectPattern);
     
-    throw new Error('PDF-parse returned insufficient text');
-    
-  } catch (parseError) {
-    console.log('PDF-parse failed, trying alternative approach:', parseError);
-    
-    // Alternative: Use a different PDF parsing approach
-    try {
-      const decoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: false });
-      const text = decoder.decode(pdfArrayBuffer);
+    for (const match of textMatches) {
+      const textContent = match[1];
       
-      // Look for text patterns in PDF structure
-      const textPatterns = [
-        /stream\s*(.*?)\s*endstream/gs,
-        /BT\s*(.*?)\s*ET/gs,
-        /\[(.*?)\]\s*TJ/gs,
-        /\((.*?)\)\s*Tj/gs
-      ];
+      // Extract text from Tj and TJ operators
+      const tjPattern = /\((.*?)\)\s*Tj/g;
+      const tjMatches = textContent.matchAll(tjPattern);
       
-      let extractedText = '';
-      
-      for (const pattern of textPatterns) {
-        const matches = text.matchAll(pattern);
-        for (const match of matches) {
-          if (match[1]) {
-            extractedText += match[1] + ' ';
-          }
+      for (const tjMatch of tjMatches) {
+        if (tjMatch[1]) {
+          extractedText += tjMatch[1] + ' ';
         }
       }
       
-      // Clean up the extracted text
-      extractedText = extractedText
-        .replace(/\\[rnt]/g, ' ')
-        .replace(/[^\x20-\x7E\xC0-\xFF]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+      // Extract text from TJ arrays
+      const tjArrayPattern = /\[(.*?)\]\s*TJ/g;
+      const tjArrayMatches = textContent.matchAll(tjArrayPattern);
       
-      if (extractedText.length > 100) {
-        console.log('Alternative extraction successful, text length:', extractedText.length);
-        return extractedText;
+      for (const tjArrayMatch of tjArrayMatches) {
+        if (tjArrayMatch[1]) {
+          // Extract strings from the array
+          const stringPattern = /\((.*?)\)/g;
+          const strings = tjArrayMatch[1].matchAll(stringPattern);
+          for (const str of strings) {
+            if (str[1]) {
+              extractedText += str[1] + ' ';
+            }
+          }
+        }
       }
-      
-      throw new Error('Alternative extraction failed');
-      
-    } catch (altError) {
-      console.log('Alternative extraction failed:', altError);
-      throw new Error('Could not extract readable text from PDF');
     }
+    
+    // Pattern 2: Look for stream content that might contain text
+    const streamPattern = /stream\s*(.*?)\s*endstream/gs;
+    const streamMatches = pdfString.matchAll(streamPattern);
+    
+    for (const match of streamMatches) {
+      const streamContent = match[1];
+      
+      // Try to extract readable text from streams
+      const readableTextPattern = /\b[A-ZÄÖÅ][a-zäöå]{2,}\b/g;
+      const readableMatches = streamContent.matchAll(readableTextPattern);
+      
+      for (const readableMatch of readableMatches) {
+        extractedText += readableMatch[0] + ' ';
+      }
+    }
+    
+    // Clean up the extracted text
+    extractedText = extractedText
+      .replace(/\\n/g, ' ')
+      .replace(/\\r/g, ' ')
+      .replace(/\\t/g, ' ')
+      .replace(/\\/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    console.log('Text extraction completed. Raw length:', extractedText.length);
+    
+    if (extractedText.length < 50) {
+      throw new Error('Kunde inte extrahera tillräckligt med text från PDF:en');
+    }
+    
+    return extractedText;
+    
+  } catch (error) {
+    console.error('PDF text extraction error:', error);
+    throw new Error(`PDF-textextraktion misslyckades: ${error.message}`);
   }
 };
 
@@ -94,32 +107,35 @@ const validateAndCleanText = (text: string): string => {
     .trim();
   
   // Check if text contains actual readable words
-  const wordCount = (cleanText.match(/[a-öA-Ö]{3,}/g) || []).length;
-  const numberCount = (cleanText.match(/\d+/g) || []).length;
+  const wordPattern = /\b[a-öA-Ö]{3,}\b/g;
+  const words = cleanText.match(wordPattern) || [];
+  const numberPattern = /\d+/g;
+  const numbers = cleanText.match(numberPattern) || [];
   
-  console.log('Word count:', wordCount, 'Number count:', numberCount);
+  console.log('Words found:', words.length, 'Numbers found:', numbers.length);
   
-  if (wordCount < 10) {
-    throw new Error('PDF innehåller för få läsbara ord. Kontrollera att det är en textbaserad PDF.');
+  if (words.length < 10) {
+    throw new Error('PDF innehåller för få läsbara ord. Kontrollera att det är en textbaserad PDF och inte en skannad bild.');
   }
   
   // Look for financial keywords to ensure it's relevant
   const financialKeywords = [
-    'kronor', 'mkr', 'msek', 'miljoner', 'miljarder', 
-    'omsättning', 'intäkter', 'vinst', 'resultat', 'balans',
-    'revenue', 'profit', 'income', 'earnings', 'sek', 'eur', 'usd'
+    'kronor', 'mkr', 'msek', 'miljoner', 'miljarder', 'tkr',
+    'omsättning', 'intäkter', 'vinst', 'resultat', 'balans', 'rapport',
+    'revenue', 'profit', 'income', 'earnings', 'sek', 'eur', 'usd',
+    'finansiell', 'kvartal', 'år', 'period'
   ];
   
   const hasFinancialContent = financialKeywords.some(keyword => 
-    cleanText.toLowerCase().includes(keyword)
+    cleanText.toLowerCase().includes(keyword.toLowerCase())
   );
   
-  if (!hasFinancialContent && numberCount < 5) {
+  if (!hasFinancialContent && numbers.length < 5) {
     console.log('Warning: Document may not contain financial data');
   }
   
-  // Return the first 8000 characters for AI processing
-  const result = cleanText.substring(0, 8000);
+  // Return the first 5000 characters for AI processing
+  const result = cleanText.substring(0, 5000);
   console.log('Final cleaned text length:', result.length);
   
   return result;
@@ -158,7 +174,7 @@ serve(async (req) => {
       throw new Error('Downloaded PDF is empty');
     }
 
-    // Extract text from PDF
+    // Extract text from PDF using our Deno-compatible method
     const extractedText = await extractTextFromPDF(pdfArrayBuffer);
     
     // Validate and clean the text
@@ -186,7 +202,7 @@ serve(async (req) => {
         content: cleanedText,
         length: cleanedText.length,
         quality: 'high',
-        message: 'Text successfully extracted from PDF'
+        message: 'Text successfully extracted from PDF using Deno-compatible method'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -201,7 +217,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: false, 
         error: error.message || 'Ett fel uppstod vid PDF-extrahering',
-        details: 'Could not extract readable text from the PDF file'
+        details: 'Could not extract readable text from the PDF file using Deno-compatible method'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
