@@ -91,7 +91,16 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
 
       if (!contentError && contentData) {
         if (contentData.script_alternatives && Array.isArray(contentData.script_alternatives)) {
-          setScriptAlternatives(contentData.script_alternatives as ScriptAlternative[]);
+          // Safely convert Json[] to ScriptAlternative[] by validating the structure
+          const alternatives = (contentData.script_alternatives as unknown as ScriptAlternative[])
+            .filter((alt: any) => 
+              alt && 
+              typeof alt === 'object' && 
+              alt.type && 
+              alt.title && 
+              alt.script
+            );
+          setScriptAlternatives(alternatives);
         }
         
         if (contentData.script_text && !initialScript) {
