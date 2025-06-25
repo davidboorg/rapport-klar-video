@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +19,8 @@ const PDFTestInterface: React.FC = () => {
   const [debugInfo, setDebugInfo] = useState<string>('');
   const { toast } = useToast();
 
-  const testPDFUrl = 'https://qpveeqvzvukolfagasne.supabase.co/storage/v1/object/sign/project-pdfs/rapport-delarsrapport-januari-mars-2025-250429.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8wZjAzZWViNC05ODhhLTQwMTUtOWQ4ZS1iMjY2OGU0NDdiMTkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9qZWN0LXBkZnMvcmFwcG9ydC1kZWxhcnNyYXBwb3J0LWphbnVhcmktbWFycy0yMDI1LTI1MDQyOS5wZGYiLCJpYXQiOjE3NTA4NjIzMTAsImV4cCI6MTc1MTQ2NzExMH0.MFM-6gcpFSCqZnoyvB_1Gw6GwTd7zqsyB0SO_sI62Qw';
+  // Updated to use the open AIK PDF that doesn't require authentication
+  const testPDFUrl = 'https://www.aikfotboll.se/media/h1dftn03/240212-kallelse-till-a-rssta-mma-i-aik-fotboll-ab.pdf';
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -63,23 +63,23 @@ const PDFTestInterface: React.FC = () => {
     const apiUrl = externalApiUrl.endsWith('/') ? externalApiUrl.slice(0, -1) : externalApiUrl;
     
     console.log('🚀 Anropar ÖPPNA API:', apiUrl);
-    console.log('📄 PDF URL:', testPDFUrl);
+    console.log('📄 PDF URL (ÖPPEN AIK PDF):', testPDFUrl);
     
-    setDebugInfo(`🌟 NYTT ÖPPET API TEST 🌟\nFörsöker ansluta till: ${apiUrl}\nPDF URL: ${testPDFUrl}\nTidpunkt: ${new Date().toISOString()}`);
+    setDebugInfo(`🌟 NYTT ÖPPET API TEST med ÖPPEN PDF 🌟\nFörsöker ansluta till: ${apiUrl}\nPDF URL: ${testPDFUrl}\nTidpunkt: ${new Date().toISOString()}`);
     
     try {
-      console.log('🔍 Skickar request med PDF URL...');
+      console.log('🔍 Skickar request med ÖPPEN PDF URL...');
       
-      // Use the simplified request format that matches your new API code
+      // Use the correct request format matching your new API code
       const requestBody = {
-        url: testPDFUrl  // Using 'url' as per your new API code
+        url: testPDFUrl  // Using 'url' as per your simplified API code
       };
       
       console.log('📦 Request body:', requestBody);
       setDebugInfo(prev => prev + `\n📦 Request body: ${JSON.stringify(requestBody, null, 2)}`);
       
-      console.log('🌐 Testing OPEN API connectivity...');
-      setDebugInfo(prev => prev + `\n🌐 Testing OPEN API connectivity...`);
+      console.log('🌐 Testing OPEN API connectivity with OPEN PDF...');
+      setDebugInfo(prev => prev + `\n🌐 Testing OPEN API connectivity with OPEN PDF...`);
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -244,7 +244,7 @@ const PDFTestInterface: React.FC = () => {
 
     try {
       console.log(`🎯 Testar PDF extraktion med ${useExternalApi ? 'ÖPPEN External API' : 'Supabase Edge Function'}`);
-      console.log('📄 PDF URL:', testPDFUrl);
+      console.log('📄 PDF URL (ÖPPEN AIK PDF):', testPDFUrl);
       
       let result;
       
@@ -259,7 +259,7 @@ const PDFTestInterface: React.FC = () => {
       
       toast({
         title: "PDF Extraction Successful!",
-        description: `Extracted ${result.metadata?.wordCount || 'unknown'} words using ${useExternalApi ? 'ÖPPEN External API' : 'Supabase'}.`,
+        description: `Extracted ${result.metadata?.wordCount || 'unknown'} words from ÖPPEN AIK PDF using ${useExternalApi ? 'ÖPPEN External API' : 'Supabase'}.`,
       });
 
     } catch (err) {
@@ -300,7 +300,7 @@ const PDFTestInterface: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-green-800">
             <ExternalLink className="w-5 h-5" />
-            🌟 ÖPPEN API Status - Nu Tillgängligt! 🌟
+            🌟 ÖPPEN API + ÖPPEN PDF Test - Nu Tillgängligt! 🌟
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -325,6 +325,16 @@ const PDFTestInterface: React.FC = () => {
                 Använd ÖPPNA API
               </Button>
             </div>
+          </div>
+
+          <div className="p-3 bg-blue-100 border border-blue-300 rounded">
+            <p className="text-sm font-medium text-blue-800 mb-2">📄 ÖPPEN PDF (Ingen Auth krävs):</p>
+            <div className="bg-white p-2 rounded font-mono text-xs break-all text-blue-700">
+              {testPDFUrl}
+            </div>
+            <p className="text-xs text-blue-600 mt-1">
+              ✅ AIK Fotboll offentlig PDF - Kallelse till årsstämma
+            </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -358,11 +368,12 @@ const PDFTestInterface: React.FC = () => {
           </div>
 
           <div className="p-2 bg-green-50 border border-green-200 rounded text-sm">
-            <p className="text-green-800 font-medium">📋 ÖPPEN API Information:</p>
+            <p className="text-green-800 font-medium">📋 ÖPPEN API + ÖPPEN PDF Information:</p>
             <ul className="text-green-700 text-xs mt-1 space-y-1">
               <li>• Endpoint: <code>/</code> (root, POST)</li>
               <li>• Request body: <code>{"{ \"url\": \"pdf_url\" }"}</code></li>
-              <li>• 🔓 Inget authentication krävs!</li>
+              <li>• 🔓 Inget authentication krävs för API!</li>
+              <li>• 🔓 Inget authentication krävs för PDF!</li>
               <li>• ✅ Enkel struktur, direkt PDF-extraktion</li>
             </ul>
           </div>
@@ -375,7 +386,7 @@ const PDFTestInterface: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-purple-800">
               <AlertCircle className="w-5 h-5" />
-              Debug Information - ÖPPEN API Test
+              Debug Information - ÖPPEN API + ÖPPEN PDF Test
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -432,7 +443,7 @@ const PDFTestInterface: React.FC = () => {
           
           <div className="p-3 bg-blue-50 border border-blue-200 rounded">
             <p className="text-sm text-blue-800">
-              <strong>Aktuell konfiguration:</strong> {useExternalApi ? '🔓 ÖPPNA Externa API' : 'Supabase Edge Function'}
+              <strong>Aktuell konfiguration:</strong> {useExternalApi ? '🔓 ÖPPNA Externa API + ÖPPEN PDF' : 'Supabase Edge Function + ÖPPEN PDF'}
             </p>
             {useExternalApi && externalApiUrl && (
               <p className="text-xs text-blue-600 mt-1 break-all">ÖPPEN API URL: {externalApiUrl}</p>
@@ -446,14 +457,17 @@ const PDFTestInterface: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            PDF Extraction Test - ÖPPEN API
+            PDF Extraction Test - ÖPPEN API + ÖPPEN PDF
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="p-3 bg-gray-50 rounded border">
-            <p className="text-sm font-medium mb-1">Test PDF:</p>
+            <p className="text-sm font-medium mb-1">Test PDF (ÖPPEN - Ingen Auth):</p>
             <p className="text-xs text-gray-600 break-all">
-              rapport-delarsrapport-januari-mars-2025-250429.pdf
+              AIK Fotboll - Kallelse till årsstämma 2024
+            </p>
+            <p className="text-xs text-blue-600 mt-1">
+              ✅ Offentligt tillgänglig PDF från aikfotboll.se
             </p>
           </div>
 
@@ -465,12 +479,12 @@ const PDFTestInterface: React.FC = () => {
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Extraherar PDF med {useExternalApi ? 'ÖPPNA External API' : 'Supabase'}...
+                Extraherar ÖPPEN PDF med {useExternalApi ? 'ÖPPNA External API' : 'Supabase'}...
               </>
             ) : (
               <>
                 <FileText className="w-4 h-4 mr-2" />
-                Testa PDF Extraktion med ÖPPNA API
+                Testa PDF Extraktion med ÖPPNA API + ÖPPEN PDF
               </>
             )}
           </Button>
@@ -501,7 +515,7 @@ const PDFTestInterface: React.FC = () => {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span className="font-medium text-green-800">ÖPPEN API Extraktion lyckades!</span>
+                  <span className="font-medium text-green-800">ÖPPEN API + ÖPPEN PDF Extraktion lyckades!</span>
                 </div>
                 {getQualityBadge()}
               </div>
@@ -530,7 +544,7 @@ const PDFTestInterface: React.FC = () => {
           {extractedText && (
             <div>
               <label className="block text-sm font-medium mb-2">
-                Extraherad text från ÖPPEN API:
+                Extraherad text från ÖPPEN API + ÖPPEN PDF:
               </label>
               <Textarea
                 value={extractedText}
@@ -539,7 +553,7 @@ const PDFTestInterface: React.FC = () => {
                 placeholder="Extraherad text kommer att visas här..."
               />
               <p className="text-xs text-gray-500 mt-1">
-                Visar alla {extractedText.length} tecken
+                Visar alla {extractedText.length} tecken från AIK Fotboll PDF
               </p>
             </div>
           )}
@@ -551,15 +565,18 @@ const PDFTestInterface: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertCircle className="w-5 h-5" />
-            Felsökningsguide - ÖPPEN API
+            Felsökningsguide - ÖPPEN API + ÖPPEN PDF
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="p-3 bg-green-50 border border-green-200 rounded">
-            <h4 className="font-medium text-green-800 mb-2">🎉 Nya API-strukturen:</h4>
+            <h4 className="font-medium text-green-800 mb-2">🎉 Nya teststrukturen:</h4>
             <div className="space-y-2 text-sm text-green-700">
               <div>
-                <strong>✅ Enkel struktur:</strong> POST direkt till root URL
+                <strong>✅ ÖPPEN API:</strong> POST direkt till root URL utan auth
+              </div>
+              <div>
+                <strong>✅ ÖPPEN PDF:</strong> Offentlig AIK Fotboll PDF utan auth
               </div>
               <div>
                 <strong>✅ Request format:</strong> <code>{"{ \"url\": \"pdf_url\" }"}</code>
@@ -592,12 +609,13 @@ const PDFTestInterface: React.FC = () => {
           </div>
           
           <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-            <h4 className="font-medium text-blue-800 mb-2">🔄 API information:</h4>
+            <h4 className="font-medium text-blue-800 mb-2">🔄 Test information:</h4>
             <div className="text-sm text-blue-700 space-y-1">
-              <p><strong>Aktuell URL:</strong> pdf-extraction-oqr2b3rqx-reportflow1.vercel.app</p>
+              <p><strong>ÖPPEN API URL:</strong> pdf-extraction-oqr2b3rqx-reportflow1.vercel.app</p>
+              <p><strong>ÖPPEN PDF URL:</strong> aikfotboll.se (offentlig)</p>
               <p><strong>Method:</strong> POST</p>
               <p><strong>Request body:</strong> <code>{"{ \"url\": \"pdf_url\" }"}</code></p>
-              <p><strong>Auth:</strong> 🔓 Inget krävs!</p>
+              <p><strong>Auth krävs:</strong> 🔓 NEJ - varken för API eller PDF!</p>
             </div>
           </div>
         </CardContent>
