@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -123,18 +122,19 @@ const PDFTestInterface: React.FC = () => {
         ? externalApiUrl.replace('/extract', '/health') 
         : `${externalApiUrl}/health`;
       
+      console.log('Testing API health at:', healthUrl);
       const response = await fetch(healthUrl);
       if (response.ok) {
         const data = await response.json();
         console.log('API Health check:', data);
         toast({
-          title: "API Health Check",
+          title: "API Health Check ✅",
           description: `API är tillgängligt! Status: ${data.status}`,
         });
       } else {
         console.log('Health check failed:', response.status);
         toast({
-          title: "API Health Check",
+          title: "API Health Check ❌",
           description: `API svarar inte korrekt (status: ${response.status})`,
           variant: "destructive",
         });
@@ -142,7 +142,7 @@ const PDFTestInterface: React.FC = () => {
     } catch (error) {
       console.log('Health check error:', error);
       toast({
-        title: "API Health Check",
+        title: "API Health Check ❌",
         description: "Kunde inte ansluta till API:t",
         variant: "destructive",
       });
@@ -208,6 +208,52 @@ const PDFTestInterface: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
+      {/* Current URL Status Card */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-blue-800">
+            <ExternalLink className="w-5 h-5" />
+            Aktuell API Status
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="p-3 bg-blue-100 border border-blue-300 rounded">
+            <p className="text-sm font-medium text-blue-800 mb-2">🔗 Senaste deployment URL:</p>
+            <div className="bg-white p-2 rounded font-mono text-sm flex items-center justify-between">
+              <span className="text-blue-700 break-all">https://pdf-extraction-i8v9tg09f-reportflow1.vercel.app</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setExternalApiUrl('https://pdf-extraction-i8v9tg09f-reportflow1.vercel.app');
+                  copyToClipboard('https://pdf-extraction-i8v9tg09f-reportflow1.vercel.app');
+                  toast({
+                    title: "URL uppdaterad!",
+                    description: "Den senaste deployment-URL:en är nu aktiv"
+                  });
+                }}
+                className="bg-green-500 hover:bg-green-600 text-white border-green-500"
+              >
+                <Copy className="w-4 h-4 mr-1" />
+                Använd denna
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={testApiHealth}
+              disabled={!externalApiUrl.trim()}
+              className="flex-1"
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Testa API Status
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* API Configuration Card */}
       <Card>
         <CardHeader>
@@ -231,7 +277,7 @@ const PDFTestInterface: React.FC = () => {
           
           {useExternalApi && (
             <div className="space-y-2">
-              <Label htmlFor="api-url">API URL (senaste Vercel deployment)</Label>
+              <Label htmlFor="api-url">API URL</Label>
               <div className="flex gap-2">
                 <Input
                   id="api-url"
@@ -248,34 +294,6 @@ const PDFTestInterface: React.FC = () => {
                 >
                   <Copy className="w-4 h-4" />
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={testApiHealth}
-                  disabled={!externalApiUrl.trim()}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Test
-                </Button>
-              </div>
-              <div className="p-3 bg-green-50 border border-green-200 rounded">
-                <p className="text-sm text-green-800 font-medium mb-2">✅ Senaste deployment-URL:</p>
-                <div className="bg-green-100 p-2 rounded font-mono text-sm flex items-center justify-between">
-                  <span className="text-green-700">https://pdf-extraction-i8v9tg09f-reportflow1.vercel.app</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setExternalApiUrl('https://pdf-extraction-i8v9tg09f-reportflow1.vercel.app');
-                      copyToClipboard('https://pdf-extraction-i8v9tg09f-reportflow1.vercel.app');
-                    }}
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
-                <p className="text-xs text-green-600 mt-2">
-                  🔄 Denna URL skapades vid din senaste deployment. Använd denna för bästa resultat!
-                </p>
               </div>
             </div>
           )}
@@ -285,7 +303,7 @@ const PDFTestInterface: React.FC = () => {
               <strong>Aktuell konfiguration:</strong> {useExternalApi ? 'Externt API' : 'Supabase Edge Function'}
             </p>
             {useExternalApi && externalApiUrl && (
-              <p className="text-xs text-blue-600 mt-1">API URL: {externalApiUrl}</p>
+              <p className="text-xs text-blue-600 mt-1 break-all">API URL: {externalApiUrl}</p>
             )}
           </div>
         </CardContent>
@@ -333,25 +351,24 @@ const PDFTestInterface: React.FC = () => {
               </div>
               <p className="text-sm text-red-700 mt-1">{error}</p>
               
+              {error.includes('Load failed') && (
+                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                  <p className="text-sm text-yellow-800 font-medium mb-2">🔧 Felsökning:</p>
+                  <ul className="text-xs text-yellow-700 space-y-1 list-disc list-inside">
+                    <li>Klicka på den gröna "Använd denna" knappen ovan för att använda senaste URL:en</li>
+                    <li>Aktivera "Använd externt API" switchen</li>
+                    <li>Testa API:t först med "Testa API Status"</li>
+                    <li>Kontrollera att du använder rätt URL: pdf-extraction-i8v9tg09f-reportflow1.vercel.app</li>
+                  </ul>
+                </div>
+              )}
+
               {error.includes('CPU Time exceeded') && (
                 <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
                   <p className="text-sm text-yellow-800">
                     <strong>Tips:</strong> Detta fel uppstår med Supabase Edge Functions. 
                     Prova att använda det externa API:t istället!
                   </p>
-                </div>
-              )}
-
-              {error.includes('Kan inte ansluta till API:t') && (
-                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Troubleshooting:</strong>
-                  </p>
-                  <ul className="text-xs text-yellow-700 mt-1 list-disc list-inside space-y-1">
-                    <li>Kontrollera att API-URL:en är korrekt</li>
-                    <li>Se till att API:t är deployat (kör: cd pdf-extraction-api && npx vercel --prod)</li>
-                    <li>Klicka på "Test"-knappen för att kontrollera API-status</li>
-                  </ul>
                 </div>
               )}
             </div>
@@ -413,41 +430,48 @@ const PDFTestInterface: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Deployment Instructions */}
+      {/* Troubleshooting Guide */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Globe className="w-5 h-5" />
-            Deployment Information
+            <AlertCircle className="w-5 h-5" />
+            Felsökningsguide
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
-            <h4 className="font-medium text-yellow-800 mb-2">⚠️ Viktigt - Använd senaste deployment URL!</h4>
-            <p className="text-sm text-yellow-700 mb-2">
-              Din senaste deployment skapade en ny URL. Äldre URLs kan kräva autentisering.
-            </p>
-            <div className="bg-yellow-100 p-2 rounded space-y-1">
-              <p className="text-xs font-mono text-yellow-800">✅ Senaste (använd denna): pdf-extraction-i8v9tg09f-reportflow1.vercel.app</p>
-              <p className="text-xs font-mono text-yellow-600">❌ Äldre: pdf-extraction-lls9ikhwn-reportflow1.vercel.app</p>
-              <p className="text-xs font-mono text-yellow-600">❌ Äldre: pdf-extraction-g0ngoz43c-reportflow1.vercel.app</p>
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded">
+            <h4 className="font-medium text-amber-800 mb-2">⚠️ Vanliga problem och lösningar:</h4>
+            <div className="space-y-2 text-sm text-amber-700">
+              <div>
+                <strong>1. "Load failed" fel:</strong>
+                <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                  <li>Använd den gröna "Använd denna" knappen för senaste URL</li>
+                  <li>Kontrollera att "Använd externt API" är aktiverat</li>
+                  <li>Testa API:t först med "Testa API Status"</li>
+                </ul>
+              </div>
+              <div>
+                <strong>2. Authentication Required:</strong>
+                <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                  <li>Du använder en gammal URL som kräver autentisering</li>
+                  <li>Använd alltid den senaste deployment URL:en</li>
+                </ul>
+              </div>
+              <div>
+                <strong>3. CPU Time exceeded (Supabase):</strong>
+                <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                  <li>Växla till "Externt API" istället för Supabase Edge Function</li>
+                </ul>
+              </div>
             </div>
           </div>
           
           <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-            <h4 className="font-medium text-blue-800 mb-2">Snabb deployment till Vercel:</h4>
-            <div className="bg-blue-100 p-2 rounded font-mono text-sm space-y-1">
-              <p>cd pdf-extraction-api</p>
-              <p>npx vercel --prod</p>
+            <h4 className="font-medium text-blue-800 mb-2">🔄 Deployment information:</h4>
+            <div className="text-sm text-blue-700 space-y-1">
+              <p><strong>Senaste URL:</strong> pdf-extraction-i8v9tg09f-reportflow1.vercel.app</p>
+              <p><strong>Äldre URL:er som kräver auth:</strong> pdf-extraction-g0ngoz43c-reportflow1.vercel.app, pdf-extraction-lls9ikhwn-reportflow1.vercel.app</p>
             </div>
-            <p className="text-xs text-blue-600 mt-2">
-              Efter deployment, kopiera den nya Vercel-URL:en från terminalen.
-            </p>
-          </div>
-          
-          <div className="text-sm text-gray-600">
-            <p>🔗 Se <code>pdf-extraction-api/DEPLOYMENT.md</code> för fullständiga instruktioner</p>
-            <p>🧪 Testa API:t med <code>npm run test</code> efter deployment</p>
           </div>
         </CardContent>
       </Card>
