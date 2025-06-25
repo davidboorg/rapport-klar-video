@@ -14,6 +14,13 @@ const MIN_TEXT_LENGTH = 100; // Increased minimum text length
 const DOWNLOAD_TIMEOUT = 10000; // 10 seconds for download
 const MAX_PROCESSING_CHARS = 1000000; // Increased processing limit
 
+// Global financial terms for reuse
+const FINANCIAL_TERMS = [
+  'omsättning', 'intäkter', 'resultat', 'vinst', 'förlust', 'EBITDA', 'EBIT',
+  'miljoner', 'mkr', 'msek', 'kvartal', 'procent', 'tillväxt', 'kostnad',
+  'rapport', 'period', 'jämfört', 'föregående', 'år', 'månad'
+];
+
 // Enhanced PDF text extraction with multiple strategies
 const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> => {
   const startTime = Date.now();
@@ -130,13 +137,8 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
       
       // STRATEGY 3: Financial context extraction (specific to financial reports)
       console.log('Strategy 3 - Financial context extraction...');
-      const financialTerms = [
-        'omsättning', 'intäkter', 'resultat', 'vinst', 'förlust', 'EBITDA', 'EBIT',
-        'miljoner', 'mkr', 'msek', 'kvartal', 'procent', 'tillväxt', 'kostnad',
-        'rapport', 'period', 'jämfört', 'föregående', 'år', 'månad'
-      ];
       
-      for (const term of financialTerms) {
+      for (const term of FINANCIAL_TERMS) {
         const termRegex = new RegExp(`(.{20,200}\\b${term}\\b.{20,200})`, 'gi');
         const termMatches = Array.from(pdfText.matchAll(termRegex));
         
@@ -182,10 +184,10 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
         .filter(segment => segment.length >= 15)
         .sort((a, b) => {
           // Prioritize segments with financial terms
-          const aHasFinancial = financialTerms.some(term => 
+          const aHasFinancial = FINANCIAL_TERMS.some(term => 
             a.toLowerCase().includes(term.toLowerCase())
           );
-          const bHasFinancial = financialTerms.some(term => 
+          const bHasFinancial = FINANCIAL_TERMS.some(term => 
             b.toLowerCase().includes(term.toLowerCase())
           );
           
@@ -223,11 +225,7 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
       const wordCount = extractedText.split(/\s+/).filter(word => word.length > 1).length;
       const hasNumbers = /\d/.test(extractedText);
       const hasSwedishChars = /[åäöÅÄÖ]/.test(extractedText);
-      const financialTerms = [
-        'omsättning', 'intäkter', 'resultat', 'vinst', 'förlust', 'EBITDA', 'EBIT',
-        'miljoner', 'mkr', 'msek', 'kvartal', 'procent', 'tillväxt', 'kostnad'
-      ];
-      const hasFinancialTerms = financialTerms.some(term => 
+      const hasFinancialTerms = FINANCIAL_TERMS.some(term => 
         extractedText.toLowerCase().includes(term.toLowerCase())
       );
       
@@ -477,11 +475,7 @@ serve(async (req) => {
     const wordCount = extractedText.split(/\s+/).filter(word => word.length > 1).length;
     const hasNumbers = /\d/.test(extractedText);
     const hasSwedishChars = /[åäöÅÄÖ]/.test(extractedText);
-    const financialTerms = [
-      'omsättning', 'intäkter', 'resultat', 'vinst', 'förlust', 'EBITDA', 'EBIT',
-      'miljoner', 'mkr', 'msek', 'kvartal', 'procent', 'tillväxt', 'kostnad'
-    ];
-    const hasFinancialTerms = financialTerms.some(term => 
+    const hasFinancialTerms = FINANCIAL_TERMS.some(term => 
       extractedText.toLowerCase().includes(term.toLowerCase())
     );
     const processingTime = Date.now() - startTime;
