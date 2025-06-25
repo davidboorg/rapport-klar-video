@@ -35,6 +35,9 @@ const WorkflowController: React.FC = () => {
       setStatus('Skapar projekt...');
       setStep('processing');
 
+      console.log('=== STARTING UPLOAD PROCESS ===');
+      console.log('File:', uploadedFile.name, 'Size:', uploadedFile.size);
+
       // Create a new project in Supabase
       const demoUserId = '00000000-0000-0000-0000-000000000000';
       
@@ -50,9 +53,11 @@ const WorkflowController: React.FC = () => {
         .single();
 
       if (projectError) {
+        console.error('Project creation error:', projectError);
         throw new Error(`Kunde inte skapa projekt: ${projectError.message}`);
       }
 
+      console.log('Project created:', project.id);
       setProjectId(project.id);
       setStatus('Laddar upp fil...');
 
@@ -63,6 +68,7 @@ const WorkflowController: React.FC = () => {
         .upload(fileName, uploadedFile);
 
       if (uploadError) {
+        console.error('Upload error:', uploadError);
         throw new Error(`Uppladdning misslyckades: ${uploadError.message}`);
       }
 
@@ -71,6 +77,8 @@ const WorkflowController: React.FC = () => {
         .from('documents')
         .getPublicUrl(fileName);
 
+      console.log('File uploaded, URL:', publicUrl);
+
       // Update project with PDF URL
       const { error: updateError } = await supabase
         .from('projects')
@@ -78,12 +86,17 @@ const WorkflowController: React.FC = () => {
         .eq('id', project.id);
 
       if (updateError) {
+        console.error('Project update error:', updateError);
         throw new Error(`Kunde inte uppdatera projekt: ${updateError.message}`);
       }
 
-      setStatus('Extraherar PDF innehåll med förbättrad algoritm...');
+      setStatus('Extraherar PDF innehåll...');
 
-      // Extract PDF content with improved extraction
+      console.log('=== CALLING PDF EXTRACTION ===');
+      console.log('Project ID:', project.id);
+      console.log('PDF URL:', publicUrl);
+
+      // Extract PDF content with better error handling
       const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-content', {
         body: {
           pdfUrl: publicUrl,
@@ -91,12 +104,23 @@ const WorkflowController: React.FC = () => {
         }
       });
 
+      console.log('=== PDF EXTRACTION RESPONSE ===');
+      console.log('Error:', extractionError);
+      console.log('Data:', extractionData);
+
       if (extractionError) {
-        throw new Error(`PDF extraktion misslyckades: ${extractionError.message}`);
+        console.error('PDF extraction error:', extractionError);
+        throw new Error(`PDF extraktion misslyckades: ${extractionError.message || 'Okänt fel från servern'}`);
       }
 
-      if (!extractionData?.success || !extractionData?.content) {
-        throw new Error(`PDF extraktion fel: ${extractionData?.error || 'Kunde inte extrahera innehåll'}`);
+      if (!extractionData?.success) {
+        console.error('PDF extraction failed:', extractionData);
+        const errorMsg = extractionData?.error || 'Okänt fel vid PDF-extraktion';
+        throw new Error(`PDF extraktion fel: ${errorMsg}`);
+      }
+
+      if (!extractionData?.content) {
+        throw new Error('Ingen text kunde extraheras från PDF:en');
       }
 
       console.log('=== PDF EXTRACTION SUCCESS ===');
@@ -111,18 +135,27 @@ const WorkflowController: React.FC = () => {
 
       toast({
         title: "PDF Extrahering Slutförd!",
-        description: `${extractionData.wordCount} ord extraherade. Granska texten innan AI-generering.`,
+        description: `${extractionData.wordCount || 0} ord extraherade. Granska texten innan AI-generering.`,
       });
 
     } catch (error) {
-      console.error('Upload and processing error:', error);
-      setStatus(`Fel: ${error instanceof Error ? error.message : 'Okänt fel'}`);
+      console.error('=== UPLOAD PROCESS FAILED ===');
+      console.error('Error details:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Ett okänt fel uppstod';
+      setStatus(`Fel: ${errorMessage}`);
       
       toast({
         title: "Fel uppstod",
-        description: error instanceof Error ? error.message : 'Ett okänt fel uppstod',
+        description: errorMessage,
         variant: "destructive",
       });
+
+      // Reset to upload step if there's an error
+      setTimeout(() => {
+        setStep('upload');
+        setStatus('Väntar på uppladdning');
+      }, 3000);
     }
   };
 
@@ -146,10 +179,12 @@ const WorkflowController: React.FC = () => {
       });
 
       if (analysisError) {
+        console.error('AI analysis error:', analysisError);
         throw new Error(`AI-analys misslyckades: ${analysisError.message}`);
       }
 
       if (!analysisData?.success) {
+        console.error('AI analysis failed:', analysisData);
         throw new Error(`AI-analys fel: ${analysisData?.error || 'Okänt fel'}`);
       }
 
@@ -189,11 +224,12 @@ const WorkflowController: React.FC = () => {
 
     } catch (error) {
       console.error('AI processing error:', error);
-      setStatus(`AI-fel: ${error instanceof Error ? error.message : 'Okänt fel'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Okänt fel';
+      setStatus(`AI-fel: ${errorMessage}`);
       
       toast({
         title: "AI-bearbetning misslyckades",
-        description: error instanceof Error ? error.message : 'Ett okänt fel uppstod',
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
