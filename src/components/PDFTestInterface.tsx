@@ -19,7 +19,7 @@ const PDFTestInterface: React.FC = () => {
   const [debugInfo, setDebugInfo] = useState<string>('');
   const { toast } = useToast();
 
-  const testPDFUrl = 'https://qpveeqvzvukolfagasne.supabase.co/storage/v1/object/sign/project-pdfs/rapport-delarsrapport-januari-mars-2025-250429.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8wZjAzZWViNC05ODhhLTQwMTUtOWQ4ZS1iMjY2OGU0NDdiMTkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9qZWN0LXBkZnMvcmFwcG9ydC1kZWxhcnNyYXBwb3J0LWphbnVhcmktbWFycy0yMDI1LTI1MDQyOS5wZGYiLCJpYXQiOjE3NTA4NTYyOTMsImV4cCI6MTc1MTQ2MTA5M30.JTE_pzNRZTAH6iyK48PGueAEDKNMkzO52X_EFmBMkAw';
+  const testPDFUrl = 'https://qpveeqvzvukolfagasne.supabase.co/storage/v1/object/sign/project-pdfs/rapport-delarsrapport-januari-mars-2025-250429.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8wZjAzZWViNC05ODhhLTQwMTUtOWQ4ZS1iMjY2OGU0NDdiMTkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9qZWN0LXBkZnMvcmFwcG9ydC1kZWxhcnNyYXBwb3J0LWphbnVhcmktbWFycy0yMDI1LTI1MDQyOS5wZGYiLCJpYXQiOjE3NTA4NjIzMTAsImV4cCI6MTc1MTQ2NzExMH0.MFM-6gcpFSCqZnoyvB_1Gw6GwTd7zqsyB0SO_sI62Qw';
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -67,11 +67,17 @@ const PDFTestInterface: React.FC = () => {
     console.log('📄 PDF URL:', testPDFUrl);
     
     // Add detailed debugging information
-    setDebugInfo(`Försöker ansluta till: ${apiUrl}\nTidpunkt: ${new Date().toISOString()}`);
+    setDebugInfo(`Försöker ansluta till: ${apiUrl}\nPDF URL: ${testPDFUrl}\nTidpunkt: ${new Date().toISOString()}`);
     
     try {
-      // First try a simple test to see if the domain is reachable
-      console.log('🔍 Testar grundläggande anslutning...');
+      console.log('🔍 Skickar request med PDF URL...');
+      
+      const requestBody = {
+        url: testPDFUrl  // Correct field name and actual PDF URL
+      };
+      
+      console.log('📦 Request body:', requestBody);
+      setDebugInfo(prev => prev + `\n📦 Request body: ${JSON.stringify(requestBody, null, 2)}`);
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -79,9 +85,7 @@ const PDFTestInterface: React.FC = () => {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          url: testPDFUrl  // Changed from pdfUrl to url
-        })
+        body: JSON.stringify(requestBody)
       });
 
       console.log('✅ Svar mottaget!');
@@ -292,6 +296,7 @@ const PDFTestInterface: React.FC = () => {
               <li>• Endpoint: <code>/api/extract</code></li>
               <li>• Request body: <code>{"{ \"url\": \"pdf_url\" }"}</code></li>
               <li>• Health check: <code>/api/health</code></li>
+              <li>• PDF URL inkluderad: ✅</li>
             </ul>
           </div>
         </CardContent>
