@@ -7,9 +7,33 @@ const pdf = require('pdf-parse');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Enhanced CORS configuration for Vercel
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://lovableproject.com',
+    /\.lovableproject\.com$/,
+    'https://pdf-extraction-api-gamma.vercel.app'
+  ],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
+
 app.use(express.json({ limit: '50mb' }));
+
+// Add request logging for debugging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} from ${req.get('origin') || 'unknown'}`);
+  next();
+});
 
 // Configuration
 const MAX_PDF_SIZE = 50 * 1024 * 1024; // 50MB
@@ -47,6 +71,19 @@ async function downloadPDF(url) {
     throw error;
   }
 }
+
+// Root endpoint for basic testing
+app.get('/', (req, res) => {
+  res.json({
+    status: 'PDF Extraction API is running',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      extract: '/extract'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Main extraction endpoint
 app.post('/extract', async (req, res) => {
@@ -105,6 +142,13 @@ app.post('/extract', async (req, res) => {
     const processingTime = Date.now() - startTime;
     const wordCount = extractedText.split(/\s+/).length;
     
+    // Check for financial terms and numbers (quality indicators)
+    const hasNumbers = /\d/.test(extractedText);
+    const financialTerms = ['revenue', 'profit', 'loss', 'income', 'costs', 'expenses', 'investment', 'equity', 'debt', 'assets', 'liabilities', 'cash flow', 'earnings', 'dividend', 'quarter', 'annual', 'budget', 'forecast', 'margin', 'growth', 'intäkter', 'vinst', 'förlust', 'kostnader', 'utgifter', 'investering', 'skuld', 'tillgångar', 'kassaflöde', 'utdelning', 'kvartal', 'årlig', 'budget', 'prognos', 'marginal', 'tillväxt'];
+    const hasFinancialTerms = financialTerms.some(term => 
+      extractedText.toLowerCase().includes(term.toLowerCase())
+    );
+    
     console.log(`Extraction successful: ${extractedText.length} chars, ${wordCount} words, ${processingTime}ms`);
     
     return res.json({
@@ -115,7 +159,9 @@ app.post('/extract', async (req, res) => {
         wordCount: wordCount,
         pages: data.numpages || 0,
         processingTimeMs: processingTime,
-        fileSizeKB: Math.round(buffer.length / 1024)
+        fileSizeKB: Math.round(buffer.length / 1024),
+        hasNumbers,
+        hasFinancialTerms
       }
     });
     
@@ -136,7 +182,8 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    platform: 'vercel'
   });
 });
 
