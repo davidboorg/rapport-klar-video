@@ -1,0 +1,19 @@
+
+{
+  "version": 2,
+  "functions": {
+    "api/extract.js": {
+      "maxDuration": 60
+    }
+  },
+  "routes": [
+    {
+      "src": "/extract",
+      "dest": "/api/extract.js"
+    },
+    {
+      "src": "/health",
+      "dest": "/api/health.js"
+    }
+  ]
+}
