@@ -38,6 +38,12 @@ const WorkflowController: React.FC = () => {
       console.log('=== STARTING UPLOAD PROCESS ===');
       console.log('File:', uploadedFile.name, 'Size:', uploadedFile.size);
 
+      // Kontrollera filstorlek innan uppladdning
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (uploadedFile.size > maxSize) {
+        throw new Error(`Filen är för stor (${Math.round(uploadedFile.size / 1024 / 1024)}MB, max 10MB)`);
+      }
+
       // Create a new project in Supabase
       const demoUserId = '00000000-0000-0000-0000-000000000000';
       
@@ -96,7 +102,7 @@ const WorkflowController: React.FC = () => {
       console.log('Project ID:', project.id);
       console.log('PDF URL:', publicUrl);
 
-      // Extract PDF content with enhanced error handling
+      // Extract PDF content med förbättrad felhantering
       const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-content', {
         body: {
           pdfUrl: publicUrl,
@@ -114,8 +120,12 @@ const WorkflowController: React.FC = () => {
         
         let errorMessage = 'PDF extraktion misslyckades';
         
-        // Försök att extrahera mer specifik felinformation
-        if (extractionError.message) {
+        // Hantera olika typer av fel
+        if (extractionError.message?.includes('FunctionsHttpError')) {
+          errorMessage = 'Edge Function fel - kontrollera att funktionen är deployad korrekt';
+        } else if (extractionError.message?.includes('timeout')) {
+          errorMessage = 'PDF-extraktion tog för lång tid - försök med en mindre PDF';
+        } else if (extractionError.message) {
           errorMessage = `PDF extraktion fel: ${extractionError.message}`;
         }
         
@@ -132,13 +142,13 @@ const WorkflowController: React.FC = () => {
         
         let errorMessage = 'PDF extraktion misslyckades';
         
-        // Använd felkoderna från edge function för bättre felmeddelanden
+        // Använd de nya felkoderna för bättre felmeddelanden
         switch (extractionData.code) {
           case 'INVALID_METHOD':
             errorMessage = 'Intern fel: Felaktig request-metod';
             break;
           case 'INVALID_JSON':
-            errorMessage = 'Intern fel: Felaktigt dataformat';
+            errorMessage = 'Intern fel: Felaktigt dataformat eller timeout';
             break;
           case 'MISSING_PDF_URL':
             errorMessage = 'Intern fel: PDF-URL saknas';
@@ -147,13 +157,19 @@ const WorkflowController: React.FC = () => {
             errorMessage = 'Intern fel: Projekt-ID saknas';
             break;
           case 'DOWNLOAD_FAILED':
-            errorMessage = 'Kunde inte ladda ner PDF-filen från servern';
+            errorMessage = 'Kunde inte ladda ner PDF-filen - kontrollera att filen är tillgänglig';
             break;
           case 'DOWNLOAD_ERROR':
-            errorMessage = 'PDF-filen kunde inte hämtas (kontrollera att filen finns)';
+            errorMessage = 'PDF-filen kunde inte hämtas (HTTP-fel)';
+            break;
+          case 'INVALID_CONTENT_TYPE':
+            errorMessage = 'Filen verkar inte vara en PDF';
             break;
           case 'EMPTY_FILE':
             errorMessage = 'PDF-filen verkar vara tom eller korrupt';
+            break;
+          case 'FILE_TOO_LARGE':
+            errorMessage = extractionData.error || 'PDF-filen är för stor (max 10MB)';
             break;
           case 'EXTRACTION_FAILED':
             errorMessage = extractionData.error || 'Kunde inte extrahera text från PDF:en';
@@ -176,6 +192,7 @@ const WorkflowController: React.FC = () => {
       console.log('Extracted text length:', extractionData.metadata?.length || extractionData.content.length);
       console.log('Word count:', extractionData.metadata?.wordCount || 'unknown');
       console.log('Processing time:', extractionData.metadata?.processingTimeMs || 'unknown', 'ms');
+      console.log('File size:', extractionData.metadata?.fileSizeMB || 'unknown', 'MB');
       console.log('Sample text:', extractionData.metadata?.sample || extractionData.content.substring(0, 100));
 
       setExtractedText(extractionData.content);
@@ -184,7 +201,7 @@ const WorkflowController: React.FC = () => {
 
       toast({
         title: "PDF Extrahering Slutförd!",
-        description: `${extractionData.metadata?.wordCount || 'Okänt antal'} ord extraherade. Granska texten innan AI-generering.`,
+        description: `${extractionData.metadata?.wordCount || 'Okänt antal'} ord extraherade på ${extractionData.metadata?.processingTimeMs || 'okänd'}ms. Granska texten innan AI-generering.`,
       });
 
     } catch (error) {
@@ -194,8 +211,13 @@ const WorkflowController: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Ett okänt fel uppstod';
       setStatus(`Fel: ${errorMessage}`);
       
+      // Bestäm toast variant baserat på feltyp
+      const isUserError = errorMessage.includes('för stor') || 
+                         errorMessage.includes('inte en PDF') ||
+                         errorMessage.includes('tom eller korrupt');
+      
       toast({
-        title: "Fel uppstod",
+        title: isUserError ? "Filproblem" : "Systemfel",
         description: errorMessage,
         variant: "destructive",
       });
