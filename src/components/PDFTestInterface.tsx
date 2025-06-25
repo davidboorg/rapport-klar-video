@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, Loader2, CheckCircle, AlertCircle, Settings, Globe, ExternalLink } from 'lucide-react';
+import { FileText, Loader2, CheckCircle, AlertCircle, Settings, Globe, ExternalLink, Copy } from 'lucide-react';
 
 const PDFTestInterface: React.FC = () => {
   const [extractedText, setExtractedText] = useState('');
@@ -16,10 +15,18 @@ const PDFTestInterface: React.FC = () => {
   const [metadata, setMetadata] = useState<any>(null);
   const [error, setError] = useState('');
   const [useExternalApi, setUseExternalApi] = useState(false);
-  const [externalApiUrl, setExternalApiUrl] = useState('');
+  const [externalApiUrl, setExternalApiUrl] = useState('https://pdf-extraction-lls9ikhwn-reportflow1.vercel.app');
   const { toast } = useToast();
 
   const testPDFUrl = 'https://qpveeqvzvukolfagasne.supabase.co/storage/v1/object/sign/project-pdfs/rapport-delarsrapport-januari-mars-2025-250429.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8wZjAzZWViNC05ODhhLTQwMTUtOWQ4ZS1iMjY2OGU0NDdiMTkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9qZWN0LXBkZnMvcmFwcG9ydC1kZWxhcnNyYXBwb3J0LWphbnVhcmktbWFycy0yMDI1LTI1MDQyOS5wZGYiLCJpYXQiOjE3NTA4NTYyOTMsImV4cCI6MTc1MTQ2MTA5M30.JTE_pzNRZTAH6iyK48PGueAEDKNMkzO52X_EFmBMkAw';
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Kopierat!",
+      description: "URL kopierad till urklipp",
+    });
+  };
 
   const extractWithSupabase = async () => {
     const { supabase } = await import('@/integrations/supabase/client');
@@ -125,9 +132,19 @@ const PDFTestInterface: React.FC = () => {
         });
       } else {
         console.log('Health check failed:', response.status);
+        toast({
+          title: "API Health Check",
+          description: `API svarar inte korrekt (status: ${response.status})`,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.log('Health check error:', error);
+      toast({
+        title: "API Health Check",
+        description: "Kunde inte ansluta till API:t",
+        variant: "destructive",
+      });
     }
   };
 
@@ -213,7 +230,7 @@ const PDFTestInterface: React.FC = () => {
           
           {useExternalApi && (
             <div className="space-y-2">
-              <Label htmlFor="api-url">API URL (t.ex. din Vercel deployment)</Label>
+              <Label htmlFor="api-url">API URL (senaste Vercel deployment)</Label>
               <div className="flex gap-2">
                 <Input
                   id="api-url"
@@ -226,6 +243,13 @@ const PDFTestInterface: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => copyToClipboard(externalApiUrl)}
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={testApiHealth}
                   disabled={!externalApiUrl.trim()}
                 >
@@ -233,9 +257,25 @@ const PDFTestInterface: React.FC = () => {
                   Test
                 </Button>
               </div>
-              <p className="text-sm text-gray-500">
-                Exempel: https://pdf-extraction-api.vercel.app
-              </p>
+              <div className="p-3 bg-green-50 border border-green-200 rounded">
+                <p className="text-sm text-green-800 font-medium mb-2">✅ Senaste deployment-URL:</p>
+                <div className="bg-green-100 p-2 rounded font-mono text-sm flex items-center justify-between">
+                  <span className="text-green-700">https://pdf-extraction-lls9ikhwn-reportflow1.vercel.app</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setExternalApiUrl('https://pdf-extraction-lls9ikhwn-reportflow1.vercel.app');
+                      copyToClipboard('https://pdf-extraction-lls9ikhwn-reportflow1.vercel.app');
+                    }}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-green-600 mt-2">
+                  🔄 Denna URL skapades vid din senaste deployment. Använd denna för bästa resultat!
+                </p>
+              </div>
             </div>
           )}
           
@@ -377,19 +417,29 @@ const PDFTestInterface: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Globe className="w-5 h-5" />
-            Deployment Instruktioner
+            Deployment Information
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
+            <h4 className="font-medium text-yellow-800 mb-2">⚠️ Viktigt - Använd senaste deployment URL!</h4>
+            <p className="text-sm text-yellow-700 mb-2">
+              Din senaste deployment skapade en ny URL. Äldre URLs kan kräva autentisering.
+            </p>
+            <div className="bg-yellow-100 p-2 rounded space-y-1">
+              <p className="text-xs font-mono text-yellow-800">✅ Senaste (använd denna): pdf-extraction-lls9ikhwn-reportflow1.vercel.app</p>
+              <p className="text-xs font-mono text-yellow-600">❌ Äldre: pdf-extraction-g0ngoz43c-reportflow1.vercel.app</p>
+            </div>
+          </div>
+          
           <div className="p-3 bg-blue-50 border border-blue-200 rounded">
             <h4 className="font-medium text-blue-800 mb-2">Snabb deployment till Vercel:</h4>
             <div className="bg-blue-100 p-2 rounded font-mono text-sm space-y-1">
               <p>cd pdf-extraction-api</p>
-              <p>npm install</p>
               <p>npx vercel --prod</p>
             </div>
             <p className="text-xs text-blue-600 mt-2">
-              Efter deployment, kopiera Vercel-URL:en och klistra in ovan.
+              Efter deployment, kopiera den nya Vercel-URL:en från terminalen.
             </p>
           </div>
           
