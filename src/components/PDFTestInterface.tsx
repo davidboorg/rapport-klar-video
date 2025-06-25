@@ -57,7 +57,10 @@ const PDFTestInterface: React.FC = () => {
       throw new Error('Ange URL till ditt externa API först');
     }
 
-    const apiUrl = externalApiUrl.endsWith('/extract') ? externalApiUrl : `${externalApiUrl}/extract`;
+    // Use /api/extract endpoint as specified
+    const apiUrl = externalApiUrl.endsWith('/api/extract') 
+      ? externalApiUrl 
+      : `${externalApiUrl}/api/extract`;
     
     console.log('Calling external API:', apiUrl);
     
@@ -68,7 +71,7 @@ const PDFTestInterface: React.FC = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          pdfUrl: testPDFUrl
+          url: testPDFUrl  // Changed from pdfUrl to url
         })
       });
 
@@ -80,7 +83,6 @@ const PDFTestInterface: React.FC = () => {
         try {
           errorData = await response.json();
         } catch (e) {
-          // If we can't parse JSON, use the response text
           const errorText = await response.text();
           throw new Error(`API error (${response.status}): ${errorText || response.statusText}`);
         }
@@ -101,7 +103,6 @@ const PDFTestInterface: React.FC = () => {
     } catch (error) {
       console.error('Fetch error details:', error);
       
-      // More specific error messages based on error type
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
         throw new Error('Kan inte ansluta till API:t. Kontrollera att URL:en är korrekt och att API:t är tillgängligt.');
       } else if (error instanceof TypeError && error.message.includes('Load failed')) {
@@ -118,9 +119,8 @@ const PDFTestInterface: React.FC = () => {
     if (!externalApiUrl.trim()) return;
     
     try {
-      const healthUrl = externalApiUrl.endsWith('/extract') 
-        ? externalApiUrl.replace('/extract', '/health') 
-        : `${externalApiUrl}/health`;
+      // Use /api/health endpoint
+      const healthUrl = `${externalApiUrl}/api/health`;
       
       console.log('Testing API health at:', healthUrl);
       const response = await fetch(healthUrl);
@@ -250,6 +250,15 @@ const PDFTestInterface: React.FC = () => {
               <ExternalLink className="w-4 h-4 mr-2" />
               Testa API Status
             </Button>
+          </div>
+
+          <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-sm">
+            <p className="text-yellow-800 font-medium">📋 API Information:</p>
+            <ul className="text-yellow-700 text-xs mt-1 space-y-1">
+              <li>• Endpoint: <code>/api/extract</code></li>
+              <li>• Request body: <code>{"{ \"url\": \"pdf_url\" }"}</code></li>
+              <li>• Health check: <code>/api/health</code></li>
+            </ul>
           </div>
         </CardContent>
       </Card>
