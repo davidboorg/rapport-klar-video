@@ -8,119 +8,156 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Improved PDF text extraction using multiple strategies
+// Enhanced PDF text extraction with multiple strategies and better handling
 const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> => {
-  console.log('Starting improved PDF text extraction...');
+  console.log('Starting enhanced PDF text extraction...');
   
   try {
     const pdfBytes = new Uint8Array(pdfArrayBuffer);
-    const pdfText = new TextDecoder('latin1').decode(pdfBytes);
-    
     console.log('PDF loaded, size:', pdfBytes.length, 'bytes');
     
-    let extractedText = '';
+    // Convert to text for pattern matching - using UTF-8 instead of latin1
+    let pdfText: string;
+    try {
+      pdfText = new TextDecoder('utf-8').decode(pdfBytes);
+    } catch {
+      // Fallback to latin1 if UTF-8 fails
+      pdfText = new TextDecoder('latin1').decode(pdfBytes);
+    }
     
-    // Strategy 1: Look for standard PDF text operators
-    const textOperators = [
-      /\(([^)]+)\)\s*Tj/g,           // Simple text showing
-      /\(([^)]+)\)\s*TJ/g,           // Text showing with individual glyph positioning
-      /\[([^\]]+)\]\s*TJ/g,          // Array of text strings
-      /BT\s+([^E]*?)\s+ET/gs,       // Text objects (between BT and ET)
+    let extractedText = '';
+    let structuredContent: string[] = [];
+    
+    // Strategy 1: Look for text between parentheses in PDF operators
+    console.log('Strategy 1: Extracting text from PDF operators...');
+    const textPatterns = [
+      /\(([^)]{3,})\)\s*(?:Tj|TJ)/g,  // Text showing operators - minimum 3 chars
+      /\[([^\]]{10,})\]\s*TJ/g,       // Array text showing - minimum 10 chars
     ];
     
-    for (const regex of textOperators) {
-      const matches = pdfText.matchAll(regex);
+    for (const pattern of textPatterns) {
+      const matches = pdfText.matchAll(pattern);
       for (const match of matches) {
         if (match[1]) {
-          // Clean the matched text
           let text = match[1]
-            .replace(/\\[nrt]/g, ' ')    // Replace escape sequences
-            .replace(/\\\(/g, '(')       // Unescape parentheses
+            .replace(/\\n/g, ' ')
+            .replace(/\\r/g, ' ')
+            .replace(/\\t/g, ' ')
+            .replace(/\\\(/g, '(')
             .replace(/\\\)/g, ')')
             .replace(/\\\\/g, '\\')
+            .replace(/\s+/g, ' ')
             .trim();
           
-          if (text.length > 0) {
-            extractedText += text + ' ';
+          // Filter out obvious encoding artifacts
+          if (text.length >= 3 && 
+              !/^[A-Z]{1,3}$/.test(text) && // Not just caps
+              !/^\d{1,3}$/.test(text) && // Not just numbers
+              /[a-zåäöA-ZÅÄÖäöü]/.test(text)) { // Contains letters
+            structuredContent.push(text);
           }
         }
       }
     }
     
     // Strategy 2: Look for readable text patterns in stream content
+    console.log('Strategy 2: Extracting from PDF streams...');
     const streamRegex = /stream\s*\n([\s\S]*?)\nendstream/g;
     const streamMatches = pdfText.matchAll(streamRegex);
     
     for (const streamMatch of streamMatches) {
       const streamContent = streamMatch[1];
       
-      // Look for readable Swedish/English text patterns
-      const readablePattern = /\b[A-ZÅÄÖa-zåäö]{3,}\b/g;
-      const readableMatches = streamContent.matchAll(readablePattern);
+      // Look for words that are likely readable text
+      const wordMatches = streamContent.match(/[A-ZÅÄÖa-zåäöü]{3,}/g);
+      if (wordMatches) {
+        for (const word of wordMatches) {
+          if (word.length >= 3 && word.length <= 50) {
+            structuredContent.push(word);
+          }
+        }
+      }
       
-      for (const readableMatch of readableMatches) {
-        extractedText += readableMatch[0] + ' ';
+      // Extract numbers that might be financial data
+      const numberMatches = streamContent.match(/\b\d{1,3}(?:\s?\d{3})*(?:[.,]\d{1,3})?\s?(?:kr|mkr|msek|miljoner|tkr|%|€|\$)?\b/g);
+      if (numberMatches) {
+        structuredContent.push(...numberMatches);
       }
     }
     
-    // Strategy 3: Simple string search for common financial terms
+    // Strategy 3: Look for specific financial terms and their context
+    console.log('Strategy 3: Extracting financial context...');
     const financialTerms = [
-      'omsättning', 'intäkter', 'resultat', 'vinst', 'förlust',
+      'omsättning', 'intäkter', 'nettoomsättning', 'försäljning',
+      'resultat', 'vinst', 'förlust', 'EBITDA', 'EBIT',
+      'rörelseresultat', 'nettoresultat', 'årsresultat',
       'balans', 'tillgångar', 'skulder', 'eget kapital',
-      'kassaflöde', 'mkr', 'msek', 'miljoner', 'tkr',
-      'kvartal', 'helår', 'rapport', 'delårsrapport'
+      'kassaflöde', 'likviditet', 'soliditet',
+      'miljoner', 'miljarder', 'mkr', 'msek', 'tkr', 'mdkr',
+      'kvartal', 'helår', 'delår', 'januari', 'februari', 'mars',
+      'april', 'maj', 'juni', 'juli', 'augusti', 'september',
+      'oktober', 'november', 'december', '2024', '2025', '2023',
+      'procent', 'tillväxt', 'minskning', 'ökning'
     ];
     
     for (const term of financialTerms) {
-      const termRegex = new RegExp(`\\b${term}\\b`, 'gi');
+      const termRegex = new RegExp(`(.{0,50}\\b${term}\\b.{0,50})`, 'gi');
       const termMatches = pdfText.matchAll(termRegex);
+      
       for (const termMatch of termMatches) {
-        // Extract context around the term (50 chars before and after)
-        const start = Math.max(0, termMatch.index! - 50);
-        const end = Math.min(pdfText.length, termMatch.index! + term.length + 50);
-        const context = pdfText.substring(start, end);
-        
-        // Clean and add context
-        const cleanContext = context
-          .replace(/[^\w\såäöÅÄÖ.,\-\d]/g, ' ')
+        const context = termMatch[1]
+          .replace(/[^\w\såäöÅÄÖ.,\-\d%€$]/g, ' ')
           .replace(/\s+/g, ' ')
           .trim();
         
-        if (cleanContext.length > 10) {
-          extractedText += cleanContext + ' ';
+        if (context.length > 10 && context.length < 200) {
+          structuredContent.push(`FINANCIAL: ${context}`);
         }
       }
     }
     
-    // Final cleanup
-    extractedText = extractedText
-      .replace(/\s+/g, ' ')           // Normalize whitespace
-      .replace(/[^\w\såäöÅÄÖ.,\-\d%]/g, ' ')  // Keep only readable characters
-      .trim();
+    // Strategy 4: Look for table-like structures
+    console.log('Strategy 4: Looking for table structures...');
+    const tablePattern = /(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)/g;
+    const tableMatches = pdfText.matchAll(tablePattern);
     
-    console.log('Extraction completed. Text length:', extractedText.length);
-    console.log('Sample text:', extractedText.substring(0, 200));
-    
-    if (extractedText.length < 20) {
-      // If we still don't have much text, try a more aggressive approach
-      console.log('Low text yield, trying aggressive extraction...');
-      
-      // Look for any alphanumeric sequences
-      const aggressivePattern = /[A-ZÅÄÖa-zåäö0-9]{2,}/g;
-      const aggressiveMatches = pdfText.matchAll(aggressivePattern);
-      
-      let aggressiveText = '';
-      for (const match of aggressiveMatches) {
-        aggressiveText += match[0] + ' ';
-      }
-      
-      if (aggressiveText.length > extractedText.length) {
-        extractedText = aggressiveText.trim();
-      }
+    for (const tableMatch of tableMatches) {
+      structuredContent.push(`TABLE_ROW: ${tableMatch[0]}`);
     }
     
-    if (extractedText.length < 10) {
-      throw new Error('Kunde inte extrahera läsbar text från PDF:en. Kontrollera att filen innehåller text och inte bara bilder.');
+    // Combine and clean all extracted content
+    extractedText = structuredContent.join(' ');
+    
+    // Final cleanup
+    extractedText = extractedText
+      .replace(/\s+/g, ' ')
+      .replace(/([.!?])\s+([A-ZÅÄÖ])/g, '$1\n\n$2') // Add paragraphs
+      .trim();
+    
+    console.log('Extraction completed. Total segments found:', structuredContent.length);
+    console.log('Final text length:', extractedText.length);
+    console.log('First 500 characters:', extractedText.substring(0, 500));
+    
+    // Quality checks
+    const wordCount = extractedText.split(/\s+/).length;
+    const hasNumbers = /\d/.test(extractedText);
+    const hasFinancialTerms = financialTerms.some(term => 
+      extractedText.toLowerCase().includes(term.toLowerCase())
+    );
+    
+    console.log('Quality metrics:', {
+      wordCount,
+      hasNumbers,
+      hasFinancialTerms,
+      length: extractedText.length
+    });
+    
+    if (extractedText.length < 100) {
+      throw new Error('Extraktionen gav för lite text. PDF:en kanske innehåller mest bilder eller har dålig textkvalitet. Försök med en annan PDF-fil.');
+    }
+    
+    if (wordCount < 20) {
+      throw new Error('För få läsbara ord hittades i PDF:en. Kontrollera att dokumentet innehåller text och inte bara bilder.');
     }
     
     return extractedText;
@@ -139,7 +176,7 @@ serve(async (req) => {
   try {
     const { pdfUrl, projectId } = await req.json();
     
-    console.log('=== PDF EXTRACTION REQUEST ===');
+    console.log('=== ENHANCED PDF EXTRACTION REQUEST ===');
     console.log('PDF URL:', pdfUrl);
     console.log('Project ID:', projectId);
 
@@ -151,7 +188,6 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    // Download PDF with better error handling
     console.log('Downloading PDF from:', pdfUrl);
     const pdfResponse = await fetch(pdfUrl);
     
@@ -161,10 +197,6 @@ serve(async (req) => {
 
     const contentType = pdfResponse.headers.get('content-type');
     console.log('Content type:', contentType);
-    
-    if (contentType && !contentType.includes('pdf')) {
-      console.warn('Content type is not PDF:', contentType);
-    }
 
     const pdfArrayBuffer = await pdfResponse.arrayBuffer();
     console.log('PDF downloaded successfully, size:', pdfArrayBuffer.byteLength, 'bytes');
@@ -177,7 +209,7 @@ serve(async (req) => {
       throw new Error('Downloaded file is too small to be a valid PDF');
     }
 
-    // Check if it's actually a PDF file by looking for PDF header
+    // Validate PDF header
     const headerBytes = new Uint8Array(pdfArrayBuffer.slice(0, 10));
     const headerString = new TextDecoder().decode(headerBytes);
     
@@ -187,12 +219,13 @@ serve(async (req) => {
 
     console.log('PDF validation passed, extracting text...');
 
-    // Extract text using our improved method
     const extractedText = await extractTextFromPDF(pdfArrayBuffer);
     
     console.log('=== EXTRACTION RESULTS ===');
     console.log('Extracted text length:', extractedText.length);
-    console.log('First 300 characters:', extractedText.substring(0, 300));
+    console.log('Word count:', extractedText.split(/\s+/).length);
+    console.log('Contains numbers:', /\d/.test(extractedText));
+    console.log('Sample (first 300 chars):', extractedText.substring(0, 300));
 
     // Update project status
     const { error: updateError } = await supabase
@@ -212,7 +245,10 @@ serve(async (req) => {
         success: true, 
         content: extractedText,
         length: extractedText.length,
-        message: 'Text successfully extracted using improved multi-strategy approach'
+        wordCount: extractedText.split(/\s+/).length,
+        hasNumbers: /\d/.test(extractedText),
+        sample: extractedText.substring(0, 500),
+        message: 'Text successfully extracted using enhanced multi-strategy approach'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
