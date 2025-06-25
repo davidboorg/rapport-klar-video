@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, Loader2, CheckCircle, AlertCircle, Settings, Globe } from 'lucide-react';
+import { FileText, Loader2, CheckCircle, AlertCircle, Settings, Globe, ExternalLink } from 'lucide-react';
 
 const PDFTestInterface: React.FC = () => {
   const [extractedText, setExtractedText] = useState('');
@@ -52,31 +52,83 @@ const PDFTestInterface: React.FC = () => {
 
     const apiUrl = externalApiUrl.endsWith('/extract') ? externalApiUrl : `${externalApiUrl}/extract`;
     
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        pdfUrl: testPDFUrl
-      })
-    });
+    console.log('Calling external API:', apiUrl);
+    
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          pdfUrl: testPDFUrl
+        })
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`API error (${response.status}): ${errorData.error || response.statusText}`);
+      console.log('API Response status:', response.status);
+      console.log('API Response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          // If we can't parse JSON, use the response text
+          const errorText = await response.text();
+          throw new Error(`API error (${response.status}): ${errorText || response.statusText}`);
+        }
+        throw new Error(`API error (${response.status}): ${errorData.error || response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('API Response data:', result);
+
+      if (!result.success) {
+        throw new Error(`External API error: ${result.error || 'Unknown error'}`);
+      }
+
+      return {
+        text: result.text,
+        metadata: result.metadata
+      };
+    } catch (error) {
+      console.error('Fetch error details:', error);
+      
+      // More specific error messages based on error type
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        throw new Error('Kan inte ansluta till API:t. Kontrollera att URL:en är korrekt och att API:t är tillgängligt.');
+      } else if (error instanceof TypeError && error.message.includes('Load failed')) {
+        throw new Error('Anslutningen till API:t misslyckades. Detta kan bero på CORS-problem eller att API:t inte är deployat.');
+      } else if (error.name === 'AbortError') {
+        throw new Error('API-anropet tog för lång tid (timeout).');
+      } else {
+        throw error;
+      }
     }
+  };
 
-    const result = await response.json();
-
-    if (!result.success) {
-      throw new Error(`External API error: ${result.error || 'Unknown error'}`);
+  const testApiHealth = async () => {
+    if (!externalApiUrl.trim()) return;
+    
+    try {
+      const healthUrl = externalApiUrl.endsWith('/extract') 
+        ? externalApiUrl.replace('/extract', '/health') 
+        : `${externalApiUrl}/health`;
+      
+      const response = await fetch(healthUrl);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('API Health check:', data);
+        toast({
+          title: "API Health Check",
+          description: `API är tillgängligt! Status: ${data.status}`,
+        });
+      } else {
+        console.log('Health check failed:', response.status);
+      }
+    } catch (error) {
+      console.log('Health check error:', error);
     }
-
-    return {
-      text: result.text,
-      metadata: result.metadata
-    };
   };
 
   const extractPDFText = async () => {
@@ -162,13 +214,25 @@ const PDFTestInterface: React.FC = () => {
           {useExternalApi && (
             <div className="space-y-2">
               <Label htmlFor="api-url">API URL (t.ex. din Vercel deployment)</Label>
-              <Input
-                id="api-url"
-                type="url"
-                placeholder="https://your-pdf-api.vercel.app"
-                value={externalApiUrl}
-                onChange={(e) => setExternalApiUrl(e.target.value)}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="api-url"
+                  type="url"
+                  placeholder="https://your-pdf-api.vercel.app"
+                  value={externalApiUrl}
+                  onChange={(e) => setExternalApiUrl(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={testApiHealth}
+                  disabled={!externalApiUrl.trim()}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Test
+                </Button>
+              </div>
               <p className="text-sm text-gray-500">
                 Exempel: https://pdf-extraction-api.vercel.app
               </p>
@@ -234,6 +298,19 @@ const PDFTestInterface: React.FC = () => {
                     <strong>Tips:</strong> Detta fel uppstår med Supabase Edge Functions. 
                     Prova att använda det externa API:t istället!
                   </p>
+                </div>
+              )}
+
+              {error.includes('Kan inte ansluta till API:t') && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Troubleshooting:</strong>
+                  </p>
+                  <ul className="text-xs text-yellow-700 mt-1 list-disc list-inside space-y-1">
+                    <li>Kontrollera att API-URL:en är korrekt</li>
+                    <li>Se till att API:t är deployat (kör: cd pdf-extraction-api && npx vercel --prod)</li>
+                    <li>Klicka på "Test"-knappen för att kontrollera API-status</li>
+                  </ul>
                 </div>
               )}
             </div>
@@ -306,11 +383,14 @@ const PDFTestInterface: React.FC = () => {
         <CardContent className="space-y-3">
           <div className="p-3 bg-blue-50 border border-blue-200 rounded">
             <h4 className="font-medium text-blue-800 mb-2">Snabb deployment till Vercel:</h4>
-            <div className="bg-blue-100 p-2 rounded font-mono text-sm">
+            <div className="bg-blue-100 p-2 rounded font-mono text-sm space-y-1">
               <p>cd pdf-extraction-api</p>
               <p>npm install</p>
               <p>npx vercel --prod</p>
             </div>
+            <p className="text-xs text-blue-600 mt-2">
+              Efter deployment, kopiera Vercel-URL:en och klistra in ovan.
+            </p>
           </div>
           
           <div className="text-sm text-gray-600">
