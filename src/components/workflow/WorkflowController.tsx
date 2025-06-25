@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import UploadStep from './UploadStep';
 import ProcessingStep from './ProcessingStep';
 import ScriptReviewStep from './ScriptReviewStep';
+import ScriptComparisonStep from './ScriptComparisonStep';
 import PodcastGeneration from '../content/PodcastGeneration';
 import VideoGenerationStep from './VideoGenerationStep';
 import DownloadStep from './DownloadStep';
@@ -9,6 +10,8 @@ import StatusIndicator from './StatusIndicator';
 import PDFTextPreview from '../pdf/PDFTextPreview';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
 
 export type WorkflowStep = 'upload' | 'processing' | 'textPreview' | 'scriptReview' | 'audio' | 'video' | 'download';
 
@@ -17,6 +20,8 @@ const WorkflowController: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [extractedText, setExtractedText] = useState<string>('');
   const [script, setScript] = useState<string | null>(null);
+  const [script1, setScript1] = useState<string>('');
+  const [script2, setScript2] = useState<string>('');
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<string>('Väntar på uppladdning');
@@ -148,31 +153,30 @@ const WorkflowController: React.FC = () => {
         throw new Error(`AI-analys fel: ${analysisData?.error || 'Okänt fel'}`);
       }
 
-      // Check data quality and handle script generation accordingly
-      if (analysisData.data_quality === 'low' || !analysisData.script_text) {
+      // Check if we got both scripts
+      if (analysisData.manus1 && analysisData.manus2) {
+        setScript1(analysisData.manus1);
+        setScript2(analysisData.manus2);
+        setStatus('Båda manusen genererade - välj ditt favoritmanus');
+        setStep('scriptReview');
+
+        toast({
+          title: "AI-analys Slutförd!",
+          description: "Två olika manus har genererats. Välj det som passar bäst för din presentation.",
+        });
+      } else if (analysisData.script_text) {
+        // Fallback to single script
+        setScript(analysisData.script_text);
+        setStatus('Manus genererat och redo för granskning');
+        setStep('scriptReview');
+
+        toast({
+          title: "Manus genererat",
+          description: "Ett manus har skapats baserat på ditt dokument.",
+        });
+      } else {
+        // Generate basic script as fallback
         const basicScript = generateBasicScript(analysisData.financial_data);
-        
-        // Save the basic script
-        const { error: contentError } = await supabase
-          .from('generated_content')
-          .insert({
-            project_id: projectId,
-            script_text: basicScript,
-            generation_status: 'completed',
-            script_alternatives: [{
-              type: 'executive',
-              title: 'Grundläggande sammanfattning',
-              duration: '2-3 minuter',
-              script: basicScript,
-              tone: 'Informativ',
-              key_points: ['Dokumentanalys genomförd', 'Grundläggande information extraherad']
-            }]
-          });
-
-        if (contentError) {
-          console.error('Error saving basic script:', contentError);
-        }
-
         setScript(basicScript);
         setStatus('Grundläggande manus genererat');
         setStep('scriptReview');
@@ -181,19 +185,7 @@ const WorkflowController: React.FC = () => {
           title: "Manus genererat",
           description: "Ett grundläggande manus har skapats baserat på den extraherade texten.",
         });
-
-        return;
       }
-
-      // Use the high-quality generated script
-      setScript(analysisData.script_text);
-      setStatus('Högkvalitativt manus genererat och redo för granskning');
-      setStep('scriptReview');
-
-      toast({
-        title: "AI-analys Slutförd!",
-        description: "Ett högkvalitativt manus har genererats från ditt dokument.",
-      });
 
     } catch (error) {
       console.error('AI processing error:', error);
@@ -242,6 +234,10 @@ Tack för er uppmärksamhet.
       title: "Manus godkänt!",
       description: "Nu kan du generera podcast med avancerade ElevenLabs-inställningar.",
     });
+  };
+
+  const handleScriptSelect = (selectedScript: string) => {
+    setScript(selectedScript);
   };
 
   const handlePodcastGenerated = (podcastUrl: string) => {
@@ -300,8 +296,33 @@ Tack för er uppmärksamhet.
           isLoading={isProcessingAI}
         />
       )}
-      {step === 'scriptReview' && script && (
-        <ScriptReviewStep script={script} onApprove={handleScriptApprove} />
+      {step === 'scriptReview' && (script1 || script2 || script) && (
+        <>
+          {script1 && script2 ? (
+            <ScriptComparisonStep
+              script1={script1}
+              script2={script2}
+              onSelectScript={handleScriptSelect}
+            />
+          ) : (
+            <ScriptReviewStep 
+              script={script || ''} 
+              onApprove={handleScriptApprove} 
+            />
+          )}
+          
+          {script && (
+            <div className="mt-4 flex justify-center">
+              <Button 
+                onClick={() => handleScriptApprove(script)}
+                className="flex items-center gap-2"
+              >
+                <ArrowRight className="w-4 h-4" />
+                Fortsätt till Podcast-generering
+              </Button>
+            </div>
+          )}
+        </>
       )}
       {step === 'audio' && script && projectId && (
         <PodcastGeneration
