@@ -11,13 +11,13 @@ const corsHeaders = {
 // Robusta konstanter för prestanda och säkerhet
 const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB max
 const EXTRACTION_TIMEOUT = 25000; // 25 sekunder max
-const MIN_TEXT_LENGTH = 20; // Minimum text length för validering
+const MIN_TEXT_LENGTH = 50; // Minimum text length för validering
 const DOWNLOAD_TIMEOUT = 15000; // 15 sekunder för nedladdning
 
-// Förbättrad PDF text extraktion med robust felhantering
+// Förbättrad PDF text extraktion med flera strategier
 const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> => {
   const startTime = Date.now();
-  console.log('=== STARTING PDF EXTRACTION ===');
+  console.log('=== STARTING ENHANCED PDF EXTRACTION ===');
   console.log('PDF size:', pdfArrayBuffer.byteLength, 'bytes');
   
   return new Promise(async (resolve, reject) => {
@@ -56,80 +56,103 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
       let extractedText = '';
       let textSegments: string[] = [];
       
-      console.log('Starting text extraction with multiple strategies...');
+      console.log('Starting multi-strategy text extraction...');
       
-      // Strategi 1: Extrahera text mellan parenteser i PDF operators
-      const textPatterns = [
-        /\(([^)]{2,})\)\s*(?:Tj|TJ)/g,    // Standard text operators
-        /\[([^\]]{5,})\]\s*TJ/g,          // Array text operators
-        /BT\s+(.+?)\s+ET/gs,              // Text blocks mellan BT/ET
-        /\(([^)]+)\)\s*Tj/g,              // Enkel text operator
-        /\/F\d+\s+\d+\s+Tf\s*\(([^)]+)\)/g, // Text med font-specifikation
-      ];
+      // STRATEGI 1: Extrahera text mellan parenteser i PDF operators (mest vanlig)
+      const basicTextPattern = /\(([^)]{3,})\)\s*(?:Tj|TJ)/g;
+      let matches = Array.from(pdfText.matchAll(basicTextPattern));
+      console.log('Strategy 1 - Basic text operators found:', matches.length, 'matches');
       
-      let totalMatches = 0;
-      for (const pattern of textPatterns) {
-        const matches = Array.from(pdfText.matchAll(pattern));
-        totalMatches += matches.length;
-        
-        for (const match of matches) {
-          if (match[1]) {
-            let text = match[1]
-              .replace(/\\n/g, '\n')
-              .replace(/\\r/g, '\r')
-              .replace(/\\t/g, '\t')
-              .replace(/\\\(/g, '(')
-              .replace(/\\\)/g, ')')
-              .replace(/\\\\/g, '\\')
-              .replace(/\\([0-7]{3})/g, (_, octal) => String.fromCharCode(parseInt(octal, 8)));
-            
-            // Rensa text från PDF-artefakter
-            text = text
-              .replace(/\s+/g, ' ')
-              .replace(/[^\x20-\x7E\u00A0-\u017F\u0100-\u024F\u1E00-\u1EFF]/g, ' ')
-              .trim();
-            
-            // Filtrera bort skräp - måste innehålla läsbara tecken
-            if (text.length >= 2 && /[a-zA-ZåäöÅÄÖ0-9]/.test(text)) {
-              textSegments.push(text);
+      for (const match of matches) {
+        if (match[1]) {
+          let text = match[1]
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '\r')
+            .replace(/\\t/g, '\t')
+            .replace(/\\\(/g, '(')
+            .replace(/\\\)/g, ')')
+            .replace(/\\\\/g, '\\')
+            .replace(/\\([0-7]{3})/g, (_, octal) => String.fromCharCode(parseInt(octal, 8)));
+          
+          // Rensa och validera text
+          text = text
+            .replace(/\s+/g, ' ')
+            .replace(/[^\x20-\x7E\u00A0-\u017F\u0100-\u024F\u1E00-\u1EFF\u00C0-\u00FF]/g, ' ')
+            .trim();
+          
+          if (text.length >= 3 && /[a-zA-ZåäöÅÄÖ0-9]/.test(text)) {
+            textSegments.push(text);
+          }
+        }
+      }
+      
+      // STRATEGI 2: Extrahera från array text operators
+      const arrayTextPattern = /\[([^\]]{5,})\]\s*TJ/g;
+      matches = Array.from(pdfText.matchAll(arrayTextPattern));
+      console.log('Strategy 2 - Array text operators found:', matches.length, 'matches');
+      
+      for (const match of matches) {
+        if (match[1]) {
+          // Hantera array format med parenteser
+          const arrayContent = match[1];
+          const textParts = arrayContent.match(/\(([^)]+)\)/g);
+          if (textParts) {
+            for (const part of textParts) {
+              const cleanText = part.slice(1, -1) // Ta bort parenteser
+                .replace(/\\n/g, '\n')
+                .replace(/\\r/g, '\r')
+                .replace(/\s+/g, ' ')
+                .trim();
+              
+              if (cleanText.length >= 2 && /[a-zA-ZåäöÅÄÖ0-9]/.test(cleanText)) {
+                textSegments.push(cleanText);
+              }
             }
           }
         }
       }
       
-      console.log(`Found ${totalMatches} text matches across all patterns`);
+      // STRATEGI 3: Text blocks mellan BT/ET (Begin Text/End Text)
+      const textBlockPattern = /BT\s+(.+?)\s+ET/gs;
+      matches = Array.from(pdfText.matchAll(textBlockPattern));
+      console.log('Strategy 3 - Text blocks (BT/ET) found:', matches.length, 'matches');
       
-      // Strategi 2: Sök efter läsbara ord i streams
-      const streamRegex = /stream\s*\n([\s\S]*?)\nendstream/g;
-      const streamMatches = Array.from(pdfText.matchAll(streamRegex));
-      
-      console.log(`Found ${streamMatches.length} streams to process`);
-      
-      for (const streamMatch of streamMatches) {
-        const streamContent = streamMatch[1];
-        // Försök extrahera läsbara ord
-        const wordPattern = /\b[a-zA-ZåäöÅÄÖ0-9]{2,}\b/g;
-        const words = streamContent.match(wordPattern);
-        
-        if (words && words.length > 2) {
-          const extractedFromStream = words.join(' ');
-          if (extractedFromStream.length > 10) {
-            textSegments.push(extractedFromStream);
+      for (const match of matches) {
+        if (match[1]) {
+          // Extrahera text från text block
+          const blockContent = match[1];
+          const textMatches = blockContent.match(/\(([^)]+)\)/g);
+          if (textMatches) {
+            for (const textMatch of textMatches) {
+              const cleanText = textMatch.slice(1, -1)
+                .replace(/\\n/g, '\n')
+                .replace(/\s+/g, ' ')
+                .trim();
+              
+              if (cleanText.length >= 2 && /[a-zA-ZåäöÅÄÖ0-9]/.test(cleanText)) {
+                textSegments.push(cleanText);
+              }
+            }
           }
         }
       }
       
-      // Strategi 3: Sök efter finansiella termer och kontext
+      // STRATEGI 4: Sök efter finansiella termer och kontext (för finansiella rapporter)
       const financialTerms = [
         'omsättning', 'intäkter', 'försäljning', 'resultat', 'vinst', 'förlust',
         'EBITDA', 'EBIT', 'rörelseresultat', 'nettoresultat', 'årsresultat',
         'miljoner', 'miljarder', 'mkr', 'msek', 'kvartal', 'procent', 'tillväxt',
-        'revenue', 'profit', 'loss', 'growth', 'quarter', 'percent'
+        'revenue', 'profit', 'loss', 'growth', 'quarter', 'percent', 'rapport',
+        'delårsrapport', 'årsredovisning', 'kvartalsrapport'
       ];
       
+      console.log('Strategy 4 - Searching for financial terms...');
+      let financialMatches = 0;
+      
       for (const term of financialTerms) {
-        const termRegex = new RegExp(`(.{0,50}\\b${term}\\b.{0,50})`, 'gi');
+        const termRegex = new RegExp(`(.{0,100}\\b${term}\\b.{0,100})`, 'gi');
         const termMatches = Array.from(pdfText.matchAll(termRegex));
+        financialMatches += termMatches.length;
         
         for (const termMatch of termMatches) {
           let context = termMatch[1]
@@ -137,22 +160,31 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
             .replace(/\s+/g, ' ')
             .trim();
           
-          if (context.length > 5 && context.length < 200) {
+          if (context.length > 10 && context.length < 300) {
             textSegments.push(context);
           }
         }
       }
       
+      console.log('Financial terms found:', financialMatches, 'contexts');
+      
+      // STRATEGI 5: Extrahera strukturerad text (datum, siffror, etc.)
+      const structuredPattern = /\b(?:\d{4}[-\/]\d{1,2}[-\/]\d{1,2}|\d{1,2}[-\/]\d{1,2}[-\/]\d{4}|\d+[.,]\d+|\d+\s*%|\d+\s*mkr|\d+\s*msek)\b/gi;
+      const structuredMatches = Array.from(pdfText.matchAll(structuredPattern));
+      console.log('Strategy 5 - Structured data found:', structuredMatches.length, 'items');
+      
       // Kombinera och rensa alla extraherade segment
       extractedText = textSegments
         .filter((segment, index, array) => array.indexOf(segment) === index) // Ta bort dubbletter
+        .filter(segment => segment.length >= 3) // Filtrera mycket korta segment
         .join(' ')
         .trim();
       
       // Slutlig rensning och formatering
       extractedText = extractedText
-        .replace(/\s+/g, ' ')
-        .replace(/([.!?])\s+([A-ZÅÄÖ])/g, '$1\n\n$2')
+        .replace(/\s+/g, ' ') // Konsolidera whitespace
+        .replace(/([.!?])\s+([A-ZÅÄÖ])/g, '$1\n\n$2') // Lägg till radbrytningar efter meningar
+        .replace(/\n\s*\n\s*\n/g, '\n\n') // Begränsa till max 2 radbrytningar
         .trim();
       
       const processingTime = Date.now() - startTime;
@@ -161,15 +193,21 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
       console.log('Text segments found:', textSegments.length);
       console.log('Final text length:', extractedText.length);
       console.log('Processing time:', processingTime, 'ms');
-      console.log('Sample text (first 150 chars):', extractedText.substring(0, 150));
+      console.log('Sample text (first 200 chars):', extractedText.substring(0, 200));
       
       // Kvalitetsvalidering
       const wordCount = extractedText.split(/\s+/).filter(word => word.length > 1).length;
       const hasNumbers = /\d/.test(extractedText);
+      const hasSwedishChars = /[åäöÅÄÖ]/.test(extractedText);
+      const hasFinancialTerms = financialTerms.some(term => 
+        extractedText.toLowerCase().includes(term.toLowerCase())
+      );
       
       console.log('Quality metrics:', { 
         wordCount, 
         hasNumbers, 
+        hasSwedishChars,
+        hasFinancialTerms,
         textLength: extractedText.length,
         processingTimeMs: processingTime
       });
@@ -179,8 +217,17 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
         throw new Error(`För lite text kunde extraheras från PDF:en (${extractedText.length} tecken, minimum ${MIN_TEXT_LENGTH})`);
       }
       
-      if (wordCount < 5) {
+      if (wordCount < 10) {
         throw new Error('För få läsbara ord hittades i PDF:en');
+      }
+      
+      // Kolla om texten verkar vara meningsfull
+      const alphaCount = (extractedText.match(/[a-zA-ZåäöÅÄÖ]/g) || []).length;
+      const totalCount = extractedText.replace(/\s/g, '').length;
+      const alphaRatio = alphaCount / totalCount;
+      
+      if (alphaRatio < 0.3) {
+        console.warn('Warning: Low alphabetic ratio detected:', alphaRatio);
       }
       
       clearTimeout(timeoutId);
@@ -207,7 +254,6 @@ serve(async (req) => {
   console.log('=== PDF EXTRACTION REQUEST START ===');
   console.log('Method:', req.method);
   console.log('URL:', req.url);
-  console.log('User-Agent:', req.headers.get('user-agent'));
 
   try {
     // Validera request method
@@ -288,27 +334,6 @@ serve(async (req) => {
       );
     }
 
-    // Kontrollera Supabase konfiguration
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase configuration');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Serverkonfiguration saknas',
-          code: 'MISSING_CONFIG'
-        }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     console.log('=== DOWNLOADING PDF ===');
     console.log('PDF URL:', pdfUrl);
     
@@ -321,7 +346,7 @@ serve(async (req) => {
       pdfResponse = await fetch(pdfUrl, {
         method: 'GET',
         headers: {
-          'User-Agent': 'ReportFlow-PDFExtractor/2.0',
+          'User-Agent': 'ReportFlow-PDFExtractor/3.0',
           'Accept': 'application/pdf',
         },
         signal: downloadController.signal
@@ -417,9 +442,9 @@ serve(async (req) => {
       );
     }
 
-    console.log('=== STARTING TEXT EXTRACTION ===');
+    console.log('=== STARTING ENHANCED TEXT EXTRACTION ===');
     
-    // Extrahera text från PDF med timeout-skydd
+    // Extrahera text från PDF med förbättrade strategier
     let extractedText;
     try {
       extractedText = await extractTextFromPDF(pdfArrayBuffer);
@@ -462,23 +487,6 @@ serve(async (req) => {
       fileSizeMB: Math.round(pdfArrayBuffer.byteLength / 1024 / 1024 * 100) / 100
     });
 
-    // Uppdatera projektstatus
-    try {
-      const { error: updateError } = await supabase
-        .from('projects')
-        .update({ 
-          status: 'processing',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', projectId);
-
-      if (updateError) {
-        console.log('Warning: Could not update project status:', updateError.message);
-      }
-    } catch (error) {
-      console.log('Warning: Project update failed:', error);
-    }
-
     // Returnera framgångsrikt resultat med komplett metadata
     return new Response(
       JSON.stringify({ 
@@ -493,7 +501,7 @@ serve(async (req) => {
           fileSizeMB: Math.round(pdfArrayBuffer.byteLength / 1024 / 1024 * 100) / 100,
           sample: extractedText.substring(0, 200)
         },
-        message: 'Text framgångsrikt extraherad från PDF'
+        message: 'Text framgångsrikt extraherad från PDF med förbättrade strategier'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

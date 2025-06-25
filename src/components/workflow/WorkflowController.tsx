@@ -35,13 +35,18 @@ const WorkflowController: React.FC = () => {
       setStatus('Skapar projekt...');
       setStep('processing');
 
-      console.log('=== STARTING UPLOAD PROCESS ===');
+      console.log('=== STARTING ENHANCED UPLOAD PROCESS ===');
       console.log('File:', uploadedFile.name, 'Size:', uploadedFile.size);
 
       // Kontrollera filstorlek innan uppladdning
       const maxSize = 10 * 1024 * 1024; // 10MB
       if (uploadedFile.size > maxSize) {
         throw new Error(`Filen är för stor (${Math.round(uploadedFile.size / 1024 / 1024)}MB, max 10MB)`);
+      }
+
+      // Validera filtyp
+      if (uploadedFile.type !== 'application/pdf') {
+        throw new Error('Endast PDF-filer är tillåtna');
       }
 
       // Create a new project in Supabase
@@ -67,7 +72,7 @@ const WorkflowController: React.FC = () => {
       setProjectId(project.id);
       setStatus('Laddar upp fil...');
 
-      // Upload file to the documents bucket
+      // Upload file to the documents bucket (skapa bucket om den inte finns)
       const fileName = `${project.id}/${uploadedFile.name}`;
       const { error: uploadError } = await supabase.storage
         .from('documents')
@@ -96,9 +101,9 @@ const WorkflowController: React.FC = () => {
         throw new Error(`Kunde inte uppdatera projekt: ${updateError.message}`);
       }
 
-      setStatus('Extraherar PDF innehåll...');
+      setStatus('Extraherar PDF innehåll med förbättrade algoritmer...');
 
-      console.log('=== CALLING PDF EXTRACTION ===');
+      console.log('=== CALLING ENHANCED PDF EXTRACTION ===');
       console.log('Project ID:', project.id);
       console.log('PDF URL:', publicUrl);
 
@@ -193,15 +198,17 @@ const WorkflowController: React.FC = () => {
       console.log('Word count:', extractionData.metadata?.wordCount || 'unknown');
       console.log('Processing time:', extractionData.metadata?.processingTimeMs || 'unknown', 'ms');
       console.log('File size:', extractionData.metadata?.fileSizeMB || 'unknown', 'MB');
+      console.log('Has numbers:', extractionData.metadata?.hasNumbers || 'unknown');
+      console.log('Has Swedish chars:', extractionData.metadata?.hasSwedishChars || 'unknown');
       console.log('Sample text:', extractionData.metadata?.sample || extractionData.content.substring(0, 100));
 
       setExtractedText(extractionData.content);
-      setStatus('Text extraherad - granska innan AI-generering');
+      setStatus('Text extraherad med förbättrade algoritmer - granska innan AI-generering');
       setStep('textPreview');
 
       toast({
         title: "PDF Extrahering Slutförd!",
-        description: `${extractionData.metadata?.wordCount || 'Okänt antal'} ord extraherade på ${extractionData.metadata?.processingTimeMs || 'okänd'}ms. Granska texten innan AI-generering.`,
+        description: `${extractionData.metadata?.wordCount || 'Okänt antal'} ord extraherade på ${extractionData.metadata?.processingTimeMs || 'okänd'}ms med förbättrade algoritmer. Granska texten innan AI-generering.`,
       });
 
     } catch (error) {
@@ -214,7 +221,8 @@ const WorkflowController: React.FC = () => {
       // Bestäm toast variant baserat på feltyp
       const isUserError = errorMessage.includes('för stor') || 
                          errorMessage.includes('inte en PDF') ||
-                         errorMessage.includes('tom eller korrupt');
+                         errorMessage.includes('tom eller korrupt') ||
+                         errorMessage.includes('Endast PDF-filer');
       
       toast({
         title: isUserError ? "Filproblem" : "Systemfel",

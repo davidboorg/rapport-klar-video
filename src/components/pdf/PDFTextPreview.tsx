@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, AlertTriangle, FileText, BarChart3, RefreshCw, AlertCircle } from 'lucide-react';
+import { CheckCircle, AlertTriangle, FileText, BarChart3, RefreshCw, AlertCircle, Eye, Edit3 } from 'lucide-react';
 
 interface PDFTextPreviewProps {
   extractedText: string;
@@ -22,11 +22,12 @@ const PDFTextPreview: React.FC<PDFTextPreviewProps> = ({
   isLoading = false
 }) => {
   const [editedText, setEditedText] = useState(extractedText);
+  const [isEditing, setIsEditing] = useState(false);
   
   const wordCount = extractedText.split(/\s+/).filter(word => word.length > 1).length;
   const hasNumbers = /\d/.test(extractedText);
   const hasSwedishChars = /[åäöÅÄÖ]/.test(extractedText);
-  const hasFinancialTerms = /\b(omsättning|resultat|vinst|förlust|mkr|msek|miljoner|kvartal|procent|tillväxt|revenue|profit|growth)\b/gi.test(extractedText);
+  const hasFinancialTerms = /\b(omsättning|intäkter|resultat|vinst|förlust|mkr|msek|miljoner|kvartal|procent|tillväxt|revenue|profit|growth|EBITDA|EBIT)\b/gi.test(extractedText);
   
   // Enhanced quality assessment
   const getQualityScore = () => {
@@ -34,8 +35,8 @@ const PDFTextPreview: React.FC<PDFTextPreviewProps> = ({
     if (extractedText.length > 500) score += 2;
     if (wordCount > 50) score += 2;
     if (hasNumbers) score += 2;
-    if (hasFinancialTerms) score += 2;
-    if (hasSwedishChars) score += 1; // Bonus for Swedish content
+    if (hasFinancialTerms) score += 3; // Höger vikt för finansiella termer
+    if (hasSwedishChars) score += 1;
     if (extractedText.length > 1000) score += 1;
     
     // Penalize for potential garbage text
@@ -43,20 +44,21 @@ const PDFTextPreview: React.FC<PDFTextPreviewProps> = ({
     const totalCount = extractedText.replace(/\s/g, '').length;
     const alphaRatio = alphaCount / totalCount;
     
-    if (alphaRatio < 0.5) score -= 3; // Penalty for low alphabetic ratio
-    if (alphaRatio < 0.3) score -= 5; // Heavy penalty for garbage text
+    if (alphaRatio < 0.5) score -= 2; // Penalty for low alphabetic ratio
+    if (alphaRatio < 0.3) score -= 4; // Heavy penalty for garbage text
     
     return Math.max(0, score);
   };
 
   const qualityScore = getQualityScore();
-  const maxScore = 10;
+  const maxScore = 11;
   
   const getQualityLevel = () => {
-    if (qualityScore >= 8) return { level: 'Utmärkt', color: 'bg-green-100 text-green-700', icon: CheckCircle };
-    if (qualityScore >= 6) return { level: 'Bra', color: 'bg-blue-100 text-blue-700', icon: CheckCircle };
-    if (qualityScore >= 4) return { level: 'Godkänd', color: 'bg-yellow-100 text-yellow-700', icon: AlertTriangle };
-    if (qualityScore >= 2) return { level: 'Låg kvalitet', color: 'bg-orange-100 text-orange-700', icon: AlertTriangle };
+    if (qualityScore >= 9) return { level: 'Utmärkt', color: 'bg-green-100 text-green-700', icon: CheckCircle };
+    if (qualityScore >= 7) return { level: 'Mycket bra', color: 'bg-green-100 text-green-600', icon: CheckCircle };
+    if (qualityScore >= 5) return { level: 'Bra', color: 'bg-blue-100 text-blue-700', icon: CheckCircle };
+    if (qualityScore >= 3) return { level: 'Godkänd', color: 'bg-yellow-100 text-yellow-700', icon: AlertTriangle };
+    if (qualityScore >= 1) return { level: 'Låg kvalitet', color: 'bg-orange-100 text-orange-700', icon: AlertTriangle };
     return { level: 'Mycket dålig', color: 'bg-red-100 text-red-700', icon: AlertCircle };
   };
 
@@ -73,6 +75,39 @@ const PDFTextPreview: React.FC<PDFTextPreviewProps> = ({
   };
 
   const isGarbage = isPotentialGarbage();
+
+  // Identifiera specifika problem med texten
+  const getTextIssues = () => {
+    const issues = [];
+    
+    if (extractedText.length < 100) {
+      issues.push('Texten är mycket kort - kan vara en bildbaserad PDF');
+    }
+    
+    if (wordCount < 20) {
+      issues.push('För få ord hittades - PDF:en kan innehålla huvudsakligen bilder');
+    }
+    
+    if (!hasNumbers && extractedText.length > 200) {
+      issues.push('Inga siffror hittades - oväntat för en finansiell rapport');
+    }
+    
+    if (!hasFinancialTerms && extractedText.length > 300) {
+      issues.push('Inga finansiella termer identifierades');
+    }
+    
+    const alphaCount = (extractedText.match(/[a-zA-ZåäöÅÄÖ]/g) || []).length;
+    const totalCount = extractedText.replace(/\s/g, '').length;
+    const alphaRatio = alphaCount / totalCount;
+    
+    if (alphaRatio < 0.5) {
+      issues.push('Hög andel specialtecken - kan indikera encoding-problem');
+    }
+    
+    return issues;
+  };
+
+  const textIssues = getTextIssues();
 
   return (
     <div className="space-y-6">
@@ -126,8 +161,9 @@ const PDFTextPreview: React.FC<PDFTextPreviewProps> = ({
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div 
                   className={`h-2 rounded-full transition-all duration-300 ${
-                    qualityScore >= 6 ? 'bg-green-600' : 
-                    qualityScore >= 4 ? 'bg-yellow-600' : 'bg-red-600'
+                    qualityScore >= 7 ? 'bg-green-600' : 
+                    qualityScore >= 5 ? 'bg-blue-600' :
+                    qualityScore >= 3 ? 'bg-yellow-600' : 'bg-red-600'
                   }`}
                   style={{ width: `${Math.min((qualityScore / maxScore) * 100, 100)}%` }}
                 ></div>
@@ -135,63 +171,83 @@ const PDFTextPreview: React.FC<PDFTextPreviewProps> = ({
             </div>
           </div>
 
-          {/* Garbage text warning */}
-          {isGarbage && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          {/* Issues and warnings */}
+          {textIssues.length > 0 && (
+            <div className={`p-4 rounded-lg border ${isGarbage ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}`}>
               <div className="flex items-center gap-2 mb-2">
-                <AlertCircle className="w-5 h-5 text-red-600" />
-                <span className="font-medium text-red-800">Potentiellt trasig text upptäckt</span>
+                <AlertCircle className={`w-5 h-5 ${isGarbage ? 'text-red-600' : 'text-yellow-600'}`} />
+                <span className={`font-medium ${isGarbage ? 'text-red-800' : 'text-yellow-800'}`}>
+                  {isGarbage ? 'Kritiska problem upptäckta' : 'Kvalitetsvarningar'}
+                </span>
               </div>
-              <div className="text-sm text-red-700 space-y-1">
-                <div>• Texten innehåller för många specialtecken eller slumpmässiga tecken</div>
-                <div>• Detta kan bero på encoding-problem eller att PDF:en innehåller huvudsakligen bilder</div>
-                <div className="mt-2 font-medium">
-                  Rekommendation: Ladda upp en textbaserad PDF eller en PDF med bättre textkvalitet.
-                </div>
+              <div className={`text-sm ${isGarbage ? 'text-red-700' : 'text-yellow-700'} space-y-1`}>
+                {textIssues.map((issue, index) => (
+                  <div key={index}>• {issue}</div>
+                ))}
+                {isGarbage && (
+                  <div className="mt-2 font-medium">
+                    Rekommendation: Ladda upp en textbaserad PDF eller kontrollera att PDF:en innehåller läsbar text.
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {/* Quality warnings */}
-          {qualityScore < 6 && !isGarbage && (
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          {/* Extraction success info */}
+          {qualityScore >= 7 && (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="w-5 h-5 text-yellow-600" />
-                <span className="font-medium text-yellow-800">Kvalitetsvarning</span>
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <span className="font-medium text-green-800">Utmärkt textextraktion!</span>
               </div>
-              <div className="text-sm text-yellow-700 space-y-1">
-                {extractedText.length < 500 && <div>• Texten är för kort (behöver minst 500 tecken)</div>}
-                {wordCount < 50 && <div>• För få ord hittades</div>}
-                {!hasNumbers && <div>• Inga siffror hittades i texten</div>}
-                {!hasFinancialTerms && <div>• Inga finansiella termer hittades</div>}
-                <div className="mt-2 font-medium">
-                  Du kan fortfarande försöka generera manus, men resultatet kan bli sämre.
-                </div>
+              <div className="text-sm text-green-700">
+                Texten har extraherat med hög kvalitet och innehåller finansiella data som är lämplig för AI-analys.
               </div>
             </div>
           )}
 
           {/* Text preview with editing capability */}
           <div>
-            <label className="block text-sm font-medium mb-2">
-              Förhandsvisning av extraherad text (kan redigeras vid behov):
-            </label>
-            <Textarea
-              value={editedText}
-              onChange={(e) => setEditedText(e.target.value)}
-              className="min-h-[300px] font-mono text-sm"
-              placeholder="Extraherad text kommer att visas här..."
-            />
-            <div className="text-xs text-gray-500 mt-1">
-              Du kan redigera texten ovan innan den skickas till AI:n för manusgenerering
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium">
+                {isEditing ? 'Redigera extraherad text:' : 'Förhandsvisning av extraherad text:'}
+              </label>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(!isEditing)}
+                className="flex items-center gap-1"
+              >
+                {isEditing ? <Eye className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+                {isEditing ? 'Visa' : 'Redigera'}
+              </Button>
             </div>
+            
+            {isEditing ? (
+              <Textarea
+                value={editedText}
+                onChange={(e) => setEditedText(e.target.value)}
+                className="min-h-[300px] font-mono text-sm"
+                placeholder="Extraherad text kommer att visas här..."
+              />
+            ) : (
+              <div className="min-h-[300px] p-3 bg-gray-50 border rounded-md font-mono text-sm whitespace-pre-wrap overflow-y-auto">
+                {extractedText || 'Ingen text extraherad än...'}
+              </div>
+            )}
+            
+            {isEditing && (
+              <div className="text-xs text-gray-500 mt-1">
+                Du kan redigera texten ovan innan den skickas till AI:n för manusgenerering
+              </div>
+            )}
           </div>
 
           {/* Actions */}
           <div className="flex gap-3">
             <Button 
-              onClick={() => onApprove(editedText)}
-              disabled={isLoading || editedText.length < 50}
+              onClick={() => onApprove(isEditing ? editedText : extractedText)}
+              disabled={isLoading || (isEditing ? editedText.length < 50 : extractedText.length < 50)}
               className="flex-1"
               variant={isGarbage ? "destructive" : "default"}
             >
@@ -212,8 +268,8 @@ const PDFTextPreview: React.FC<PDFTextPreviewProps> = ({
 
           {/* Help text */}
           <div className="text-xs text-gray-500 p-3 bg-blue-50 rounded">
-            <strong>Tips:</strong> För bästa resultat, använd textbaserade PDF:er (exporterade från Word, Google Docs, etc.) 
-            istället för inskannade dokument eller PDF:er med mycket grafik.
+            <strong>Tips för bästa resultat:</strong> Använd textbaserade PDF:er (exporterade från Word, Google Docs, etc.) 
+            istället för inskannade dokument. Finansiella rapporter med tydlig struktur och siffror ger bäst resultat.
           </div>
         </CardContent>
       </Card>
