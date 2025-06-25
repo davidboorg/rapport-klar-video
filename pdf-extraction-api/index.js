@@ -15,7 +15,8 @@ const corsOptions = {
     'https://lovableproject.com',
     /\.lovableproject\.com$/,
     'https://pdf-extraction-api-gamma.vercel.app',
-    'https://pdf-extraction-oi1ur38qz-reportflow1.vercel.app'
+    'https://pdf-extraction-oi1ur38qz-reportflow1.vercel.app',
+    'https://pdf-extraction-g45pnk6u3-reportflow1.vercel.app'
   ],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
