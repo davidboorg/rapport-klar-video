@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +16,7 @@ const PDFTestInterface: React.FC = () => {
   const [metadata, setMetadata] = useState<any>(null);
   const [error, setError] = useState('');
   const [useExternalApi, setUseExternalApi] = useState(false);
-  const [externalApiUrl, setExternalApiUrl] = useState('https://pdf-extraction-i8v9tg09f-reportflow1.vercel.app');
+  const [externalApiUrl, setExternalApiUrl] = useState('https://pdf-extraction-oqr2b3rqx-reportflow1.vercel.app');
   const [debugInfo, setDebugInfo] = useState<string>('');
   const { toast } = useToast();
 
@@ -58,10 +59,8 @@ const PDFTestInterface: React.FC = () => {
       throw new Error('Ange URL till ditt externa API först');
     }
 
-    // Use /api/extract endpoint for the new open API structure
-    const apiUrl = externalApiUrl.endsWith('/api/extract') 
-      ? externalApiUrl 
-      : `${externalApiUrl}/api/extract`;
+    // Use the root API directly for the new simplified structure
+    const apiUrl = externalApiUrl.endsWith('/') ? externalApiUrl.slice(0, -1) : externalApiUrl;
     
     console.log('🚀 Anropar ÖPPNA API:', apiUrl);
     console.log('📄 PDF URL:', testPDFUrl);
@@ -71,8 +70,9 @@ const PDFTestInterface: React.FC = () => {
     try {
       console.log('🔍 Skickar request med PDF URL...');
       
+      // Use the simplified request format that matches your new API code
       const requestBody = {
-        pdfUrl: testPDFUrl  // Using 'pdfUrl' as per the API specification
+        url: testPDFUrl  // Using 'url' as per your new API code
       };
       
       console.log('📦 Request body:', requestBody);
@@ -114,8 +114,8 @@ const PDFTestInterface: React.FC = () => {
       
       setDebugInfo(prev => prev + `\n🎉 Data mottagen från ÖPPNA API! Text length: ${result.text?.length || 0}`);
 
-      if (!result.success) {
-        throw new Error(`External API error: ${result.error || 'Unknown error'}`);
+      if (result.error) {
+        throw new Error(`External API error: ${result.error}`);
       }
 
       return {
@@ -143,8 +143,8 @@ const PDFTestInterface: React.FC = () => {
     if (!externalApiUrl.trim()) return;
     
     try {
-      // Use /api/health endpoint
-      const healthUrl = `${externalApiUrl}/api/health`;
+      // Test basic connectivity to the root
+      const healthUrl = externalApiUrl.endsWith('/') ? externalApiUrl.slice(0, -1) : externalApiUrl;
       
       console.log('🏥 Testar ÖPPEN API health på:', healthUrl);
       setDebugInfo(`🏥 Testar ÖPPEN API hälsa: ${healthUrl}\nTid: ${new Date().toISOString()}`);
@@ -160,17 +160,17 @@ const PDFTestInterface: React.FC = () => {
       setDebugInfo(prev => prev + `\n📊 Health status: ${response.status}`);
       
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.text();
         console.log('🏥 ÖPPEN API Health check:', data);
-        setDebugInfo(prev => prev + `\n✅ Health OK: ${JSON.stringify(data)}`);
+        setDebugInfo(prev => prev + `\n✅ Health OK: ${data.substring(0, 200)}`);
         toast({
           title: "ÖPPEN API Health Check ✅",
-          description: `API är tillgängligt! Status: ${data.status}`,
+          description: `API är tillgängligt! Status: ${response.status}`,
         });
       } else {
         console.log('🏥 Health check failed:', response.status);
         const errorText = await response.text();
-        setDebugInfo(prev => prev + `\n❌ Health failed: ${response.status} - ${errorText}`);
+        setDebugInfo(prev => prev + `\n❌ Health failed: ${response.status} - ${errorText.substring(0, 100)}`);
         toast({
           title: "API Health Check ❌",
           description: `API svarar inte korrekt (status: ${response.status})`,
@@ -307,13 +307,13 @@ const PDFTestInterface: React.FC = () => {
           <div className="p-3 bg-green-100 border border-green-300 rounded">
             <p className="text-sm font-medium text-green-800 mb-2">🔓 Öppen API URL (Inget Auth krävs):</p>
             <div className="bg-white p-2 rounded font-mono text-sm flex items-center justify-between">
-              <span className="text-green-700 break-all">https://pdf-extraction-i8v9tg09f-reportflow1.vercel.app</span>
+              <span className="text-green-700 break-all">https://pdf-extraction-oqr2b3rqx-reportflow1.vercel.app</span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setExternalApiUrl('https://pdf-extraction-i8v9tg09f-reportflow1.vercel.app');
-                  copyToClipboard('https://pdf-extraction-i8v9tg09f-reportflow1.vercel.app');
+                  setExternalApiUrl('https://pdf-extraction-oqr2b3rqx-reportflow1.vercel.app');
+                  copyToClipboard('https://pdf-extraction-oqr2b3rqx-reportflow1.vercel.app');
                   toast({
                     title: "ÖPPEN API URL uppdaterad!",
                     description: "Det öppna API:t är nu aktivt - inget auth krävs!"
@@ -360,11 +360,10 @@ const PDFTestInterface: React.FC = () => {
           <div className="p-2 bg-green-50 border border-green-200 rounded text-sm">
             <p className="text-green-800 font-medium">📋 ÖPPEN API Information:</p>
             <ul className="text-green-700 text-xs mt-1 space-y-1">
-              <li>• Endpoint: <code>/api/extract</code></li>
-              <li>• Request body: <code>{"{ \"pdfUrl\": \"pdf_url\" }"}</code></li>
-              <li>• Health check: <code>/api/health</code></li>
-              <li>• 🔓 Inget authentication krävs längre!</li>
-              <li>• ✅ Fullständigt öppet och tillgängligt</li>
+              <li>• Endpoint: <code>/</code> (root, POST)</li>
+              <li>• Request body: <code>{"{ \"url\": \"pdf_url\" }"}</code></li>
+              <li>• 🔓 Inget authentication krävs!</li>
+              <li>• ✅ Enkel struktur, direkt PDF-extraktion</li>
             </ul>
           </div>
         </CardContent>
@@ -484,24 +483,14 @@ const PDFTestInterface: React.FC = () => {
               </div>
               <p className="text-sm text-red-700 mt-1">{error}</p>
               
-              {error.includes('Load failed') && (
+              {error.includes('body is disturbed') && (
                 <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                  <p className="text-sm text-yellow-800 font-medium mb-2">🔧 Felsökning för ÖPPEN API:</p>
+                  <p className="text-sm text-yellow-800 font-medium mb-2">🔧 Body parsing fel:</p>
                   <ul className="text-xs text-yellow-700 space-y-1 list-disc list-inside">
-                    <li>Klicka på den gröna "Använd ÖPPNA API" knappen ovan</li>
-                    <li>Aktivera "Använd ÖPPNA externa PDF-API" switchen</li>
-                    <li>Testa API:t först med "Test Domän" och "Test Health"</li>
-                    <li>Det öppna API:t kräver inget authentication längre!</li>
+                    <li>Detta fel beror ofta på att request body är låst eller stör</li>
+                    <li>Kontrollera att din API-kod hanterar JSON-parsing korrekt</li>
+                    <li>Se till att `Content-Type: application/json` headers finns</li>
                   </ul>
-                </div>
-              )}
-
-              {error.includes('CPU Time exceeded') && (
-                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Tips:</strong> Detta fel uppstår med Supabase Edge Functions. 
-                    Prova att använda det ÖPPNA externa API:t istället!
-                  </p>
                 </div>
               )}
             </div>
@@ -535,12 +524,6 @@ const PDFTestInterface: React.FC = () => {
                   <p className="text-gray-600">{metadata.hasFinancialTerms ? '✓' : '✗'}</p>
                 </div>
               </div>
-              
-              {metadata.processingTimeMs && (
-                <p className="text-xs text-gray-500 mt-2">
-                  Bearbetningstid: {metadata.processingTimeMs}ms
-                </p>
-              )}
             </div>
           )}
 
@@ -573,47 +556,47 @@ const PDFTestInterface: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="p-3 bg-green-50 border border-green-200 rounded">
-            <h4 className="font-medium text-green-800 mb-2">🎉 Nyheter med ÖPPEN API:</h4>
+            <h4 className="font-medium text-green-800 mb-2">🎉 Nya API-strukturen:</h4>
             <div className="space-y-2 text-sm text-green-700">
               <div>
-                <strong>✅ Inget Authentication:</strong> API:t är nu helt öppet och kräver inget auth
+                <strong>✅ Enkel struktur:</strong> POST direkt till root URL
               </div>
               <div>
-                <strong>✅ Förbättrad Stabilitet:</strong> Direkt åtkomst utan auth-tokens
+                <strong>✅ Request format:</strong> <code>{"{ \"url\": \"pdf_url\" }"}</code>
               </div>
               <div>
-                <strong>✅ Enklare Integration:</strong> Bara skicka PDF URL i request body
+                <strong>✅ Response format:</strong> <code>{"{ \"text\": \"...\", \"metadata\": {...} }"}</code>
               </div>
             </div>
           </div>
           
           <div className="p-3 bg-amber-50 border border-amber-200 rounded">
-            <h4 className="font-medium text-amber-800 mb-2">⚠️ Om det fortfarande inte fungerar:</h4>
+            <h4 className="font-medium text-amber-800 mb-2">⚠️ Body parsing fel:</h4>
             <div className="space-y-2 text-sm text-amber-700">
               <div>
-                <strong>1. "Load failed" fel:</strong>
+                <strong>1. "body is disturbed or locked":</strong>
                 <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
-                  <li>Använd den gröna "Använd ÖPPNA API" knappen</li>
-                  <li>Kontrollera att "Använd ÖPPNA externa PDF-API" är aktiverat</li>
-                  <li>Testa domänen först med "Test Domän"</li>
-                  <li>Kolla att Vercel-appen inte har gått i "sleep mode"</li>
+                  <li>API-koden försöker läsa request body flera gånger</li>
+                  <li>Kontrollera att du bara läser `req.body` en gång</li>
+                  <li>Använd middleware för body parsing istället</li>
                 </ul>
               </div>
               <div>
-                <strong>2. CPU Time exceeded (Supabase):</strong>
+                <strong>2. JSON parsing fel:</strong>
                 <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
-                  <li>Växla till "ÖPPNA externa API" istället för Supabase Edge Function</li>
+                  <li>Se till att Content-Type är `application/json`</li>
+                  <li>Validera JSON-struktur innan parsing</li>
                 </ul>
               </div>
             </div>
           </div>
           
           <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-            <h4 className="font-medium text-blue-800 mb-2">🔄 ÖPPEN API information:</h4>
+            <h4 className="font-medium text-blue-800 mb-2">🔄 API information:</h4>
             <div className="text-sm text-blue-700 space-y-1">
-              <p><strong>Aktuell URL:</strong> pdf-extraction-i8v9tg09f-reportflow1.vercel.app</p>
-              <p><strong>Endpoint:</strong> /api/extract (POST)</p>
-              <p><strong>Health:</strong> /api/health (GET)</p>
+              <p><strong>Aktuell URL:</strong> pdf-extraction-oqr2b3rqx-reportflow1.vercel.app</p>
+              <p><strong>Method:</strong> POST</p>
+              <p><strong>Request body:</strong> <code>{"{ \"url\": \"pdf_url\" }"}</code></p>
               <p><strong>Auth:</strong> 🔓 Inget krävs!</p>
             </div>
           </div>
