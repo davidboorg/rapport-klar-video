@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
@@ -8,21 +7,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Further optimized constants for faster processing
-const MAX_PDF_SIZE = 5 * 1024 * 1024; // Reduced to 5MB for better performance
-const EXTRACTION_TIMEOUT = 15000; // Reduced to 15 seconds
-const MIN_TEXT_LENGTH = 20; // Minimum text length for validation
-const DOWNLOAD_TIMEOUT = 8000; // 8 seconds for download
-const MAX_PROCESSING_CHARS = 500000; // Limit processing to first 500KB of text
+// Enhanced constants for better quality extraction
+const MAX_PDF_SIZE = 8 * 1024 * 1024; // Increased to 8MB
+const EXTRACTION_TIMEOUT = 25000; // Increased to 25 seconds
+const MIN_TEXT_LENGTH = 100; // Increased minimum text length
+const DOWNLOAD_TIMEOUT = 10000; // 10 seconds for download
+const MAX_PROCESSING_CHARS = 1000000; // Increased processing limit
 
-// Ultra-fast PDF text extraction with aggressive early termination
+// Enhanced PDF text extraction with multiple strategies
 const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> => {
   const startTime = Date.now();
-  console.log('=== STARTING ULTRA-FAST PDF EXTRACTION ===');
+  console.log('=== STARTING ENHANCED PDF EXTRACTION ===');
   console.log('PDF size:', pdfArrayBuffer.byteLength, 'bytes');
   
   return new Promise(async (resolve, reject) => {
-    // Aggressive timeout protection
     const timeoutId = setTimeout(() => {
       reject(new Error(`PDF-extraktion timeout efter ${EXTRACTION_TIMEOUT/1000}s`));
     }, EXTRACTION_TIMEOUT);
@@ -30,7 +28,7 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
     try {
       const pdfBytes = new Uint8Array(pdfArrayBuffer);
       
-      // Quick PDF validation
+      // PDF validation
       const headerBytes = new Uint8Array(pdfArrayBuffer.slice(0, 8));
       const headerString = new TextDecoder('utf-8', { fatal: false }).decode(headerBytes);
       
@@ -40,11 +38,11 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
 
       console.log('PDF header validation passed');
 
-      // Convert to string with limited size for performance
-      let pdfText: string;
+      // Convert to string for text extraction
       const processingSize = Math.min(pdfArrayBuffer.byteLength, MAX_PROCESSING_CHARS);
       const limitedBytes = new Uint8Array(pdfArrayBuffer.slice(0, processingSize));
       
+      let pdfText: string;
       try {
         pdfText = new TextDecoder('utf-8', { fatal: false }).decode(limitedBytes);
       } catch (error) {
@@ -55,123 +53,181 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
       let extractedText = '';
       let textSegments: string[] = [];
       
-      console.log('Starting ultra-fast text extraction...');
+      console.log('Starting enhanced text extraction with multiple strategies...');
       
-      // STRATEGY 1: Basic text operators (most common and fastest) - VERY LIMITED
-      const basicTextPattern = /\(([^)]{4,100})\)\s*(?:Tj|TJ)/g;
-      let matches = Array.from(pdfText.matchAll(basicTextPattern));
-      console.log('Strategy 1 - Basic text operators:', matches.length, 'matches');
+      // STRATEGY 1: Enhanced text operators with broader patterns
+      console.log('Strategy 1 - Enhanced text operators...');
+      const textPatterns = [
+        /\(([^)]{10,200})\)\s*(?:Tj|TJ|'|")/g,  // Standard text operators
+        /\[([^\]]{10,200})\]\s*TJ/g,             // Array text operators
+        /BT\s+[^E]*?ET/g,                        // Complete text blocks
+        /\(\s*([^)]{15,150})\s*\)/g              // General parentheses content
+      ];
       
-      // Process only first 50 matches for speed
-      for (const match of matches.slice(0, 50)) {
-        if (match[1]) {
-          let text = match[1]
+      for (const pattern of textPatterns) {
+        const matches = Array.from(pdfText.matchAll(pattern));
+        console.log(`Pattern found ${matches.length} matches`);
+        
+        for (const match of matches.slice(0, 100)) { // Process more matches
+          let text = match[1] || match[0];
+          if (!text) continue;
+          
+          // Clean extracted text
+          text = text
             .replace(/\\n/g, '\n')
-            .replace(/\\r/g, '\r')
+            .replace(/\\r/g, '\r') 
             .replace(/\\t/g, '\t')
             .replace(/\\\(/g, '(')
             .replace(/\\\)/g, ')')
-            .replace(/\\\\/g, '\\');
-          
-          text = text
+            .replace(/\\\\/g, '\\')
+            .replace(/BT|ET|Tf|Tm|Td|TD/g, ' ') // Remove PDF operators
             .replace(/\s+/g, ' ')
-            .replace(/[^\x20-\x7E\u00A0-\u017F\u0100-\u024F\u1E00-\u1EFF\u00C0-\u00FF]/g, ' ')
             .trim();
           
-          if (text.length >= 4 && /[a-zA-ZåäöÅÄÖ0-9]/.test(text)) {
+          // Filter out metadata and keep meaningful text
+          if (text.length >= 10 && 
+              !text.match(/^[0-9\.\s\-\+]+$/) && // Not just numbers
+              !text.match(/^(CreationDate|Producer|Creator|Title|Subject|Keywords|Author|ModDate|FlateDecode|BitsPerComponent|AppleWebKit|Google Docs|Storytel AB)$/i) && // Not metadata
+              text.match(/[a-zA-ZåäöÅÄÖ]{3,}/) && // Contains actual words
+              !text.match(/^[A-Z\s]+$/) // Not all caps (likely headers)
+          ) {
             textSegments.push(text);
           }
         }
         
-        // Very early termination if we have enough text
-        if (textSegments.length > 20 && textSegments.join(' ').length > 500) {
-          console.log('Ultra-early termination - sufficient text found');
-          break;
-        }
+        if (textSegments.length > 20) break; // Stop if we have enough content
       }
       
-      // STRATEGY 2: Financial terms context (ultra-fast financial extraction)
-      if (textSegments.length < 10) {
-        const financialTerms = [
-          'omsättning', 'intäkter', 'resultat', 'vinst', 'förlust',
-          'EBITDA', 'EBIT', 'miljoner', 'mkr', 'msek', 'kvartal'
-        ];
+      // STRATEGY 2: Stream content extraction (for modern PDFs)
+      console.log('Strategy 2 - Stream content extraction...');
+      const streamPattern = /stream[\s\n\r]+(.*?)[\s\n\r]+endstream/gs;
+      const streamMatches = Array.from(pdfText.matchAll(streamPattern));
+      
+      for (const streamMatch of streamMatches.slice(0, 20)) {
+        let streamContent = streamMatch[1];
+        if (!streamContent) continue;
         
-        console.log('Strategy 2 - Ultra-fast financial context extraction...');
-        let financialMatches = 0;
-        
-        // Process only first 3 terms for speed
-        for (const term of financialTerms.slice(0, 3)) {
-          const termRegex = new RegExp(`(.{0,50}\\b${term}\\b.{0,50})`, 'gi');
-          const termMatches = Array.from(pdfText.matchAll(termRegex));
-          financialMatches += termMatches.length;
-          
-          // Process only first 2 matches per term
-          for (const termMatch of termMatches.slice(0, 2)) {
-            let context = termMatch[1]
-              .replace(/[^\w\såäöÅÄÖ.,\-\d%€$]/g, ' ')
-              .replace(/\s+/g, ' ')
-              .trim();
-            
-            if (context.length > 10 && context.length < 100) {
-              textSegments.push(context);
+        // Try to decode stream content
+        try {
+          // Look for readable text in streams
+          const readableText = streamContent.match(/[a-zA-ZåäöÅÄÖ\s]{20,}/g);
+          if (readableText) {
+            for (const text of readableText.slice(0, 10)) {
+              const cleanText = text.replace(/\s+/g, ' ').trim();
+              if (cleanText.length > 15 && 
+                  !cleanText.match(/^[A-Z\s]+$/) &&
+                  cleanText.match(/[a-zA-ZåäöÅÄÖ]/)) {
+                textSegments.push(cleanText);
+              }
             }
           }
+        } catch (error) {
+          console.log('Stream decode failed:', error.message);
+        }
+        
+        if (textSegments.length > 30) break;
+      }
+      
+      // STRATEGY 3: Financial context extraction (specific to financial reports)
+      console.log('Strategy 3 - Financial context extraction...');
+      const financialTerms = [
+        'omsättning', 'intäkter', 'resultat', 'vinst', 'förlust', 'EBITDA', 'EBIT',
+        'miljoner', 'mkr', 'msek', 'kvartal', 'procent', 'tillväxt', 'kostnad',
+        'rapport', 'period', 'jämfört', 'föregående', 'år', 'månad'
+      ];
+      
+      for (const term of financialTerms) {
+        const termRegex = new RegExp(`(.{20,200}\\b${term}\\b.{20,200})`, 'gi');
+        const termMatches = Array.from(pdfText.matchAll(termRegex));
+        
+        for (const termMatch of termMatches.slice(0, 5)) {
+          let context = termMatch[1]
+            .replace(/[^\w\såäöÅÄÖ.,\-\d%€$]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
           
-          // Stop if we have enough
-          if (financialMatches > 3 && textSegments.join(' ').length > 300) {
-            break;
+          if (context.length > 30 && context.length < 300) {
+            textSegments.push(context);
           }
         }
         
-        console.log('Financial terms found:', financialMatches, 'contexts');
+        if (textSegments.length > 40) break;
       }
       
-      // STRATEGY 3: Simple text patterns (if still need more)
-      if (textSegments.length < 5) {
-        console.log('Strategy 3 - Simple text patterns...');
-        const simplePattern = /([A-ZÅÄÖ][a-zA-ZåäöÅÄÖ\s]{10,80})/g;
-        const simpleMatches = Array.from(pdfText.matchAll(simplePattern));
+      // STRATEGY 4: Line-based extraction (for structured content)
+      console.log('Strategy 4 - Line-based extraction...');
+      const lines = pdfText.split(/\n|\r\n|\r/);
+      for (const line of lines.slice(0, 200)) {
+        const cleanLine = line
+          .replace(/[^\w\såäöÅÄÖ.,\-\d%€$()]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
         
-        for (const match of simpleMatches.slice(0, 10)) {
-          const text = match[1].trim();
-          if (text.length > 10 && /[a-zA-ZåäöÅÄÖ]/.test(text)) {
-            textSegments.push(text);
-          }
+        if (cleanLine.length > 20 && 
+            cleanLine.length < 200 &&
+            cleanLine.match(/[a-zA-ZåäöÅÄÖ]{3,}/) &&
+            !cleanLine.match(/^[A-Z\s]+$/) &&
+            !cleanLine.match(/^[0-9\.\s\-\+%]+$/)) {
+          textSegments.push(cleanLine);
         }
+        
+        if (textSegments.length > 50) break;
       }
       
-      // Combine and clean all extracted segments - VERY LIMITED
-      extractedText = textSegments
-        .filter((segment, index, array) => array.indexOf(segment) === index) // Remove duplicates
-        .filter(segment => segment.length >= 4) // Filter very short segments
-        .slice(0, 50) // Limit to first 50 segments for performance
-        .join(' ')
-        .trim();
+      // Combine and clean all extracted segments
+      console.log('Combining and cleaning extracted segments...');
+      
+      // Remove duplicates and sort by relevance
+      const uniqueSegments = [...new Set(textSegments)]
+        .filter(segment => segment.length >= 15)
+        .sort((a, b) => {
+          // Prioritize segments with financial terms
+          const aHasFinancial = financialTerms.some(term => 
+            a.toLowerCase().includes(term.toLowerCase())
+          );
+          const bHasFinancial = financialTerms.some(term => 
+            b.toLowerCase().includes(term.toLowerCase())
+          );
+          
+          if (aHasFinancial && !bHasFinancial) return -1;
+          if (!aHasFinancial && bHasFinancial) return 1;
+          
+          // Then by length (longer is often better)
+          return b.length - a.length;
+        })
+        .slice(0, 100); // Take best 100 segments
+      
+      extractedText = uniqueSegments.join(' ').trim();
       
       // Final cleaning
       extractedText = extractedText
         .replace(/\s+/g, ' ')
+        .replace(/\.\s+\./g, '.')
+        .replace(/,\s+,/g, ',')
         .trim();
       
-      // Limit final text length for performance
-      if (extractedText.length > 2000) {
-        extractedText = extractedText.substring(0, 2000) + '...';
+      // Limit final text length but be more generous
+      if (extractedText.length > 5000) {
+        extractedText = extractedText.substring(0, 5000) + '...';
       }
       
       const processingTime = Date.now() - startTime;
       
-      console.log('=== ULTRA-FAST EXTRACTION COMPLETED ===');
-      console.log('Text segments found:', textSegments.length);
+      console.log('=== ENHANCED EXTRACTION COMPLETED ===');
+      console.log('Text segments found:', uniqueSegments.length);
       console.log('Final text length:', extractedText.length);
       console.log('Processing time:', processingTime, 'ms');
-      console.log('Sample text (first 100 chars):', extractedText.substring(0, 100));
+      console.log('Sample text (first 200 chars):', extractedText.substring(0, 200));
       
-      // Quality validation
+      // Enhanced quality validation
       const wordCount = extractedText.split(/\s+/).filter(word => word.length > 1).length;
       const hasNumbers = /\d/.test(extractedText);
       const hasSwedishChars = /[åäöÅÄÖ]/.test(extractedText);
-      const hasFinancialTerms = ['omsättning', 'intäkter', 'resultat', 'vinst', 'förlust', 'EBITDA', 'EBIT', 'miljoner', 'mkr', 'msek', 'kvartal'].some(term => 
+      const financialTerms = [
+        'omsättning', 'intäkter', 'resultat', 'vinst', 'förlust', 'EBITDA', 'EBIT',
+        'miljoner', 'mkr', 'msek', 'kvartal', 'procent', 'tillväxt', 'kostnad'
+      ];
+      const hasFinancialTerms = financialTerms.some(term => 
         extractedText.toLowerCase().includes(term.toLowerCase())
       );
       
@@ -184,12 +240,12 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
         processingTimeMs: processingTime
       });
       
-      // Validate extracted text
+      // Relaxed validation for better success rate
       if (extractedText.length < MIN_TEXT_LENGTH) {
         throw new Error(`För lite text extraherad från PDF:en (${extractedText.length} tecken, minimum ${MIN_TEXT_LENGTH})`);
       }
       
-      if (wordCount < 5) {
+      if (wordCount < 10) {
         throw new Error('För få läsbara ord hittades i PDF:en');
       }
       
@@ -214,7 +270,7 @@ serve(async (req) => {
   }
 
   const startTime = Date.now();
-  console.log('=== ULTRA-FAST PDF EXTRACTION REQUEST START ===');
+  console.log('=== ENHANCED PDF EXTRACTION REQUEST START ===');
   console.log('Method:', req.method);
   console.log('URL:', req.url);
 
@@ -235,12 +291,12 @@ serve(async (req) => {
       );
     }
 
-    // Read request body with shorter timeout
+    // Read request body with timeout
     let requestBody;
     try {
       const bodyPromise = req.json();
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 3000)
+        setTimeout(() => reject(new Error('Request timeout')), 5000)
       );
       requestBody = await Promise.race([bodyPromise, timeoutPromise]);
     } catch (error) {
@@ -300,7 +356,7 @@ serve(async (req) => {
     console.log('=== DOWNLOADING PDF ===');
     console.log('PDF URL:', pdfUrl);
     
-    // Download PDF with shorter timeout
+    // Download PDF with timeout
     const downloadController = new AbortController();
     const downloadTimeout = setTimeout(() => downloadController.abort(), DOWNLOAD_TIMEOUT);
     
@@ -309,7 +365,7 @@ serve(async (req) => {
       pdfResponse = await fetch(pdfUrl, {
         method: 'GET',
         headers: {
-          'User-Agent': 'ReportFlow-PDFExtractor/5.0',
+          'User-Agent': 'ReportFlow-PDFExtractor/6.0',
           'Accept': 'application/pdf,*/*',
         },
         signal: downloadController.signal
@@ -388,9 +444,9 @@ serve(async (req) => {
       );
     }
 
-    console.log('=== STARTING ULTRA-FAST TEXT EXTRACTION ===');
+    console.log('=== STARTING ENHANCED TEXT EXTRACTION ===');
     
-    // Extract text from PDF with ultra-fast strategies
+    // Extract text from PDF with enhanced strategies
     let extractedText;
     try {
       extractedText = await extractTextFromPDF(pdfArrayBuffer);
@@ -421,12 +477,16 @@ serve(async (req) => {
     const wordCount = extractedText.split(/\s+/).filter(word => word.length > 1).length;
     const hasNumbers = /\d/.test(extractedText);
     const hasSwedishChars = /[åäöÅÄÖ]/.test(extractedText);
-    const hasFinancialTerms = ['omsättning', 'intäkter', 'resultat', 'vinst', 'förlust', 'EBITDA', 'EBIT', 'miljoner', 'mkr', 'msek', 'kvartal'].some(term => 
+    const financialTerms = [
+      'omsättning', 'intäkter', 'resultat', 'vinst', 'förlust', 'EBITDA', 'EBIT',
+      'miljoner', 'mkr', 'msek', 'kvartal', 'procent', 'tillväxt', 'kostnad'
+    ];
+    const hasFinancialTerms = financialTerms.some(term => 
       extractedText.toLowerCase().includes(term.toLowerCase())
     );
     const processingTime = Date.now() - startTime;
     
-    console.log('=== ULTRA-FAST EXTRACTION SUCCESS ===');
+    console.log('=== ENHANCED EXTRACTION SUCCESS ===');
     console.log('Final statistics:', {
       textLength: extractedText.length,
       wordCount,
@@ -450,9 +510,9 @@ serve(async (req) => {
           hasFinancialTerms: hasFinancialTerms,
           processingTimeMs: processingTime,
           fileSizeMB: Math.round(pdfArrayBuffer.byteLength / 1024 / 1024 * 100) / 100,
-          sample: extractedText.substring(0, 150)
+          sample: extractedText.substring(0, 200)
         },
-        message: 'Text framgångsrikt extraherad från PDF med ultra-snabba strategier'
+        message: 'Text framgångsrikt extraherad från PDF med förbättrade strategier'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
