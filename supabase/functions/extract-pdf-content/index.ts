@@ -8,38 +8,40 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Enhanced constants for better quality extraction
+// Constants
 const MAX_PDF_SIZE = 8 * 1024 * 1024; // 8MB
-const EXTRACTION_TIMEOUT = 25000; // 25 seconds
-const MIN_TEXT_LENGTH = 100;
-const DOWNLOAD_TIMEOUT = 10000; // 10 seconds for download
-const MAX_PROCESSING_CHARS = 1000000;
+const EXTRACTION_TIMEOUT = 30000; // 30 seconds
+const MIN_TEXT_LENGTH = 200;
+const DOWNLOAD_TIMEOUT = 15000; // 15 seconds for download
 
-// Global financial terms for reuse
+// Swedish and English financial terms for detection
 const FINANCIAL_TERMS = [
   'omsättning', 'intäkter', 'resultat', 'vinst', 'förlust', 'EBITDA', 'EBIT',
   'miljoner', 'mkr', 'msek', 'kvartal', 'procent', 'tillväxt', 'kostnad',
-  'rapport', 'period', 'jämfört', 'föregående', 'år', 'månad'
+  'rapport', 'period', 'jämfört', 'föregående', 'år', 'månad', 'revenue',
+  'profit', 'loss', 'growth', 'quarter', 'million', 'percent', 'compared',
+  'previous', 'year', 'month', 'earnings', 'income', 'expenses', 'margin'
 ];
 
-// Metadata and garbage terms to filter out
-const METADATA_TERMS = [
+// Comprehensive metadata and garbage terms to filter out aggressively
+const GARBAGE_TERMS = [
   'CreationDate', 'Producer', 'Creator', 'Title', 'Subject', 'Keywords', 'Author', 
   'ModDate', 'FlateDecode', 'BitsPerComponent', 'AppleWebKit', 'Google Docs', 
-  'Storytel AB', 'PDF', 'Type', 'Font', 'Encoding', 'Length', 'Filter',
-  'ColorSpace', 'Width', 'Height', 'XObject', 'Resources', 'MediaBox',
-  'CropBox', 'Rotate', 'Parent', 'Kids', 'Count', 'Annots', 'Contents',
-  'DeviceRGB', 'DeviceCMYK', 'DeviceGray', 'CalRGB', 'CalGray', 'ICCBased',
-  'Separation', 'Pattern', 'Indexed', 'Lab', 'FunctionType', 'Domain', 'Range',
-  'BBox', 'Matrix', 'XStep', 'YStep', 'FormType', 'Group', 'CS', 'S', 'BM',
-  'CA', 'ca', 'SMask', 'AIS', 'TK', 'OPM', 'op', 'OP', 'SA', 'SMask',
-  'Microsoft', 'Adobe', 'Acrobat', 'Reader', 'Chrome', 'Safari', 'Firefox'
+  'PDF', 'Type', 'Font', 'Encoding', 'Length', 'Filter', 'ColorSpace', 'Width', 
+  'Height', 'XObject', 'Resources', 'MediaBox', 'CropBox', 'Rotate', 'Parent', 
+  'Kids', 'Count', 'Annots', 'Contents', 'DeviceRGB', 'DeviceCMYK', 'DeviceGray',
+  'CalRGB', 'CalGray', 'ICCBased', 'Separation', 'Pattern', 'Indexed', 'Lab',
+  'FunctionType', 'Domain', 'Range', 'BBox', 'Matrix', 'XStep', 'YStep',
+  'FormType', 'Group', 'CS', 'S', 'BM', 'CA', 'ca', 'SMask', 'AIS', 'TK', 'OPM',
+  'op', 'OP', 'SA', 'Microsoft', 'Adobe', 'Acrobat', 'Reader', 'Chrome', 'Safari',
+  'Firefox', 'Mozilla', 'Windows', 'KHTML', 'Gecko', 'WebKit', 'Skia',
+  'endstream', 'startxref', 'trailer', 'xref', 'obj', 'endobj', 'stream'
 ];
 
-// Enhanced PDF text extraction with aggressive metadata filtering
+// Enhanced PDF text extraction with focus on readable content
 const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> => {
   const startTime = Date.now();
-  console.log('=== STARTING ENHANCED PDF EXTRACTION ===');
+  console.log('=== STARTING ROBUST PDF EXTRACTION ===');
   console.log('PDF size:', pdfArrayBuffer.byteLength, 'bytes');
   
   return new Promise(async (resolve, reject) => {
@@ -60,174 +62,105 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
 
       console.log('PDF header validation passed');
 
-      // Convert to string for text extraction
-      const processingSize = Math.min(pdfArrayBuffer.byteLength, MAX_PROCESSING_CHARS);
-      const limitedBytes = new Uint8Array(pdfArrayBuffer.slice(0, processingSize));
-      
+      // Convert to string for text extraction with multiple encoding attempts
       let pdfText: string;
       try {
-        pdfText = new TextDecoder('utf-8', { fatal: false }).decode(limitedBytes);
+        // Try UTF-8 first
+        pdfText = new TextDecoder('utf-8', { fatal: false }).decode(pdfBytes);
       } catch (error) {
-        console.log('UTF-8 failed, trying latin1');
-        pdfText = new TextDecoder('latin1', { fatal: false }).decode(limitedBytes);
-      }
-      
-      let extractedText = '';
-      let textSegments: string[] = [];
-      
-      console.log('Starting enhanced text extraction with aggressive filtering...');
-      
-      // STRATEGY 1: Enhanced text operators with metadata filtering
-      console.log('Strategy 1 - Enhanced text operators with metadata filtering...');
-      const textPatterns = [
-        /\(([^)]{20,300})\)\s*(?:Tj|TJ|'|")/g,
-        /\[([^\]]{20,300})\]\s*TJ/g,
-        /BT\s+([^E]*?)ET/g,
-        /\(\s*([^)]{25,250})\s*\)/g
-      ];
-      
-      for (const pattern of textPatterns) {
-        const matches = Array.from(pdfText.matchAll(pattern));
-        console.log(`Pattern found ${matches.length} matches`);
-        
-        for (const match of matches.slice(0, 150)) {
-          let text = match[1] || match[0];
-          if (!text) continue;
-          
-          // Clean extracted text
-          text = text
-            .replace(/\\n/g, '\n')
-            .replace(/\\r/g, '\r') 
-            .replace(/\\t/g, '\t')
-            .replace(/\\\(/g, '(')
-            .replace(/\\\)/g, ')')
-            .replace(/\\\\/g, '\\')
-            .replace(/BT|ET|Tf|Tm|Td|TD|TL|Tr|Ts|Tc|Tw|Tz/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-          
-          // Aggressive metadata filtering
-          const isMetadata = METADATA_TERMS.some(term => 
-            text.toLowerCase().includes(term.toLowerCase())
-          );
-          
-          // Content quality checks
-          const hasLetters = /[a-zA-ZåäöÅÄÖ]{5,}/.test(text);
-          const hasMultipleWords = text.split(/\s+/).length >= 3;
-          const notJustNumbers = !/^[0-9\.\s\-\+%]+$/.test(text);
-          const notAllCaps = text !== text.toUpperCase();
-          const hasReasonableLength = text.length >= 20 && text.length <= 500;
-          const notJustSpecialChars = /[a-zA-ZåäöÅÄÖ]/.test(text);
-          
-          if (!isMetadata && hasLetters && hasMultipleWords && notJustNumbers && 
-              hasReasonableLength && notJustSpecialChars && notAllCaps) {
-            textSegments.push(text);
-          }
+        try {
+          // Fall back to latin1
+          pdfText = new TextDecoder('latin1', { fatal: false }).decode(pdfBytes);
+        } catch (error2) {
+          // Final fallback to ascii
+          pdfText = new TextDecoder('ascii', { fatal: false }).decode(pdfBytes);
         }
-        
-        if (textSegments.length > 30) break;
       }
       
-      // STRATEGY 2: Stream content extraction with better filtering
+      let extractedSegments: string[] = [];
+      
+      console.log('Starting content-focused text extraction...');
+      
+      // STRATEGY 1: Look for text between parentheses (common PDF text storage)
+      console.log('Strategy 1 - Parentheses text extraction...');
+      const parenthesesPattern = /\(([^)]{10,200})\)/g;
+      const parenthesesMatches = Array.from(pdfText.matchAll(parenthesesPattern));
+      
+      for (const match of parenthesesMatches.slice(0, 200)) {
+        let text = match[1];
+        if (!text) continue;
+        
+        // Clean and validate text
+        text = cleanExtractedText(text);
+        if (isValidText(text)) {
+          extractedSegments.push(text);
+        }
+      }
+      
+      console.log(`Found ${extractedSegments.length} segments from parentheses extraction`);
+      
+      // STRATEGY 2: Look for text in stream content blocks
       console.log('Strategy 2 - Stream content extraction...');
-      const streamPattern = /stream[\s\n\r]+(.*?)[\s\n\r]+endstream/gs;
+      const streamPattern = /stream\s*([\s\S]*?)\s*endstream/g;
       const streamMatches = Array.from(pdfText.matchAll(streamPattern));
       
-      for (const streamMatch of streamMatches.slice(0, 30)) {
-        let streamContent = streamMatch[1];
+      for (const streamMatch of streamMatches.slice(0, 50)) {
+        const streamContent = streamMatch[1];
         if (!streamContent) continue;
         
-        // Look for readable text in streams
-        const readableTextPattern = /[a-zA-ZåäöÅÄÖ\s]{30,300}/g;
-        const readableTexts = Array.from(streamContent.matchAll(readableTextPattern));
+        // Look for readable text patterns in stream
+        const readablePattern = /[a-zA-ZåäöÅÄÖ\s]{15,150}/g;
+        const readableMatches = Array.from(streamContent.matchAll(readablePattern));
         
-        for (const textMatch of readableTexts.slice(0, 15)) {
-          const text = textMatch[0]
-            .replace(/\s+/g, ' ')
-            .trim();
-          
-          // Filter out metadata
-          const isMetadata = METADATA_TERMS.some(term => 
-            text.toLowerCase().includes(term.toLowerCase())
-          );
-          
-          if (!isMetadata && text.length > 25 && text.length < 400 &&
-              text.split(/\s+/).length >= 4 &&
-              /[a-zA-ZåäöÅÄÖ]{4,}/.test(text)) {
-            textSegments.push(text);
+        for (const textMatch of readableMatches.slice(0, 20)) {
+          let text = textMatch[0];
+          text = cleanExtractedText(text);
+          if (isValidText(text)) {
+            extractedSegments.push(text);
           }
         }
-        
-        if (textSegments.length > 50) break;
       }
       
-      // STRATEGY 3: Financial context extraction
+      console.log(`Total segments after stream extraction: ${extractedSegments.length}`);
+      
+      // STRATEGY 3: Look for text around financial terms
       console.log('Strategy 3 - Financial context extraction...');
-      
-      for (const term of FINANCIAL_TERMS) {
-        const termRegex = new RegExp(`(.{30,400}\\b${term}\\b.{30,400})`, 'gi');
-        const termMatches = Array.from(pdfText.matchAll(termRegex));
+      for (const term of FINANCIAL_TERMS.slice(0, 15)) {
+        const contextPattern = new RegExp(`(.{20,300}\\b${term}\\b.{20,300})`, 'gi');
+        const contextMatches = Array.from(pdfText.matchAll(contextPattern));
         
-        for (const termMatch of termMatches.slice(0, 8)) {
-          let context = termMatch[1]
-            .replace(/[^\w\såäöÅÄÖ.,\-\d%€$]/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-          
-          // Filter out metadata
-          const isMetadata = METADATA_TERMS.some(term => 
-            context.toLowerCase().includes(term.toLowerCase())
-          );
-          
-          if (!isMetadata && context.length > 40 && context.length < 500 &&
-              context.split(/\s+/).length >= 6) {
-            textSegments.push(context);
+        for (const contextMatch of contextMatches.slice(0, 10)) {
+          let text = contextMatch[1];
+          text = cleanExtractedText(text);
+          if (isValidText(text) && text.length > 30) {
+            extractedSegments.push(text);
           }
         }
-        
-        if (textSegments.length > 60) break;
       }
       
-      // STRATEGY 4: Line-based extraction with better filtering
+      console.log(`Total segments after financial extraction: ${extractedSegments.length}`);
+      
+      // STRATEGY 4: Look for line-based content
       console.log('Strategy 4 - Line-based extraction...');
       const lines = pdfText.split(/\n|\r\n|\r/);
-      for (const line of lines.slice(0, 300)) {
-        const cleanLine = line
-          .replace(/[^\w\såäöÅÄÖ.,\-\d%€$()]/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-        
-        // Filter out metadata
-        const isMetadata = METADATA_TERMS.some(term => 
-          cleanLine.toLowerCase().includes(term.toLowerCase())
-        );
-        
-        if (!isMetadata && cleanLine.length > 25 && cleanLine.length < 300 &&
-            cleanLine.split(/\s+/).length >= 4 &&
-            /[a-zA-ZåäöÅÄÖ]{4,}/.test(cleanLine) &&
-            cleanLine !== cleanLine.toUpperCase() &&
-            !/^[0-9\.\s\-\+%]+$/.test(cleanLine)) {
-          textSegments.push(cleanLine);
+      for (const line of lines.slice(0, 500)) {
+        let cleanLine = cleanExtractedText(line);
+        if (isValidText(cleanLine) && cleanLine.length > 20) {
+          extractedSegments.push(cleanLine);
         }
-        
-        if (textSegments.length > 80) break;
       }
       
-      // Combine and clean all extracted segments
-      console.log('Combining and cleaning extracted segments...');
+      console.log(`Total segments after line extraction: ${extractedSegments.length}`);
       
-      // Remove duplicates and sort by relevance
-      const uniqueSegments = [...new Set(textSegments)]
+      // Remove duplicates and filter for quality
+      const uniqueSegments = [...new Set(extractedSegments)]
         .filter(segment => {
-          // Final quality filter
-          const words = segment.split(/\s+/);
-          const hasGoodLength = segment.length >= 25 && segment.length <= 400;
-          const hasEnoughWords = words.length >= 4;
-          const hasLetters = /[a-zA-ZåäöÅÄÖ]{4,}/.test(segment);
-          const notAllCaps = segment !== segment.toUpperCase();
-          const notJustNumbers = !/^[0-9\.\s\-\+%]+$/.test(segment);
-          
-          return hasGoodLength && hasEnoughWords && hasLetters && notAllCaps && notJustNumbers;
+          // Final quality check
+          return segment.length >= 15 && 
+                 segment.length <= 500 &&
+                 segment.split(/\s+/).length >= 3 &&
+                 /[a-zA-ZåäöÅÄÖ]{3,}/.test(segment) &&
+                 !isGarbageText(segment);
         })
         .sort((a, b) => {
           // Prioritize segments with financial terms
@@ -241,37 +174,35 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
           if (aHasFinancial && !bHasFinancial) return -1;
           if (!aHasFinancial && bHasFinancial) return 1;
           
-          // Then by word count (more words often better for context)
-          const aWords = a.split(/\s+/).length;
-          const bWords = b.split(/\s+/).length;
-          
-          return bWords - aWords;
+          // Then by meaningful content (more words = better)
+          return b.split(/\s+/).length - a.split(/\s+/).length;
         })
-        .slice(0, 150); // Take best 150 segments
+        .slice(0, 100); // Take best 100 segments
       
-      extractedText = uniqueSegments.join(' ').trim();
+      let extractedText = uniqueSegments.join(' ').trim();
       
-      // Final cleaning
+      // Final cleaning pass
       extractedText = extractedText
         .replace(/\s+/g, ' ')
         .replace(/\.\s+\./g, '.')
         .replace(/,\s+,/g, ',')
+        .replace(/\s+([.,!?;:])/g, '$1')
         .trim();
       
-      // Limit final text length but be more generous
-      if (extractedText.length > 8000) {
-        extractedText = extractedText.substring(0, 8000) + '...';
+      // Limit final text length
+      if (extractedText.length > 10000) {
+        extractedText = extractedText.substring(0, 10000) + '...';
       }
       
       const processingTime = Date.now() - startTime;
       
-      console.log('=== ENHANCED EXTRACTION COMPLETED ===');
-      console.log('Text segments found:', uniqueSegments.length);
+      console.log('=== ROBUST EXTRACTION COMPLETED ===');
+      console.log('Unique segments found:', uniqueSegments.length);
       console.log('Final text length:', extractedText.length);
       console.log('Processing time:', processingTime, 'ms');
-      console.log('Sample text (first 300 chars):', extractedText.substring(0, 300));
+      console.log('Sample text (first 200 chars):', extractedText.substring(0, 200));
       
-      // Enhanced quality validation
+      // Quality validation
       const wordCount = extractedText.split(/\s+/).filter(word => word.length > 1).length;
       const hasNumbers = /\d/.test(extractedText);
       const hasSwedishChars = /[åäöÅÄÖ]/.test(extractedText);
@@ -288,13 +219,22 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
         processingTimeMs: processingTime
       });
       
-      // More relaxed validation for better success rate
+      // Validation with improved criteria
       if (extractedText.length < MIN_TEXT_LENGTH) {
-        throw new Error(`För lite innehållstext extraherad från PDF:en (${extractedText.length} tecken, minimum ${MIN_TEXT_LENGTH}). PDF:en kan vara bildbaserad eller innehålla huvudsakligen metadata.`);
+        throw new Error(`För lite innehållstext extraherad från PDF:en (${extractedText.length} tecken, minimum ${MIN_TEXT_LENGTH}). PDF:en kan vara bildbaserad eller skadad.`);
       }
       
-      if (wordCount < 15) {
-        throw new Error('För få läsbara ord hittades i PDF:en - kontrollera att det är en textbaserad PDF med faktiskt innehåll');
+      if (wordCount < 20) {
+        throw new Error('För få läsbara ord hittades i PDF:en - kontrollera att det är en textbaserad PDF');
+      }
+      
+      // Check if we only got garbage
+      const alphaCount = (extractedText.match(/[a-zA-ZåäöÅÄÖ]/g) || []).length;
+      const totalCount = extractedText.replace(/\s/g, '').length;
+      const alphaRatio = alphaCount / totalCount;
+      
+      if (alphaRatio < 0.3) {
+        throw new Error('Extraherad text innehåller för många specialtecken - PDF:en kan vara skadad eller kräver OCR');
       }
       
       clearTimeout(timeoutId);
@@ -308,6 +248,61 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
   });
 };
 
+// Helper function to clean extracted text
+function cleanExtractedText(text: string): string {
+  return text
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\r') 
+    .replace(/\\t/g, '\t')
+    .replace(/\\\(/g, '(')
+    .replace(/\\\)/g, ')')
+    .replace(/\\\\/g, '\\')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, ' ') // Remove control characters
+    .replace(/[^\w\såäöÅÄÖ.,\-\d%€$()!?;:]/g, ' ') // Keep only meaningful characters
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Helper function to validate if text is meaningful
+function isValidText(text: string): boolean {
+  if (!text || text.length < 10) return false;
+  
+  // Must have letters
+  if (!/[a-zA-ZåäöÅÄÖ]{3,}/.test(text)) return false;
+  
+  // Must have multiple words
+  if (text.split(/\s+/).length < 2) return false;
+  
+  // Check for garbage patterns
+  if (isGarbageText(text)) return false;
+  
+  // Check alpha ratio
+  const alphaCount = (text.match(/[a-zA-ZåäöÅÄÖ]/g) || []).length;
+  const totalCount = text.replace(/\s/g, '').length;
+  const alphaRatio = alphaCount / totalCount;
+  
+  return alphaRatio > 0.4;
+}
+
+// Helper function to detect garbage text
+function isGarbageText(text: string): boolean {
+  // Check for metadata terms
+  if (GARBAGE_TERMS.some(term => text.toLowerCase().includes(term.toLowerCase()))) {
+    return true;
+  }
+  
+  // Check for too many special characters in sequence
+  if (/[^\w\s]{5,}/.test(text)) return true;
+  
+  // Check for binary-like patterns
+  if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]{3,}/.test(text)) return true;
+  
+  // Check for encoded strings
+  if (/\\[xuU][0-9a-fA-F]{2,}/.test(text)) return true;
+  
+  return false;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -318,7 +313,7 @@ serve(async (req) => {
   }
 
   const startTime = Date.now();
-  console.log('=== ENHANCED PDF EXTRACTION REQUEST START ===');
+  console.log('=== ROBUST PDF EXTRACTION REQUEST START ===');
   console.log('Method:', req.method);
   console.log('URL:', req.url);
 
@@ -413,7 +408,7 @@ serve(async (req) => {
       pdfResponse = await fetch(pdfUrl, {
         method: 'GET',
         headers: {
-          'User-Agent': 'ReportFlow-PDFExtractor/7.0',
+          'User-Agent': 'ReportFlow-PDFExtractor/8.0',
           'Accept': 'application/pdf,*/*',
         },
         signal: downloadController.signal
@@ -492,9 +487,9 @@ serve(async (req) => {
       );
     }
 
-    console.log('=== STARTING ENHANCED TEXT EXTRACTION ===');
+    console.log('=== STARTING ROBUST TEXT EXTRACTION ===');
     
-    // Extract text from PDF with enhanced strategies
+    // Extract text from PDF with robust content-focused strategies
     let extractedText;
     try {
       extractedText = await extractTextFromPDF(pdfArrayBuffer);
@@ -530,7 +525,7 @@ serve(async (req) => {
     );
     const processingTime = Date.now() - startTime;
     
-    console.log('=== ENHANCED EXTRACTION SUCCESS ===');
+    console.log('=== ROBUST EXTRACTION SUCCESS ===');
     console.log('Final statistics:', {
       textLength: extractedText.length,
       wordCount,
@@ -556,7 +551,7 @@ serve(async (req) => {
           fileSizeMB: Math.round(pdfArrayBuffer.byteLength / 1024 / 1024 * 100) / 100,
           sample: extractedText.substring(0, 300)
         },
-        message: 'Text framgångsrikt extraherad från PDF med avancerade strategier och metadatafiltrering'
+        message: 'Text framgångsrikt extraherad från PDF med robusta innehållsfokuserade strategier'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
