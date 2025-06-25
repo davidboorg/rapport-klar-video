@@ -79,6 +79,10 @@ const PDFTestInterface: React.FC = () => {
       console.log('📦 Request body:', requestBody);
       setDebugInfo(prev => prev + `\n📦 Request body: ${JSON.stringify(requestBody, null, 2)}`);
       
+      // Add network connectivity test first
+      console.log('🌐 Testing basic connectivity...');
+      setDebugInfo(prev => prev + `\n🌐 Testing basic connectivity...`);
+      
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -186,6 +190,53 @@ const PDFTestInterface: React.FC = () => {
     }
   };
 
+  const testBasicConnectivity = async () => {
+    if (!externalApiUrl.trim()) return;
+    
+    try {
+      console.log('🔍 Testing basic domain connectivity...');
+      setDebugInfo(`🔍 Testing basic domain connectivity to: ${externalApiUrl}\nTid: ${new Date().toISOString()}`);
+      
+      // Try a simple GET to root first
+      const rootResponse = await fetch(externalApiUrl, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+      
+      console.log('🌐 Root response status:', rootResponse.status);
+      setDebugInfo(prev => prev + `\n🌐 Root response: ${rootResponse.status}`);
+      
+      if (rootResponse.ok) {
+        const data = await rootResponse.text();
+        console.log('🌐 Root response data:', data.substring(0, 200));
+        setDebugInfo(prev => prev + `\n📄 Root data: ${data.substring(0, 100)}`);
+        
+        toast({
+          title: "Grundläggande anslutning ✅",
+          description: "Domänen är tillgänglig!",
+        });
+      } else {
+        setDebugInfo(prev => prev + `\n❌ Root failed: ${rootResponse.status}`);
+        toast({
+          title: "Anslutningstest ⚠️",
+          description: `Domänen svarar med status: ${rootResponse.status}`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.log('🌐 Basic connectivity error:', error);
+      setDebugInfo(prev => prev + `\n💥 Connectivity error: ${error.message}`);
+      toast({
+        title: "Anslutningstest ❌",
+        description: `Kan inte nå domänen: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
   const extractPDFText = async () => {
     setIsLoading(true);
     setError('');
@@ -278,15 +329,33 @@ const PDFTestInterface: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <Button
+              variant="outline"
+              onClick={testBasicConnectivity}
+              disabled={!externalApiUrl.trim()}
+              className="text-xs"
+            >
+              <Globe className="w-4 h-4 mr-1" />
+              Test Domän
+            </Button>
             <Button
               variant="outline"
               onClick={testApiHealth}
               disabled={!externalApiUrl.trim()}
-              className="flex-1"
+              className="text-xs"
             >
-              <ExternalLink className="w-4 h-4 mr-2" />
-              Testa API Status
+              <ExternalLink className="w-4 h-4 mr-1" />
+              Test Health
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => window.open(externalApiUrl, '_blank')}
+              disabled={!externalApiUrl.trim()}
+              className="text-xs"
+            >
+              <ExternalLink className="w-4 h-4 mr-1" />
+              Öppna i ny flik
             </Button>
           </div>
 
@@ -512,7 +581,8 @@ const PDFTestInterface: React.FC = () => {
                 <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
                   <li>Använd den gröna "Använd denna" knappen för senaste URL</li>
                   <li>Kontrollera att "Använd externt API" är aktiverat</li>
-                  <li>Testa API:t först med "Testa API Status"</li>
+                  <li>Testa domänen först med "Test Domän"</li>
+                  <li>Kolla att Vercel-appen inte har gått i "sleep mode"</li>
                 </ul>
               </div>
               <div>
