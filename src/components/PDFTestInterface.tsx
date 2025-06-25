@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +16,7 @@ const PDFTestInterface: React.FC = () => {
   const [metadata, setMetadata] = useState<any>(null);
   const [error, setError] = useState('');
   const [useExternalApi, setUseExternalApi] = useState(false);
-  const [externalApiUrl, setExternalApiUrl] = useState('https://pdf-extraction-lls9ikhwn-reportflow1.vercel.app');
+  const [externalApiUrl, setExternalApiUrl] = useState('https://pdf-extraction-i8v9tg09f-reportflow1.vercel.app');
   const { toast } = useToast();
 
   const testPDFUrl = 'https://qpveeqvzvukolfagasne.supabase.co/storage/v1/object/sign/project-pdfs/rapport-delarsrapport-januari-mars-2025-250429.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8wZjAzZWViNC05ODhhLTQwMTUtOWQ4ZS1iMjY2OGU0NDdiMTkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9qZWN0LXBkZnMvcmFwcG9ydC1kZWxhcnNyYXBwb3J0LWphbnVhcmktbWFycy0yMDI1LTI1MDQyOS5wZGYiLCJpYXQiOjE3NTA4NTYyOTMsImV4cCI6MTc1MTQ2MTA5M30.JTE_pzNRZTAH6iyK48PGueAEDKNMkzO52X_EFmBMkAw';
@@ -260,13 +261,13 @@ const PDFTestInterface: React.FC = () => {
               <div className="p-3 bg-green-50 border border-green-200 rounded">
                 <p className="text-sm text-green-800 font-medium mb-2">✅ Senaste deployment-URL:</p>
                 <div className="bg-green-100 p-2 rounded font-mono text-sm flex items-center justify-between">
-                  <span className="text-green-700">https://pdf-extraction-lls9ikhwn-reportflow1.vercel.app</span>
+                  <span className="text-green-700">https://pdf-extraction-i8v9tg09f-reportflow1.vercel.app</span>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      setExternalApiUrl('https://pdf-extraction-lls9ikhwn-reportflow1.vercel.app');
-                      copyToClipboard('https://pdf-extraction-lls9ikhwn-reportflow1.vercel.app');
+                      setExternalApiUrl('https://pdf-extraction-i8v9tg09f-reportflow1.vercel.app');
+                      copyToClipboard('https://pdf-extraction-i8v9tg09f-reportflow1.vercel.app');
                     }}
                   >
                     <Copy className="w-4 h-4" />
@@ -427,7 +428,8 @@ const PDFTestInterface: React.FC = () => {
               Din senaste deployment skapade en ny URL. Äldre URLs kan kräva autentisering.
             </p>
             <div className="bg-yellow-100 p-2 rounded space-y-1">
-              <p className="text-xs font-mono text-yellow-800">✅ Senaste (använd denna): pdf-extraction-lls9ikhwn-reportflow1.vercel.app</p>
+              <p className="text-xs font-mono text-yellow-800">✅ Senaste (använd denna): pdf-extraction-i8v9tg09f-reportflow1.vercel.app</p>
+              <p className="text-xs font-mono text-yellow-600">❌ Äldre: pdf-extraction-lls9ikhwn-reportflow1.vercel.app</p>
               <p className="text-xs font-mono text-yellow-600">❌ Äldre: pdf-extraction-g0ngoz43c-reportflow1.vercel.app</p>
             </div>
           </div>
