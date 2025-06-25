@@ -96,7 +96,7 @@ const WorkflowController: React.FC = () => {
       console.log('Project ID:', project.id);
       console.log('PDF URL:', publicUrl);
 
-      // Extract PDF content with better error handling
+      // Extract PDF content with enhanced error handling
       const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-content', {
         body: {
           pdfUrl: publicUrl,
@@ -105,29 +105,78 @@ const WorkflowController: React.FC = () => {
       });
 
       console.log('=== PDF EXTRACTION RESPONSE ===');
-      console.log('Error:', extractionError);
-      console.log('Data:', extractionData);
+      console.log('Raw response data:', extractionData);
+      console.log('Raw response error:', extractionError);
 
+      // Hantera Supabase function error
       if (extractionError) {
-        console.error('PDF extraction error:', extractionError);
-        throw new Error(`PDF extraktion misslyckades: ${extractionError.message || 'Okänt fel från servern'}`);
+        console.error('Supabase function invocation error:', extractionError);
+        
+        let errorMessage = 'PDF extraktion misslyckades';
+        
+        // Försök att extrahera mer specifik felinformation
+        if (extractionError.message) {
+          errorMessage = `PDF extraktion fel: ${extractionError.message}`;
+        }
+        
+        throw new Error(errorMessage);
       }
 
-      if (!extractionData?.success) {
-        console.error('PDF extraction failed:', extractionData);
-        const errorMsg = extractionData?.error || 'Okänt fel vid PDF-extraktion';
-        throw new Error(`PDF extraktion fel: ${errorMsg}`);
+      // Hantera response från edge function
+      if (!extractionData) {
+        throw new Error('Inget svar från PDF-extraktions-tjänsten');
       }
 
-      if (!extractionData?.content) {
-        throw new Error('Ingen text kunde extraheras från PDF:en');
+      if (!extractionData.success) {
+        console.error('PDF extraction failed with response:', extractionData);
+        
+        let errorMessage = 'PDF extraktion misslyckades';
+        
+        // Använd felkoderna från edge function för bättre felmeddelanden
+        switch (extractionData.code) {
+          case 'INVALID_METHOD':
+            errorMessage = 'Intern fel: Felaktig request-metod';
+            break;
+          case 'INVALID_JSON':
+            errorMessage = 'Intern fel: Felaktigt dataformat';
+            break;
+          case 'MISSING_PDF_URL':
+            errorMessage = 'Intern fel: PDF-URL saknas';
+            break;
+          case 'MISSING_PROJECT_ID':
+            errorMessage = 'Intern fel: Projekt-ID saknas';
+            break;
+          case 'DOWNLOAD_FAILED':
+            errorMessage = 'Kunde inte ladda ner PDF-filen från servern';
+            break;
+          case 'DOWNLOAD_ERROR':
+            errorMessage = 'PDF-filen kunde inte hämtas (kontrollera att filen finns)';
+            break;
+          case 'EMPTY_FILE':
+            errorMessage = 'PDF-filen verkar vara tom eller korrupt';
+            break;
+          case 'EXTRACTION_FAILED':
+            errorMessage = extractionData.error || 'Kunde inte extrahera text från PDF:en';
+            break;
+          case 'UNEXPECTED_ERROR':
+            errorMessage = 'Ett oväntat fel uppstod under PDF-bearbetning';
+            break;
+          default:
+            errorMessage = extractionData.error || 'Okänt fel vid PDF-extraktion';
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      if (!extractionData.content) {
+        throw new Error('Ingen text kunde extraheras från PDF:en - kontrollera att det är en textbaserad PDF');
       }
 
       console.log('=== PDF EXTRACTION SUCCESS ===');
-      console.log('Extracted text length:', extractionData.length);
-      console.log('Word count:', extractionData.wordCount);
-      console.log('Has numbers:', extractionData.hasNumbers);
-      console.log('Sample text:', extractionData.sample);
+      console.log('Extracted text length:', extractionData.metadata?.length || extractionData.content.length);
+      console.log('Word count:', extractionData.metadata?.wordCount || 'unknown');
+      console.log('Processing time:', extractionData.metadata?.processingTimeMs || 'unknown', 'ms');
+      console.log('Sample text:', extractionData.metadata?.sample || extractionData.content.substring(0, 100));
 
       setExtractedText(extractionData.content);
       setStatus('Text extraherad - granska innan AI-generering');
@@ -135,7 +184,7 @@ const WorkflowController: React.FC = () => {
 
       toast({
         title: "PDF Extrahering Slutförd!",
-        description: `${extractionData.wordCount || 0} ord extraherade. Granska texten innan AI-generering.`,
+        description: `${extractionData.metadata?.wordCount || 'Okänt antal'} ord extraherade. Granska texten innan AI-generering.`,
       });
 
     } catch (error) {
@@ -155,7 +204,7 @@ const WorkflowController: React.FC = () => {
       setTimeout(() => {
         setStep('upload');
         setStatus('Väntar på uppladdning');
-      }, 3000);
+      }, 5000);
     }
   };
 

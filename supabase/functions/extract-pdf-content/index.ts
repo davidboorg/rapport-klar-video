@@ -8,259 +8,404 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Enhanced PDF text extraction with better error handling and encoding
-const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> => {
-  console.log('Starting enhanced PDF text extraction...');
-  
-  try {
-    const pdfBytes = new Uint8Array(pdfArrayBuffer);
-    console.log('PDF loaded, size:', pdfBytes.length, 'bytes');
-    
-    // Validate PDF header
-    const headerBytes = new Uint8Array(pdfArrayBuffer.slice(0, 10));
-    const headerString = new TextDecoder('utf-8', { fatal: false }).decode(headerBytes);
-    
-    if (!headerString.startsWith('%PDF')) {
-      throw new Error('Filen är inte en giltig PDF (saknar PDF-header)');
-    }
+// Timeout konstant för att undvika CPU timeout
+const EXTRACTION_TIMEOUT = 25000; // 25 sekunder max
 
-    console.log('PDF validation passed, extracting text...');
-    
-    // Convert to string with better encoding handling
-    let pdfText: string;
+// Förbättrad PDF text extraktion med timeout och bättre felhantering
+const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> => {
+  console.log('=== STARTING PDF EXTRACTION ===');
+  console.log('PDF size:', pdfArrayBuffer.byteLength, 'bytes');
+  
+  return new Promise(async (resolve, reject) => {
+    // Sätt upp timeout för att undvika CPU timeout
+    const timeoutId = setTimeout(() => {
+      reject(new Error('PDF-extraktion tog för lång tid (timeout efter 25s)'));
+    }, EXTRACTION_TIMEOUT);
+
     try {
-      // Try UTF-8 first
-      pdfText = new TextDecoder('utf-8', { fatal: false }).decode(pdfBytes);
-    } catch {
-      try {
-        // Fallback to latin1
-        pdfText = new TextDecoder('latin1', { fatal: false }).decode(pdfBytes);
-      } catch {
-        // Final fallback to windows-1252
-        pdfText = new TextDecoder('windows-1252', { fatal: false }).decode(pdfBytes);
+      const pdfBytes = new Uint8Array(pdfArrayBuffer);
+      
+      // Validera PDF header
+      const headerBytes = new Uint8Array(pdfArrayBuffer.slice(0, 10));
+      const headerString = new TextDecoder('utf-8', { fatal: false }).decode(headerBytes);
+      
+      if (!headerString.startsWith('%PDF')) {
+        throw new Error('Filen är inte en giltig PDF');
       }
-    }
-    
-    let extractedText = '';
-    let textSegments: string[] = [];
-    
-    console.log('Extracting text using multiple strategies...');
-    
-    // Strategy 1: Look for text between parentheses in PDF operators
-    const textPatterns = [
-      /\(([^)]{3,})\)\s*(?:Tj|TJ)/g,    // Text showing operators
-      /\[([^\]]{10,})\]\s*TJ/g,         // Array text showing
-      /BT\s+(.+?)\s+ET/gs,              // Text blocks between BT/ET
-    ];
-    
-    for (const pattern of textPatterns) {
-      const matches = pdfText.matchAll(pattern);
-      for (const match of matches) {
-        if (match[1]) {
-          let text = match[1]
-            .replace(/\\n/g, '\n')
-            .replace(/\\r/g, '\r')
-            .replace(/\\t/g, '\t')
-            .replace(/\\\(/g, '(')
-            .replace(/\\\)/g, ')')
-            .replace(/\\\\/g, '\\')
-            .replace(/\\([0-7]{3})/g, (match, octal) => {
-              try {
-                return String.fromCharCode(parseInt(octal, 8));
-              } catch {
-                return match;
-              }
-            });
-          
-          // Clean up and validate text
-          text = text.replace(/\s+/g, ' ').trim();
-          
-          // Filter out garbage - must contain readable characters
-          if (text.length >= 3 && 
-              /[a-zA-ZåäöÅÄÖ]/.test(text) && 
-              !/^[^a-zA-ZåäöÅÄÖ0-9\s]{5,}$/.test(text)) {
-            textSegments.push(text);
+
+      console.log('PDF header validation passed');
+
+      // Konvertera till string med UTF-8 encoding
+      let pdfText: string;
+      try {
+        pdfText = new TextDecoder('utf-8', { fatal: false }).decode(pdfBytes);
+      } catch (error) {
+        console.log('UTF-8 decoding failed, trying latin1');
+        pdfText = new TextDecoder('latin1', { fatal: false }).decode(pdfBytes);
+      }
+      
+      let extractedText = '';
+      let textSegments: string[] = [];
+      
+      console.log('Starting text extraction with multiple strategies...');
+      
+      // Strategi 1: Extrahera text mellan parenteser i PDF operators
+      const textPatterns = [
+        /\(([^)]{2,})\)\s*(?:Tj|TJ)/g,    // Text operators
+        /\[([^\]]{5,})\]\s*TJ/g,          // Array text operators
+        /BT\s+(.+?)\s+ET/gs,              // Text blocks mellan BT/ET
+      ];
+      
+      let totalMatches = 0;
+      for (const pattern of textPatterns) {
+        const matches = Array.from(pdfText.matchAll(pattern));
+        totalMatches += matches.length;
+        
+        for (const match of matches) {
+          if (match[1]) {
+            let text = match[1]
+              .replace(/\\n/g, '\n')
+              .replace(/\\r/g, '\r')
+              .replace(/\\t/g, '\t')
+              .replace(/\\\(/g, '(')
+              .replace(/\\\)/g, ')')
+              .replace(/\\\\/g, '\\');
+            
+            // Rensa text
+            text = text.replace(/\s+/g, ' ').trim();
+            
+            // Filtrera bort skräp - måste innehålla läsbara tecken
+            if (text.length >= 2 && /[a-zA-ZåäöÅÄÖ]/.test(text)) {
+              textSegments.push(text);
+            }
           }
         }
       }
-    }
-    
-    // Strategy 2: Look for readable words in streams
-    const streamRegex = /stream\s*\n([\s\S]*?)\nendstream/g;
-    const streamMatches = pdfText.matchAll(streamRegex);
-    
-    for (const streamMatch of streamMatches) {
-      const streamContent = streamMatch[1];
       
-      // Extract Swedish and English words
-      const wordPattern = /\b[a-zA-ZåäöÅÄÖ]{3,}\b/g;
-      const words = streamContent.match(wordPattern);
+      console.log(`Found ${totalMatches} text matches across all patterns`);
       
-      if (words && words.length > 3) {
-        const meaningfulWords = words.filter(word => 
-          word.length >= 3 && 
-          word.length <= 30 &&
-          !/^[A-Z]{3,}$/.test(word)
-        );
+      // Strategi 2: Sök efter läsbara ord i streams
+      const streamRegex = /stream\s*\n([\s\S]*?)\nendstream/g;
+      const streamMatches = Array.from(pdfText.matchAll(streamRegex));
+      
+      console.log(`Found ${streamMatches.length} streams to process`);
+      
+      for (const streamMatch of streamMatches) {
+        const streamContent = streamMatch[1];
+        const wordPattern = /\b[a-zA-ZåäöÅÄÖ]{2,}\b/g;
+        const words = streamContent.match(wordPattern);
         
-        if (meaningfulWords.length > 3) {
-          textSegments.push(meaningfulWords.join(' '));
+        if (words && words.length > 2) {
+          textSegments.push(words.join(' '));
         }
       }
-    }
-    
-    // Strategy 3: Extract financial terms and context
-    const financialTerms = [
-      'omsättning', 'intäkter', 'försäljning', 'resultat', 'vinst', 'förlust',
-      'EBITDA', 'EBIT', 'rörelseresultat', 'nettoresultat', 'årsresultat',
-      'miljoner', 'miljarder', 'mkr', 'msek', 'tkr', 'kvartal', 'procent',
-      'tillväxt', 'revenue', 'profit', 'growth', 'sales'
-    ];
-    
-    for (const term of financialTerms) {
-      const termRegex = new RegExp(`(.{0,50}\\b${term}\\b.{0,50})`, 'gi');
-      const termMatches = pdfText.matchAll(termRegex);
       
-      for (const termMatch of termMatches) {
-        let context = termMatch[1]
-          .replace(/[^\w\såäöÅÄÖ.,\-\d%€$]/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
+      // Strategi 3: Sök efter finansiella termer och kontext
+      const financialTerms = [
+        'omsättning', 'intäkter', 'försäljning', 'resultat', 'vinst', 'förlust',
+        'EBITDA', 'EBIT', 'rörelseresultat', 'nettoresultat', 'årsresultat',
+        'miljoner', 'miljarder', 'mkr', 'msek', 'kvartal', 'procent', 'tillväxt'
+      ];
+      
+      for (const term of financialTerms) {
+        const termRegex = new RegExp(`(.{0,30}\\b${term}\\b.{0,30})`, 'gi');
+        const termMatches = Array.from(pdfText.matchAll(termRegex));
         
-        if (context.length > 10 && context.length < 200) {
-          textSegments.push(context);
+        for (const termMatch of termMatches) {
+          let context = termMatch[1]
+            .replace(/[^\w\såäöÅÄÖ.,\-\d%€$]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          
+          if (context.length > 5 && context.length < 150) {
+            textSegments.push(context);
+          }
         }
       }
+      
+      // Kombinera alla extraherade segment
+      extractedText = textSegments.join(' ').trim();
+      
+      // Slutlig rensning
+      extractedText = extractedText
+        .replace(/\s+/g, ' ')
+        .replace(/([.!?])\s+([A-ZÅÄÖ])/g, '$1\n\n$2')
+        .trim();
+      
+      console.log('=== EXTRACTION COMPLETED ===');
+      console.log('Text segments found:', textSegments.length);
+      console.log('Final text length:', extractedText.length);
+      console.log('Sample text (first 150 chars):', extractedText.substring(0, 150));
+      
+      // Kvalitetsvalidering
+      const wordCount = extractedText.split(/\s+/).filter(word => word.length > 1).length;
+      const hasNumbers = /\d/.test(extractedText);
+      
+      console.log('Quality metrics:', { 
+        wordCount, 
+        hasNumbers, 
+        textLength: extractedText.length 
+      });
+      
+      // Validera extraherad text
+      if (extractedText.length < 20) {
+        throw new Error('För lite text kunde extraheras från PDF:en');
+      }
+      
+      if (wordCount < 5) {
+        throw new Error('För få läsbara ord hittades i PDF:en');
+      }
+      
+      clearTimeout(timeoutId);
+      resolve(extractedText);
+      
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.error('PDF extraction error:', error);
+      reject(error);
     }
-    
-    // Combine and clean all extracted content
-    extractedText = textSegments.join('\n').trim();
-    
-    // Final cleanup
-    extractedText = extractedText
-      .replace(/\n{3,}/g, '\n\n')
-      .replace(/\s+/g, ' ')
-      .replace(/([.!?])\s+([A-ZÅÄÖ])/g, '$1\n\n$2')
-      .trim();
-    
-    console.log('Extraction completed. Segments found:', textSegments.length);
-    console.log('Final text length:', extractedText.length);
-    console.log('Sample text:', extractedText.substring(0, 200));
-    
-    // Quality validation
-    const wordCount = extractedText.split(/\s+/).filter(word => word.length > 1).length;
-    const hasNumbers = /\d/.test(extractedText);
-    const hasSwedishChars = /[åäöÅÄÖ]/.test(extractedText);
-    
-    console.log('Quality metrics:', { wordCount, hasNumbers, hasSwedishChars, length: extractedText.length });
-    
-    // Enhanced validation
-    if (extractedText.length < 50) {
-      throw new Error('För lite text extraherad. PDF:en kanske innehåller mest bilder.');
-    }
-    
-    if (wordCount < 10) {
-      throw new Error('För få läsbara ord hittades. Kontrollera att PDF:en innehåller text.');
-    }
-    
-    // Check for garbage text
-    const alphaCount = (extractedText.match(/[a-zA-ZåäöÅÄÖ]/g) || []).length;
-    const totalCount = extractedText.replace(/\s/g, '').length;
-    const alphaRatio = alphaCount / totalCount;
-    
-    if (alphaRatio < 0.4) {
-      throw new Error('Texten verkar vara korrupt. Försök med en textbaserad PDF.');
-    }
-    
-    return extractedText;
-    
-  } catch (error) {
-    console.error('PDF extraction error:', error);
-    throw new Error(`PDF-extraktion misslyckades: ${error.message}`);
-  }
+  });
 };
 
 serve(async (req) => {
+  // Hantera CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const requestBody = await req.json();
-    const { pdfUrl, projectId } = requestBody;
-    
-    console.log('=== PDF EXTRACTION REQUEST ===');
-    console.log('PDF URL:', pdfUrl);
-    console.log('Project ID:', projectId);
+  const startTime = Date.now();
+  console.log('=== PDF EXTRACTION REQUEST START ===');
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  console.log('Headers:', Object.fromEntries(req.headers.entries()));
 
-    if (!pdfUrl || !projectId) {
-      throw new Error('Missing pdfUrl or projectId');
+  try {
+    // Validera request method
+    if (req.method !== 'POST') {
+      console.error('Invalid method:', req.method);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Endast POST-förfrågningar är tillåtna',
+          code: 'INVALID_METHOD'
+        }),
+        { 
+          status: 405,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
+    // Läs request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (error) {
+      console.error('Failed to parse JSON:', error);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Ogiltig JSON i request body',
+          code: 'INVALID_JSON'
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    const { pdfUrl, projectId } = requestBody;
+    
+    console.log('Request data:', { pdfUrl: pdfUrl ? 'provided' : 'missing', projectId });
+
+    // Validera required fields
+    if (!pdfUrl) {
+      console.error('Missing pdfUrl in request');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'PDF URL saknas i förfrågan',
+          code: 'MISSING_PDF_URL'
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    if (!projectId) {
+      console.error('Missing projectId in request');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Projekt-ID saknas i förfrågan',
+          code: 'MISSING_PROJECT_ID'
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Kontrollera Supabase konfiguration
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase configuration');
+      console.error('Missing Supabase configuration');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Serverkonfiguration saknas',
+          code: 'MISSING_CONFIG'
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('Downloading PDF...');
+    console.log('=== DOWNLOADING PDF ===');
+    console.log('PDF URL:', pdfUrl);
     
-    const pdfResponse = await fetch(pdfUrl, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; PDF-Extractor/1.0)',
-      }
-    });
+    // Ladda ner PDF med timeout
+    const downloadController = new AbortController();
+    const downloadTimeout = setTimeout(() => downloadController.abort(), 15000);
+    
+    let pdfResponse;
+    try {
+      pdfResponse = await fetch(pdfUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'ReportFlow-PDFExtractor/1.0',
+        },
+        signal: downloadController.signal
+      });
+    } catch (error) {
+      clearTimeout(downloadTimeout);
+      console.error('PDF download failed:', error);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Kunde inte ladda ner PDF-filen',
+          code: 'DOWNLOAD_FAILED',
+          details: error.message
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
+    clearTimeout(downloadTimeout);
     
     if (!pdfResponse.ok) {
-      throw new Error(`Failed to download PDF: ${pdfResponse.status}`);
+      console.error('PDF download failed with status:', pdfResponse.status);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Kunde inte ladda ner PDF: HTTP ${pdfResponse.status}`,
+          code: 'DOWNLOAD_ERROR'
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     const pdfArrayBuffer = await pdfResponse.arrayBuffer();
-    console.log('PDF downloaded, size:', pdfArrayBuffer.byteLength, 'bytes');
+    console.log('PDF downloaded successfully. Size:', pdfArrayBuffer.byteLength, 'bytes');
 
     if (pdfArrayBuffer.byteLength === 0) {
-      throw new Error('PDF-filen är tom');
+      console.error('PDF file is empty');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'PDF-filen är tom',
+          code: 'EMPTY_FILE'
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
-    console.log('Starting text extraction...');
-    const extractedText = await extractTextFromPDF(pdfArrayBuffer);
+    console.log('=== STARTING TEXT EXTRACTION ===');
     
-    console.log('=== EXTRACTION SUCCESS ===');
-    console.log('Text length:', extractedText.length);
+    // Extrahera text från PDF
+    let extractedText;
+    try {
+      extractedText = await extractTextFromPDF(pdfArrayBuffer);
+    } catch (error) {
+      console.error('Text extraction failed:', error);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Text-extraktion misslyckades: ${error.message}`,
+          code: 'EXTRACTION_FAILED'
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
     
+    // Beräkna statistik
     const wordCount = extractedText.split(/\s+/).filter(word => word.length > 1).length;
     const hasNumbers = /\d/.test(extractedText);
     const hasSwedishChars = /[åäöÅÄÖ]/.test(extractedText);
+    const processingTime = Date.now() - startTime;
     
-    console.log('Metrics:', { wordCount, hasNumbers, hasSwedishChars });
+    console.log('=== EXTRACTION SUCCESS ===');
+    console.log('Final statistics:', {
+      textLength: extractedText.length,
+      wordCount,
+      hasNumbers,
+      hasSwedishChars,
+      processingTimeMs: processingTime
+    });
 
-    // Update project status - using correct enum value
-    const { error: updateError } = await supabase
-      .from('projects')
-      .update({ 
-        status: 'processing',  // Use valid enum value instead of 'text_extracted'
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', projectId);
+    // Uppdatera projektstatus
+    try {
+      const { error: updateError } = await supabase
+        .from('projects')
+        .update({ 
+          status: 'processing',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', projectId);
 
-    if (updateError) {
-      console.log('Warning: Could not update project status:', updateError.message);
+      if (updateError) {
+        console.log('Warning: Could not update project status:', updateError.message);
+      }
+    } catch (error) {
+      console.log('Warning: Project update failed:', error);
     }
 
+    // Returnera framgångsrikt resultat
     return new Response(
       JSON.stringify({ 
         success: true, 
         content: extractedText,
-        length: extractedText.length,
-        wordCount: wordCount,
-        hasNumbers: hasNumbers,
-        hasSwedishChars: hasSwedishChars,
-        sample: extractedText.substring(0, 300),
-        message: 'Text successfully extracted'
+        metadata: {
+          length: extractedText.length,
+          wordCount: wordCount,
+          hasNumbers: hasNumbers,
+          hasSwedishChars: hasSwedishChars,
+          processingTimeMs: processingTime,
+          sample: extractedText.substring(0, 200)
+        },
+        message: 'Text framgångsrikt extraherad från PDF'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -269,14 +414,20 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('=== EXTRACTION FAILED ===');
-    console.error('Error:', error);
+    const processingTime = Date.now() - startTime;
+    console.error('=== UNEXPECTED ERROR ===');
+    console.error('Error type:', error.constructor.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Processing time before error:', processingTime, 'ms');
     
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'Ett fel uppstod vid PDF-extrahering',
-        details: error.stack || 'No stack trace available'
+        error: 'Ett oväntat fel uppstod vid PDF-bearbetning',
+        code: 'UNEXPECTED_ERROR',
+        details: error.message,
+        processingTimeMs: processingTime
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
