@@ -16,6 +16,7 @@ const PDFTestInterface: React.FC = () => {
   const [error, setError] = useState('');
   const [useExternalApi, setUseExternalApi] = useState(false);
   const [externalApiUrl, setExternalApiUrl] = useState('https://pdf-extraction-i8v9tg09f-reportflow1.vercel.app');
+  const [debugInfo, setDebugInfo] = useState<string>('');
   const { toast } = useToast();
 
   const testPDFUrl = 'https://qpveeqvzvukolfagasne.supabase.co/storage/v1/object/sign/project-pdfs/rapport-delarsrapport-januari-mars-2025-250429.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8wZjAzZWViNC05ODhhLTQwMTUtOWQ4ZS1iMjY2OGU0NDdiMTkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9qZWN0LXBkZnMvcmFwcG9ydC1kZWxhcnNyYXBwb3J0LWphbnVhcmktbWFycy0yMDI1LTI1MDQyOS5wZGYiLCJpYXQiOjE3NTA4NTYyOTMsImV4cCI6MTc1MTQ2MTA5M30.JTE_pzNRZTAH6iyK48PGueAEDKNMkzO52X_EFmBMkAw';
@@ -62,35 +63,50 @@ const PDFTestInterface: React.FC = () => {
       ? externalApiUrl 
       : `${externalApiUrl}/api/extract`;
     
-    console.log('Calling external API:', apiUrl);
+    console.log('🚀 Anropar externt API:', apiUrl);
+    console.log('📄 PDF URL:', testPDFUrl);
+    
+    // Add detailed debugging information
+    setDebugInfo(`Försöker ansluta till: ${apiUrl}\nTidpunkt: ${new Date().toISOString()}`);
     
     try {
+      // First try a simple test to see if the domain is reachable
+      console.log('🔍 Testar grundläggande anslutning...');
+      
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({
           url: testPDFUrl  // Changed from pdfUrl to url
         })
       });
 
-      console.log('API Response status:', response.status);
-      console.log('API Response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('✅ Svar mottaget!');
+      console.log('📊 Status:', response.status);
+      console.log('📋 Headers:', Object.fromEntries(response.headers.entries()));
+      
+      setDebugInfo(prev => prev + `\n✅ Anslutning lyckades! Status: ${response.status}`);
 
       if (!response.ok) {
         let errorData;
         try {
           errorData = await response.json();
+          console.log('❌ Error data:', errorData);
         } catch (e) {
           const errorText = await response.text();
+          console.log('❌ Error text:', errorText);
           throw new Error(`API error (${response.status}): ${errorText || response.statusText}`);
         }
         throw new Error(`API error (${response.status}): ${errorData.error || response.statusText}`);
       }
 
       const result = await response.json();
-      console.log('API Response data:', result);
+      console.log('🎉 API Response data:', result);
+      
+      setDebugInfo(prev => prev + `\n🎉 Data mottagen! Text length: ${result.text?.length || 0}`);
 
       if (!result.success) {
         throw new Error(`External API error: ${result.error || 'Unknown error'}`);
@@ -101,14 +117,16 @@ const PDFTestInterface: React.FC = () => {
         metadata: result.metadata
       };
     } catch (error) {
-      console.error('Fetch error details:', error);
+      console.error('💥 Fetch error details:', error);
+      
+      setDebugInfo(prev => prev + `\n💥 Fel: ${error.message}`);
       
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        throw new Error('Kan inte ansluta till API:t. Kontrollera att URL:en är korrekt och att API:t är tillgängligt.');
+        throw new Error('❌ Kan inte ansluta till API:t. Kontrollera att URL:en är korrekt och att API:t är tillgängligt.');
       } else if (error instanceof TypeError && error.message.includes('Load failed')) {
-        throw new Error('Anslutningen till API:t misslyckades. Detta kan bero på CORS-problem eller att API:t inte är deployat.');
+        throw new Error('❌ Anslutningen till API:t misslyckades. Detta kan bero på CORS-problem eller att API:t inte är deployat.');
       } else if (error.name === 'AbortError') {
-        throw new Error('API-anropet tog för lång tid (timeout).');
+        throw new Error('⏱️ API-anropet tog för lång tid (timeout).');
       } else {
         throw error;
       }
@@ -122,17 +140,31 @@ const PDFTestInterface: React.FC = () => {
       // Use /api/health endpoint
       const healthUrl = `${externalApiUrl}/api/health`;
       
-      console.log('Testing API health at:', healthUrl);
-      const response = await fetch(healthUrl);
+      console.log('🏥 Testar API health på:', healthUrl);
+      setDebugInfo(`🏥 Testar hälsa: ${healthUrl}\nTid: ${new Date().toISOString()}`);
+      
+      const response = await fetch(healthUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+      
+      console.log('🏥 Health response status:', response.status);
+      setDebugInfo(prev => prev + `\n📊 Health status: ${response.status}`);
+      
       if (response.ok) {
         const data = await response.json();
-        console.log('API Health check:', data);
+        console.log('🏥 API Health check:', data);
+        setDebugInfo(prev => prev + `\n✅ Health OK: ${JSON.stringify(data)}`);
         toast({
           title: "API Health Check ✅",
           description: `API är tillgängligt! Status: ${data.status}`,
         });
       } else {
-        console.log('Health check failed:', response.status);
+        console.log('🏥 Health check failed:', response.status);
+        const errorText = await response.text();
+        setDebugInfo(prev => prev + `\n❌ Health failed: ${response.status} - ${errorText}`);
         toast({
           title: "API Health Check ❌",
           description: `API svarar inte korrekt (status: ${response.status})`,
@@ -140,10 +172,11 @@ const PDFTestInterface: React.FC = () => {
         });
       }
     } catch (error) {
-      console.log('Health check error:', error);
+      console.log('🏥 Health check error:', error);
+      setDebugInfo(prev => prev + `\n💥 Health error: ${error.message}`);
       toast({
         title: "API Health Check ❌",
-        description: "Kunde inte ansluta till API:t",
+        description: `Kunde inte ansluta till API:t: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -154,10 +187,11 @@ const PDFTestInterface: React.FC = () => {
     setError('');
     setExtractedText('');
     setMetadata(null);
+    setDebugInfo('');
 
     try {
-      console.log(`Testing PDF extraction with ${useExternalApi ? 'External API' : 'Supabase Edge Function'}`);
-      console.log('PDF URL:', testPDFUrl);
+      console.log(`🎯 Testar PDF extraktion med ${useExternalApi ? 'External API' : 'Supabase Edge Function'}`);
+      console.log('📄 PDF URL:', testPDFUrl);
       
       let result;
       
@@ -176,7 +210,7 @@ const PDFTestInterface: React.FC = () => {
       });
 
     } catch (err) {
-      console.error('PDF extraction error:', err);
+      console.error('💥 PDF extraction error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
       
@@ -262,6 +296,23 @@ const PDFTestInterface: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Debug Information Card */}
+      {debugInfo && (
+        <Card className="border-purple-200 bg-purple-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-purple-800">
+              <AlertCircle className="w-5 h-5" />
+              Debug Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="text-xs bg-white p-3 rounded border font-mono whitespace-pre-wrap">
+              {debugInfo}
+            </pre>
+          </CardContent>
+        </Card>
+      )}
 
       {/* API Configuration Card */}
       <Card>
