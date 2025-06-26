@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
-import { Play, Settings, User, LogOut, Menu } from "lucide-react";
+import { Play, Settings, User, LogOut, Menu, Sparkles } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,35 +31,40 @@ const Navbar = () => {
     setMobileMenuOpen(false);
   };
 
-  // Get user display information from Supabase User properties
   const email = user?.email || "";
   const userInitials = email ? email.substring(0, 2).toUpperCase() : "U";
 
   return (
-    <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
+    <nav className="bg-white/90 backdrop-blur-md border-b border-neutral-200/50 sticky top-0 z-50 shadow-sm">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 justify-between items-center">
           {/* Logo */}
           <div className="flex items-center">
-            <Link to="/dashboard" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Play className="w-4 h-4 text-white" />
+            <Link to="/dashboard" className="flex items-center space-x-3 group">
+              <div className="relative">
+                <div className="w-10 h-10 bg-gradient-to-br from-accent-500 to-brand-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                  <Play className="w-5 h-5 text-white" />
+                </div>
+                <Sparkles className="w-4 h-4 text-accent-400 absolute -top-1 -right-1 animate-pulse" />
               </div>
-              <h1 className="text-xl font-bold text-slate-900">ReportFlow</h1>
+              <div className="flex flex-col">
+                <h1 className="text-xl font-bold gradient-text">ReportFlow</h1>
+                <span className="text-xs text-neutral-500 font-medium">AI-Powered</span>
+              </div>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-4">
+            <div className="ml-10 flex items-baseline space-x-1">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     item.current
-                      ? "bg-blue-100 text-blue-700"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                      ? "bg-accent-100 text-accent-700 shadow-sm"
+                      : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
                   }`}
                 >
                   {item.name}
@@ -73,48 +78,51 @@ const Navbar = () => {
             <div className="ml-4 flex items-center md:ml-6">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-blue-100 text-blue-600">
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:ring-2 hover:ring-accent-200 transition-all duration-200">
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="bg-gradient-to-br from-accent-500 to-brand-600 text-white font-semibold">
                         {userInitials}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end">
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
+                <DropdownMenuContent className="w-64 p-2" align="end">
+                  <DropdownMenuLabel className="font-normal p-3">
+                    <div className="flex flex-col space-y-2">
+                      <p className="text-sm font-medium leading-none text-neutral-900">
                         {email.split('@')[0]}
                       </p>
-                      <p className="text-xs leading-none text-slate-600">
+                      <p className="text-xs leading-none text-neutral-500">
                         {email}
                       </p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      Profil
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link to="/profile" className="flex items-center space-x-3 p-2 rounded-md hover:bg-neutral-50">
+                      <User className="mr-2 h-4 w-4 text-neutral-500" />
+                      <span>Profil</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/avatars" className="flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      Mina Avatarer
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link to="/avatars" className="flex items-center space-x-3 p-2 rounded-md hover:bg-neutral-50">
+                      <User className="mr-2 h-4 w-4 text-neutral-500" />
+                      <span>Mina Avatarer</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="flex items-center">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Inställningar
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link to="/profile" className="flex items-center space-x-3 p-2 rounded-md hover:bg-neutral-50">
+                      <Settings className="mr-2 h-4 w-4 text-neutral-500" />
+                      <span>Inställningar</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="flex items-center text-red-600">
+                  <DropdownMenuItem 
+                    onClick={handleLogout} 
+                    className="flex items-center space-x-3 p-2 rounded-md text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer"
+                  >
                     <LogOut className="mr-2 h-4 w-4" />
-                    Logga ut
+                    <span>Logga ut</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -126,7 +134,7 @@ const Navbar = () => {
             <Button
               variant="ghost"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="h-10 w-10 p-0"
+              className="h-10 w-10 p-0 hover:bg-neutral-100"
             >
               <Menu className="h-6 w-6" />
             </Button>
@@ -136,48 +144,48 @@ const Navbar = () => {
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
+        <div className="md:hidden border-t border-neutral-200 bg-white/95 backdrop-blur-sm">
+          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 to={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
                   item.current
-                    ? "bg-blue-100 text-blue-700"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    ? "bg-accent-100 text-accent-700"
+                    : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
                 }`}
               >
                 {item.name}
               </Link>
             ))}
-            <div className="border-t pt-4 pb-3">
-              <div className="flex items-center px-3">
+            <div className="border-t pt-4 pb-3 mt-4">
+              <div className="flex items-center px-3 mb-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-blue-100 text-blue-600">
+                  <AvatarFallback className="bg-gradient-to-br from-accent-500 to-brand-600 text-white font-semibold">
                     {userInitials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="ml-3">
-                  <div className="text-base font-medium text-slate-800">
+                  <div className="text-base font-medium text-neutral-800">
                     {email.split('@')[0]}
                   </div>
-                  <div className="text-sm font-medium text-slate-600">{email}</div>
+                  <div className="text-sm font-medium text-neutral-500">{email}</div>
                 </div>
               </div>
-              <div className="mt-3 px-2 space-y-1">
+              <div className="space-y-1 px-2">
                 <Link
                   to="/profile"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
                 >
                   Profil
                 </Link>
                 <Link
                   to="/avatars"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
                 >
                   Mina Avatarer
                 </Link>
