@@ -15,11 +15,11 @@ const PDFTestInterface: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [metadata, setMetadata] = useState<any>(null);
   const [error, setError] = useState('');
-  const [useExternalApi, setUseExternalApi] = useState(false);
-  const [externalApiUrl, setExternalApiUrl] = useState('https://pdf-extraction-oqr2b3rqx-reportflow1.vercel.app');
   const [debugInfo, setDebugInfo] = useState<string>('');
   const { toast } = useToast();
 
+  // ALLTID avstängt för säkerhet
+  const useExternalApi = false;
   const testPDFUrl = 'https://www.aikfotboll.se/media/h1dftn03/240212-kallelse-till-a-rssta-mma-i-aik-fotboll-ab.pdf';
 
   const copyToClipboard = (text: string) => {
@@ -42,8 +42,7 @@ const PDFTestInterface: React.FC = () => {
 
   const extractWithSupabase = async () => {
     console.log('🎯 SÄKERT: Använder Supabase Edge Function - den fungerande lösningen!');
-    console.log('🔒 Externa API är AVSTÄNGT, använder ENDAST Supabase');
-    setDebugInfo(`🔒 SUPABASE EDGE FUNCTION (SÄKER VÄG)\nExterna API: AVSTÄNGT\nAnvänder: Supabase Edge Function\nPDF URL: ${testPDFUrl}\nTidpunkt: ${new Date().toISOString()}`);
+    setDebugInfo(`🔒 SUPABASE EDGE FUNCTION (SÄKER VÄG)\nPDF URL: ${testPDFUrl}\nTidpunkt: ${new Date().toISOString()}`);
     
     const { supabase } = await import('@/integrations/supabase/client');
     
@@ -55,6 +54,9 @@ const PDFTestInterface: React.FC = () => {
       }
     });
 
+    console.log('🔍 Supabase response data:', data);
+    console.log('🔍 Supabase response error:', error);
+
     if (error) {
       console.error('❌ Supabase Edge Function fel:', error);
       throw new Error(`Edge Function error: ${error.message}`);
@@ -65,12 +67,27 @@ const PDFTestInterface: React.FC = () => {
       throw new Error(`Extraction failed: ${data?.error || 'Unknown error'}`);
     }
 
-    console.log('✅ Supabase Edge Function lyckades!');
-    console.log('📊 Text längd:', data.content?.length || 0);
-    setDebugInfo(prev => prev + `\n✅ Supabase Edge Function lyckades!\nText längd: ${data.content?.length || 0}\nProcessing tid: ${data.metadata?.processingTimeMs || 'okänd'}ms\nMetod: ENDAST Supabase Edge Function`);
+    // KRITISK FIX: Se till att vi använder rätt fält från responsen
+    const extractedContent = data.content;
+    console.log('✅ Extraherat innehåll typ:', typeof extractedContent);
+    console.log('✅ Extraherat innehåll längd:', extractedContent?.length);
+    console.log('✅ Första 200 tecken:', extractedContent?.substring(0, 200));
+
+    if (!extractedContent || typeof extractedContent !== 'string') {
+      throw new Error('Ingen giltig textinnehåll returnerat från Edge Function');
+    }
+
+    // Kontrollera om innehållet är korrupt
+    if (isTextCorrupt(extractedContent)) {
+      console.error('🚨 Korrupt text upptäckt i Supabase response!');
+      throw new Error('Supabase Edge Function returnerade korrupt data - detta borde inte hända!');
+    }
+
+    console.log('✅ Supabase Edge Function lyckades med ren text!');
+    setDebugInfo(prev => prev + `\n✅ Supabase Edge Function lyckades!\nText längd: ${extractedContent.length}\nProcessing tid: ${data.metadata?.processingTimeMs || 'okänd'}ms\nTyp: ${typeof extractedContent}\nÄr korrupt: ${isTextCorrupt(extractedContent) ? 'JA' : 'NEJ'}`);
 
     return {
-      text: data.content,
+      text: extractedContent,
       metadata: data.metadata
     };
   };
@@ -83,27 +100,14 @@ const PDFTestInterface: React.FC = () => {
     setDebugInfo('');
 
     try {
-      // TVINGAD SÄKERHETSCHECK - använd ALDRIG externa API:t
-      if (useExternalApi === true) {
-        console.log('🚫 SÄKERHETSVARNING: Externa API begärt men BLOCKERAT för säkerhet');
-        setDebugInfo('🚫 SÄKERHETSBLOCKERING\nExterna API blockerat av säkerhetsskäl\nOmdirigerar till Supabase Edge Function...');
-        
-        // Tvinga på Supabase istället
-        setUseExternalApi(false);
-        
-        toast({
-          title: "🚫 Externa API Blockerat",
-          description: "Av säkerhetsskäl använder vi endast Supabase Edge Function som fungerar perfekt",
-          variant: "destructive",
-        });
-      }
-
       console.log('🔒 SÄKERHETSLÄGE: Använder ENDAST Supabase Edge Function');
       console.log('📄 PDF URL (ÖPPEN AIK PDF):', testPDFUrl);
-      console.log('🛡️ Externa API: PERMANENT BLOCKERAT');
       
-      // ANVÄND ALLTID SUPABASE - SÄKERT VAL
       const result = await extractWithSupabase();
+
+      console.log('🔍 Final result type:', typeof result.text);
+      console.log('🔍 Final result length:', result.text?.length);
+      console.log('🔍 Is result corrupt?', isTextCorrupt(result.text));
 
       if (isTextCorrupt(result.text)) {
         throw new Error('🚨 Extraherad text verkar vara korrupt eller oläsbar. PDF-extraktionen misslyckades.');
@@ -189,7 +193,7 @@ const PDFTestInterface: React.FC = () => {
         <CardContent className="space-y-3">
           <div className="p-4 bg-blue-100 border border-blue-300 rounded">
             <p className="text-blue-800 font-bold text-lg mb-2">
-              🛡️ SÄKERHETSINFO: Externa API är BLOCKERAT
+              🛡️ SÄKERHETSINFO: Externa API är PERMANENT BLOCKERAT
             </p>
             <p className="text-blue-700 text-sm">
               Systemet använder endast den säkra Supabase Edge Function för att förhindra korrupt data.
@@ -200,16 +204,16 @@ const PDFTestInterface: React.FC = () => {
             <p className="text-sm font-medium text-green-800 mb-2">✅ Supabase Edge Function Status:</p>
             <div className="space-y-2 text-sm text-green-700">
               <div>
-                <strong>✅ Fungerar perfekt:</strong> Extraherar 5655 tecken med 207 ord
+                <strong>✅ Ska fungera perfekt:</strong> Extrahera ren text från PDF
               </div>
               <div>
-                <strong>✅ Snabb processing:</strong> 429ms processingstid
+                <strong>✅ Snabb processing:</strong> Under 1 sekund
               </div>
               <div>
                 <strong>✅ ÖPPEN PDF:</strong> AIK Fotboll utan auth
               </div>
               <div>
-                <strong>🔒 Säker:</strong> Ingen korrupt data
+                <strong>🔒 Säker:</strong> Ingen korrupt data ska returneras
               </div>
             </div>
           </div>
@@ -243,36 +247,6 @@ const PDFTestInterface: React.FC = () => {
         </Card>
       )}
 
-      {/* Forced Safe Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="w-5 h-5" />
-            🔒 Säker Konfiguration (Endast Supabase)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2 opacity-50">
-            <Switch
-              id="use-external-api"
-              checked={false}
-              disabled={true}
-            />
-            <Label htmlFor="use-external-api" className="flex items-center gap-2">
-              <Globe className="w-4 h-4" />
-              Externa API (🚫 PERMANENT BLOCKERAT)
-            </Label>
-          </div>
-          
-          <div className="p-3 bg-green-50 border border-green-200 rounded">
-            <p className="text-sm text-green-800">
-              <strong>🔒 Säkerhetsläge aktiverat:</strong> Endast Supabase Edge Function används för att garantera ren, läsbar text.
-            </p>
-            <p className="text-xs text-green-600 mt-1">Externa API är blockerat för att förhindra korrupt data.</p>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* PDF Test Card */}
       <Card>
         <CardHeader>
@@ -305,7 +279,7 @@ const PDFTestInterface: React.FC = () => {
             ) : (
               <>
                 <FileText className="w-4 h-4 mr-2" />
-                🔒 Testa SÄKER Supabase Edge Function
+                🔒 Testa SÄKER Supabase Edge Function (DEBUGGAD VERSION)
               </>
             )}
           </Button>
