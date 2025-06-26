@@ -72,8 +72,9 @@ const PDFTestInterface: React.FC = () => {
       throw new Error('Ange URL till ditt externa API först');
     }
 
-    // Use the root API directly for the new simplified structure
-    const apiUrl = externalApiUrl.endsWith('/') ? externalApiUrl.slice(0, -1) : externalApiUrl;
+    // Use the /extract endpoint for the external API
+    const baseUrl = externalApiUrl.endsWith('/') ? externalApiUrl.slice(0, -1) : externalApiUrl;
+    const apiUrl = `${baseUrl}/extract`;
     
     console.log('🚀 Anropar ÖPPNA API:', apiUrl);
     console.log('📄 PDF URL (ÖPPEN AIK PDF):', testPDFUrl);
@@ -83,9 +84,9 @@ const PDFTestInterface: React.FC = () => {
     try {
       console.log('🔍 Skickar request med ÖPPEN PDF URL...');
       
-      // Use the correct request format matching your new API code
+      // Use the correct request format for the /extract endpoint
       const requestBody = {
-        url: testPDFUrl  // Using 'url' as per your simplified API code
+        pdfUrl: testPDFUrl  // Using 'pdfUrl' as per the external API code
       };
       
       console.log('📦 Request body:', requestBody);
@@ -171,8 +172,9 @@ const PDFTestInterface: React.FC = () => {
     if (!externalApiUrl.trim()) return;
     
     try {
-      // Test basic connectivity to the root
-      const healthUrl = externalApiUrl.endsWith('/') ? externalApiUrl.slice(0, -1) : externalApiUrl;
+      // Test the /health endpoint
+      const baseUrl = externalApiUrl.endsWith('/') ? externalApiUrl.slice(0, -1) : externalApiUrl;
+      const healthUrl = `${baseUrl}/health`;
       
       console.log('🏥 Testar ÖPPEN API health på:', healthUrl);
       setDebugInfo(`🏥 Testar ÖPPEN API hälsa: ${healthUrl}\nTid: ${new Date().toISOString()}`);
@@ -457,11 +459,11 @@ const PDFTestInterface: React.FC = () => {
           <div className="p-2 bg-green-50 border border-green-200 rounded text-sm">
             <p className="text-green-800 font-medium">📋 ÖPPEN API + ÖPPEN PDF Information:</p>
             <ul className="text-green-700 text-xs mt-1 space-y-1">
-              <li>• Endpoint: <code>/</code> (root, POST)</li>
-              <li>• Request body: <code>{"{ \"url\": \"pdf_url\" }"}</code></li>
+              <li>• Endpoint: <code>/extract</code> (POST)</li>
+              <li>• Request body: <code>{"{ \"pdfUrl\": \"pdf_url\" }"}</code></li>
               <li>• 🔓 Inget authentication krävs för API!</li>
               <li>• 🔓 Inget authentication krävs för PDF!</li>
-              <li>• ✅ Enkel struktur, direkt PDF-extraktion</li>
+              <li>• ✅ Använder korrekt endpoint för PDF-extraktion</li>
             </ul>
           </div>
         </CardContent>
