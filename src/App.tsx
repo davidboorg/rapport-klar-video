@@ -18,7 +18,6 @@ import NotFound from "./pages/NotFound";
 import MarketSelection from "./pages/MarketSelection";
 import IRDashboard from "./pages/IRDashboard";
 import BoardDashboard from "./pages/BoardDashboard";
-import PDFTest from "./pages/PDFTest";
 
 const queryClient = new QueryClient();
 
@@ -43,7 +42,6 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/avatars" element={<Avatars />} />
               <Route path="/avatars/create" element={<AvatarSetup />} />
-              <Route path="/pdf-test" element={<PDFTest />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
