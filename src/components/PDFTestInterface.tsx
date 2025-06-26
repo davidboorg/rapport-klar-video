@@ -110,20 +110,30 @@ const PDFTestInterface: React.FC = () => {
       setDebugInfo(prev => prev + `\n✅ ÖPPEN API anslutning lyckades! Status: ${response.status}`);
 
       if (!response.ok) {
+        // Read response once and handle both cases
+        const responseText = await response.text();
+        console.log('❌ Error response:', responseText);
+        
         let errorData;
         try {
-          errorData = await response.json();
-          console.log('❌ Error data:', errorData);
+          errorData = JSON.parse(responseText);
         } catch (e) {
-          const errorText = await response.text();
-          console.log('❌ Error text:', errorText);
-          throw new Error(`API error (${response.status}): ${errorText || response.statusText}`);
+          throw new Error(`API error (${response.status}): ${responseText || response.statusText}`);
         }
         throw new Error(`API error (${response.status}): ${errorData.error || response.statusText}`);
       }
 
-      const result = await response.json();
-      console.log('🎉 ÖPPEN API Response data:', result);
+      // Read response text once
+      const responseText = await response.text();
+      console.log('🎉 ÖPPEN API Response text:', responseText.substring(0, 200) + '...');
+      
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Failed to parse JSON:', e);
+        throw new Error('API returnerade ogiltig JSON-data');
+      }
       
       setDebugInfo(prev => prev + `\n🎉 Data mottagen från ÖPPNA API! Text length: ${result.text?.length || 0}`);
 
