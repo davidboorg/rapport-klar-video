@@ -44,6 +44,9 @@ const PDFTestInterface: React.FC = () => {
   };
 
   const extractWithSupabase = async () => {
+    console.log('🎯 Använder Supabase Edge Function - den fungerande lösningen!');
+    setDebugInfo(`✅ SUPABASE EDGE FUNCTION TEST\nAnvänder den fungerande lösningen!\nPDF URL: ${testPDFUrl}\nTidpunkt: ${new Date().toISOString()}`);
+    
     const { supabase } = await import('@/integrations/supabase/client');
     
     const { data, error } = await supabase.functions.invoke('extract-pdf-content', {
@@ -60,6 +63,8 @@ const PDFTestInterface: React.FC = () => {
     if (!data?.success) {
       throw new Error(`Extraction failed: ${data?.error || 'Unknown error'}`);
     }
+
+    setDebugInfo(prev => prev + `\n✅ Supabase Edge Function lyckades!\nText längd: ${data.content?.length || 0}\nProcessing tid: ${data.metadata?.processingTimeMs || 'okänd'}ms`);
 
     return {
       text: data.content,
@@ -79,7 +84,7 @@ const PDFTestInterface: React.FC = () => {
     console.log('🚀 Anropar ÖPPNA API:', apiUrl);
     console.log('📄 PDF URL (ÖPPEN AIK PDF):', testPDFUrl);
     
-    setDebugInfo(`🌟 NYTT ÖPPET API TEST med ÖPPEN PDF 🌟\nFörsöker ansluta till: ${apiUrl}\nPDF URL: ${testPDFUrl}\nTidpunkt: ${new Date().toISOString()}`);
+    setDebugInfo(`🌟 EXTERNA API TEST (PROBLEMATISK) 🌟\nFörsöker ansluta till: ${apiUrl}\nPDF URL: ${testPDFUrl}\nTidpunkt: ${new Date().toISOString()}`);
     
     try {
       console.log('🔍 Skickar request med ÖPPEN PDF URL...');
@@ -92,8 +97,8 @@ const PDFTestInterface: React.FC = () => {
       console.log('📦 Request body:', requestBody);
       setDebugInfo(prev => prev + `\n📦 Request body: ${JSON.stringify(requestBody, null, 2)}`);
       
-      console.log('🌐 Testing OPEN API connectivity with OPEN PDF...');
-      setDebugInfo(prev => prev + `\n🌐 Testing OPEN API connectivity with OPEN PDF...`);
+      console.log('🌐 Testing EXTERNAL API connectivity (Known to have issues)...');
+      setDebugInfo(prev => prev + `\n🌐 Testing EXTERNAL API connectivity (Known to have issues)...`);
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -104,11 +109,11 @@ const PDFTestInterface: React.FC = () => {
         body: JSON.stringify(requestBody)
       });
 
-      console.log('✅ Svar mottaget från ÖPPNA API!');
+      console.log('✅ Svar mottaget från EXTERNA API!');
       console.log('📊 Status:', response.status);
       console.log('📋 Headers:', Object.fromEntries(response.headers.entries()));
       
-      setDebugInfo(prev => prev + `\n✅ ÖPPEN API anslutning lyckades! Status: ${response.status}`);
+      setDebugInfo(prev => prev + `\n⚠️ EXTERNA API anslutning lyckades! Status: ${response.status} (Men returnerar troligen korrupt data)`);
 
       if (!response.ok) {
         // Read response once and handle both cases
@@ -126,7 +131,7 @@ const PDFTestInterface: React.FC = () => {
 
       // Read response text once
       const responseText = await response.text();
-      console.log('🎉 ÖPPEN API Response text:', responseText.substring(0, 200) + '...');
+      console.log('🎉 EXTERNA API Response text:', responseText.substring(0, 200) + '...');
       
       let result;
       try {
@@ -136,7 +141,7 @@ const PDFTestInterface: React.FC = () => {
         throw new Error('API returnerade ogiltig JSON-data');
       }
       
-      setDebugInfo(prev => prev + `\n🎉 Data mottagen från ÖPPNA API! Text length: ${result.text?.length || 0}`);
+      setDebugInfo(prev => prev + `\n❌ Data mottagen från EXTERNA API! Text length: ${result.text?.length || 0} (Troligen korrupt)`);
 
       if (result.error) {
         throw new Error(`External API error: ${result.error}`);
@@ -273,14 +278,18 @@ const PDFTestInterface: React.FC = () => {
     setDebugInfo('');
 
     try {
-      console.log(`🎯 Testar PDF extraktion med ${useExternalApi ? 'ÖPPEN External API' : 'Supabase Edge Function'}`);
+      console.log(`🎯 Testar PDF extraktion med ${useExternalApi ? 'EXTERNA API (PROBLEMATISK)' : 'SUPABASE EDGE FUNCTION (FUNGERAR PERFEKT)'}`);
       console.log('📄 PDF URL (ÖPPEN AIK PDF):', testPDFUrl);
+      console.log('🔧 useExternalApi state:', useExternalApi);
       
       let result;
       
-      if (useExternalApi) {
+      // EXPLICIT check to ensure we use the right method
+      if (useExternalApi === true) {
+        console.log('⚠️ Använder EXTERNA API (som vi vet har problem)');
         result = await extractWithExternalApi();
       } else {
+        console.log('✅ Använder SUPABASE EDGE FUNCTION (som fungerar perfekt)');
         result = await extractWithSupabase();
       }
 
@@ -294,7 +303,7 @@ const PDFTestInterface: React.FC = () => {
       
       toast({
         title: "PDF Extraction Successful!",
-        description: `Extracted ${result.metadata?.wordCount || 'unknown'} words from ÖPPEN AIK PDF using ${useExternalApi ? 'ÖPPEN External API' : 'Supabase'}.`,
+        description: `Extracted ${result.metadata?.wordCount || 'unknown'} words from ÖPPEN AIK PDF using ${useExternalApi ? 'EXTERNA API' : 'SUPABASE'}.`,
       });
 
     } catch (err) {
@@ -359,6 +368,7 @@ const PDFTestInterface: React.FC = () => {
                       setExtractedText('');
                       setError('');
                       setMetadata(null);
+                      setDebugInfo('');
                       toast({
                         title: "Växlat till Supabase",
                         description: "Nu använder vi den fungerande Supabase Edge Function istället"
@@ -378,12 +388,21 @@ const PDFTestInterface: React.FC = () => {
       {/* Current URL Status Card */}
       <Card className={useExternalApi ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-green-800">
+          <CardTitle className="flex items-center gap-2">
             <ExternalLink className="w-5 h-5" />
-            {useExternalApi ? "❌ Externa API Problem" : "✅ Supabase Edge Function - Fungerar Perfekt!"}
+            {useExternalApi ? "❌ Externa API - Returnerar Korrupt Data" : "✅ Supabase Edge Function - Fungerar Perfekt!"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="p-4 bg-blue-100 border border-blue-300 rounded">
+            <p className="text-blue-800 font-bold text-lg mb-2">
+              🔧 Aktuell inställning: {useExternalApi ? '❌ EXTERNA API (PROBLEMATISK)' : '✅ SUPABASE (FUNGERAR)'}
+            </p>
+            <p className="text-blue-700 text-sm">
+              Switch state: {useExternalApi ? 'PÅ (använder externa API)' : 'AV (använder Supabase)'}
+            </p>
+          </div>
+
           {useExternalApi ? (
             <div className="p-3 bg-red-100 border border-red-300 rounded">
               <p className="text-sm font-medium text-red-800 mb-2">⚠️ Externa API returnerar korrupt text:</p>
@@ -426,46 +445,50 @@ const PDFTestInterface: React.FC = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <Button
-              variant="outline"
-              onClick={testBasicConnectivity}
-              disabled={!externalApiUrl.trim()}
-              className="text-xs"
-            >
-              <Globe className="w-4 h-4 mr-1" />
-              Test Domän
-            </Button>
-            <Button
-              variant="outline"
-              onClick={testApiHealth}
-              disabled={!externalApiUrl.trim()}
-              className="text-xs"
-            >
-              <ExternalLink className="w-4 h-4 mr-1" />
-              Test Health
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => window.open(externalApiUrl, '_blank')}
-              disabled={!externalApiUrl.trim()}
-              className="text-xs"
-            >
-              <ExternalLink className="w-4 h-4 mr-1" />
-              Öppna i ny flik
-            </Button>
-          </div>
+          {useExternalApi && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {/* testBasicConnectivity */}}
+                disabled={!externalApiUrl.trim()}
+                className="text-xs"
+              >
+                <Globe className="w-4 h-4 mr-1" />
+                Test Domän
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {/* testApiHealth */}}
+                disabled={!externalApiUrl.trim()}
+                className="text-xs"
+              >
+                <ExternalLink className="w-4 h-4 mr-1" />
+                Test Health
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => window.open(externalApiUrl, '_blank')}
+                disabled={!externalApiUrl.trim()}
+                className="text-xs"
+              >
+                <ExternalLink className="w-4 h-4 mr-1" />
+                Öppna i ny flik
+              </Button>
+            </div>
+          )}
 
-          <div className="p-2 bg-green-50 border border-green-200 rounded text-sm">
-            <p className="text-green-800 font-medium">📋 ÖPPEN API + ÖPPEN PDF Information:</p>
-            <ul className="text-green-700 text-xs mt-1 space-y-1">
-              <li>• Endpoint: <code>/extract</code> (POST)</li>
-              <li>• Request body: <code>{"{ \"pdfUrl\": \"pdf_url\" }"}</code></li>
-              <li>• 🔓 Inget authentication krävs för API!</li>
-              <li>• 🔓 Inget authentication krävs för PDF!</li>
-              <li>• ✅ Använder korrekt endpoint för PDF-extraktion</li>
-            </ul>
-          </div>
+          {useExternalApi && (
+            <div className="p-2 bg-green-50 border border-green-200 rounded text-sm">
+              <p className="text-green-800 font-medium">📋 ÖPPEN API + ÖPPEN PDF Information:</p>
+              <ul className="text-green-700 text-xs mt-1 space-y-1">
+                <li>• Endpoint: <code>/extract</code> (POST)</li>
+                <li>• Request body: <code>{"{ \"pdfUrl\": \"pdf_url\" }"}</code></li>
+                <li>• 🔓 Inget authentication krävs för API!</li>
+                <li>• 🔓 Inget authentication krävs för PDF!</li>
+                <li>• ✅ Använder korrekt endpoint för PDF-extraktion</li>
+              </ul>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -475,7 +498,7 @@ const PDFTestInterface: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-purple-800">
               <AlertCircle className="w-5 h-5" />
-              Debug Information - ÖPPEN API + ÖPPEN PDF Test
+              Debug Information - {useExternalApi ? 'EXTERNA API (PROBLEMATISK)' : 'SUPABASE (FUNGERAR)'}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -499,11 +522,23 @@ const PDFTestInterface: React.FC = () => {
             <Switch
               id="use-external-api"
               checked={useExternalApi}
-              onCheckedChange={setUseExternalApi}
+              onCheckedChange={(checked) => {
+                console.log('🔧 Switch changed to:', checked);
+                setUseExternalApi(checked);
+                setExtractedText('');
+                setError('');
+                setMetadata(null);
+                setDebugInfo('');
+                toast({
+                  title: checked ? "⚠️ Växlat till Externa API" : "✅ Växlat till Supabase",
+                  description: checked ? "Använder nu det problematiska externa API:t" : "Använder nu den fungerande Supabase Edge Function",
+                  variant: checked ? "destructive" : "default"
+                });
+              }}
             />
             <Label htmlFor="use-external-api" className="flex items-center gap-2">
               <Globe className="w-4 h-4" />
-              Använd ÖPPNA externa PDF-API
+              Använd ÖPPNA externa PDF-API (⚠️ Returnerar korrupt data)
             </Label>
           </div>
           
@@ -532,10 +567,10 @@ const PDFTestInterface: React.FC = () => {
           
           <div className="p-3 bg-blue-50 border border-blue-200 rounded">
             <p className="text-sm text-blue-800">
-              <strong>Aktuell konfiguration:</strong> {useExternalApi ? '🔓 ÖPPNA Externa API + ÖPPEN PDF' : 'Supabase Edge Function + ÖPPEN PDF'}
+              <strong>Aktuell konfiguration:</strong> {useExternalApi ? '❌ EXTERNA API (PROBLEMATISK)' : '✅ SUPABASE (FUNGERAR PERFEKT)'}
             </p>
             {useExternalApi && externalApiUrl && (
-              <p className="text-xs text-blue-600 mt-1 break-all">ÖPPEN API URL: {externalApiUrl}</p>
+              <p className="text-xs text-blue-600 mt-1 break-all">⚠️ EXTERNA API URL: {externalApiUrl}</p>
             )}
           </div>
         </CardContent>
@@ -546,7 +581,7 @@ const PDFTestInterface: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            PDF Extraction Test - ÖPPEN PDF med {useExternalApi ? 'Externa API (Problem)' : 'Supabase (Fungerar)'}
+            PDF Extraction Test - {useExternalApi ? 'EXTERNA API (⚠️ PROBLEMATISK)' : 'SUPABASE (✅ FUNGERAR)'}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -569,12 +604,12 @@ const PDFTestInterface: React.FC = () => {
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Extraherar ÖPPEN PDF med {useExternalApi ? 'Externa API' : 'Supabase'}...
+                Extraherar PDF med {useExternalApi ? 'EXTERNA API (problematisk)' : 'SUPABASE (fungerar)'}...
               </>
             ) : (
               <>
                 <FileText className="w-4 h-4 mr-2" />
-                {useExternalApi ? '⚠️ Testa Externa API (Risk för korrupt text)' : '✅ Testa Supabase Edge Function'}
+                {useExternalApi ? '⚠️ Testa Externa API (Returnerar korrupt data)' : '✅ Testa Supabase Edge Function (Fungerar perfekt)'}
               </>
             )}
           </Button>
@@ -586,17 +621,6 @@ const PDFTestInterface: React.FC = () => {
                 <span className="font-medium">Fel vid extraktion:</span>
               </div>
               <p className="text-sm text-red-700 mt-1">{error}</p>
-              
-              {error.includes('body is disturbed') && (
-                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                  <p className="text-sm text-yellow-800 font-medium mb-2">🔧 Body parsing fel:</p>
-                  <ul className="text-xs text-yellow-700 space-y-1 list-disc list-inside">
-                    <li>Detta fel beror ofta på att request body är låst eller stör</li>
-                    <li>Kontrollera att din API-kod hanterar JSON-parsing korrekt</li>
-                    <li>Se till att `Content-Type: application/json` headers finns</li>
-                  </ul>
-                </div>
-              )}
             </div>
           )}
 
