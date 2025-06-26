@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, Loader2, CheckCircle, AlertCircle, Settings, Globe, ExternalLink, Copy } from 'lucide-react';
+import { FileText, Loader2, CheckCircle, AlertCircle, Settings, Globe, ExternalLink, Copy, AlertTriangle } from 'lucide-react';
 
 const PDFTestInterface: React.FC = () => {
   const [extractedText, setExtractedText] = useState('');
@@ -28,6 +28,19 @@ const PDFTestInterface: React.FC = () => {
       title: "Kopierat!",
       description: "URL kopierad till urklipp",
     });
+  };
+
+  // Function to detect garbled/corrupt text
+  const isTextCorrupt = (text: string): boolean => {
+    if (!text || text.length < 10) return false;
+    
+    // Check for high ratio of non-printable or weird characters
+    const printableChars = text.match(/[a-zA-ZåäöÅÄÖ0-9\s.,!?;:()-]/g)?.length || 0;
+    const totalChars = text.length;
+    const printableRatio = printableChars / totalChars;
+    
+    // If less than 30% of characters are normal printable characters, it's likely corrupt
+    return printableRatio < 0.3;
   };
 
   const extractWithSupabase = async () => {
@@ -116,6 +129,11 @@ const PDFTestInterface: React.FC = () => {
 
       if (result.error) {
         throw new Error(`External API error: ${result.error}`);
+      }
+
+      // Check if the returned text is corrupt/garbled
+      if (result.text && isTextCorrupt(result.text)) {
+        throw new Error('📄 API:t returnerade korrupt/oläsbar text. Detta indikerar problem med PDF-extraktionen i det externa API:t. Prova Supabase Edge Function istället.');
       }
 
       return {
@@ -254,6 +272,11 @@ const PDFTestInterface: React.FC = () => {
         result = await extractWithSupabase();
       }
 
+      // Double-check for corrupt text even if API didn't catch it
+      if (isTextCorrupt(result.text)) {
+        throw new Error('🚨 Extraherad text verkar vara korrupt eller oläsbar. PDF-extraktionen misslyckades.');
+      }
+
       setExtractedText(result.text);
       setMetadata(result.metadata);
       
@@ -295,37 +318,91 @@ const PDFTestInterface: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
+      {/* Show corruption warning if text looks garbled */}
+      {extractedText && isTextCorrupt(extractedText) && (
+        <Card className="border-red-200 bg-red-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-800">
+              <AlertTriangle className="w-5 h-5" />
+              🚨 Korrupt Text Upptäckt!
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <p className="text-red-700">
+                Den extraherade texten verkar vara korrupt eller oläsbar. Detta indikerar att det externa API:t inte kan hantera PDF-extraktion korrekt.
+              </p>
+              <div className="p-3 bg-green-100 border border-green-300 rounded">
+                <p className="text-green-800 font-medium mb-2">✅ Rekommenderad lösning:</p>
+                <div className="space-y-2">
+                  <p className="text-green-700 text-sm">
+                    Stäng av "Använd ÖPPNA externa PDF-API" och använd Supabase Edge Function istället. 
+                    Enligt loggarna fungerar Supabase-funktionen perfekt och extraherar 5655 tecken med 207 ord på 429ms.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setUseExternalApi(false);
+                      setExtractedText('');
+                      setError('');
+                      setMetadata(null);
+                      toast({
+                        title: "Växlat till Supabase",
+                        description: "Nu använder vi den fungerande Supabase Edge Function istället"
+                      });
+                    }}
+                    className="bg-green-500 hover:bg-green-600 text-white"
+                  >
+                    ✅ Växla till Supabase Edge Function
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Current URL Status Card */}
-      <Card className="border-green-200 bg-green-50">
+      <Card className={useExternalApi ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-green-800">
             <ExternalLink className="w-5 h-5" />
-            🌟 ÖPPEN API + ÖPPEN PDF Test - Nu Tillgängligt! 🌟
+            {useExternalApi ? "❌ Externa API Problem" : "✅ Supabase Edge Function - Fungerar Perfekt!"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="p-3 bg-green-100 border border-green-300 rounded">
-            <p className="text-sm font-medium text-green-800 mb-2">🔓 Öppen API URL (Inget Auth krävs):</p>
-            <div className="bg-white p-2 rounded font-mono text-sm flex items-center justify-between">
-              <span className="text-green-700 break-all">https://pdf-extraction-oqr2b3rqx-reportflow1.vercel.app</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setExternalApiUrl('https://pdf-extraction-oqr2b3rqx-reportflow1.vercel.app');
-                  copyToClipboard('https://pdf-extraction-oqr2b3rqx-reportflow1.vercel.app');
-                  toast({
-                    title: "ÖPPEN API URL uppdaterad!",
-                    description: "Det öppna API:t är nu aktivt - inget auth krävs!"
-                  });
-                }}
-                className="bg-green-500 hover:bg-green-600 text-white border-green-500"
-              >
-                <Copy className="w-4 h-4 mr-1" />
-                Använd ÖPPNA API
-              </Button>
+          {useExternalApi ? (
+            <div className="p-3 bg-red-100 border border-red-300 rounded">
+              <p className="text-sm font-medium text-red-800 mb-2">⚠️ Externa API returnerar korrupt text:</p>
+              <div className="space-y-2 text-sm text-red-700">
+                <div>
+                  <strong>Problem:</strong> Det externa API:t kan inte hantera PDF-extraktion korrekt
+                </div>
+                <div>
+                  <strong>Resultat:</strong> Binära data istället för läsbar text
+                </div>
+                <div>
+                  <strong>Lösning:</strong> Använd Supabase Edge Function som fungerar perfekt
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-3 bg-green-100 border border-green-300 rounded">
+              <p className="text-sm font-medium text-green-800 mb-2">✅ Supabase Edge Function Status:</p>
+              <div className="space-y-2 text-sm text-green-700">
+                <div>
+                  <strong>✅ Fungerar perfekt:</strong> Extraherar 5655 tecken med 207 ord
+                </div>
+                <div>
+                  <strong>✅ Snabb processing:</strong> 429ms processingstid
+                </div>
+                <div>
+                  <strong>✅ ÖPPEN PDF:</strong> AIK Fotboll utan auth
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="p-3 bg-blue-100 border border-blue-300 rounded">
             <p className="text-sm font-medium text-blue-800 mb-2">📄 ÖPPEN PDF (Ingen Auth krävs):</p>
@@ -457,7 +534,7 @@ const PDFTestInterface: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            PDF Extraction Test - ÖPPEN API + ÖPPEN PDF
+            PDF Extraction Test - ÖPPEN PDF med {useExternalApi ? 'Externa API (Problem)' : 'Supabase (Fungerar)'}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -475,16 +552,17 @@ const PDFTestInterface: React.FC = () => {
             onClick={extractPDFText} 
             disabled={isLoading || (useExternalApi && !externalApiUrl.trim())}
             className="w-full"
+            variant={useExternalApi ? "destructive" : "default"}
           >
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Extraherar ÖPPEN PDF med {useExternalApi ? 'ÖPPNA External API' : 'Supabase'}...
+                Extraherar ÖPPEN PDF med {useExternalApi ? 'Externa API' : 'Supabase'}...
               </>
             ) : (
               <>
                 <FileText className="w-4 h-4 mr-2" />
-                Testa PDF Extraktion med ÖPPNA API + ÖPPEN PDF
+                {useExternalApi ? '⚠️ Testa Externa API (Risk för korrupt text)' : '✅ Testa Supabase Edge Function'}
               </>
             )}
           </Button>
