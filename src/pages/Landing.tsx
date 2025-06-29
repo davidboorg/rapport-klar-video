@@ -28,7 +28,7 @@ const testimonials = [
   {
     name: "Anna Svensson",
     title: "CFO, NordicTech",
-    quote: "Loveable transformed our quarterly reporting. The AI-generated videos and podcasts are a game changer for our investor relations.",
+    quote: "ReportFlow transformed our quarterly reporting. The AI-generated videos and podcasts are a game changer for our investor relations.",
     avatar: "https://randomuser.me/api/portraits/women/44.jpg",
   },
   {
@@ -54,7 +54,7 @@ export default function Landing() {
           </div>
           <h1 className="text-6xl md:text-7xl font-extrabold leading-tight mb-6 drop-shadow-lg">
             <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Loveable
+              ReportFlow
             </span>
             <br />
             <span className="text-white">Turns Reports Into Media</span>
@@ -103,7 +103,7 @@ export default function Landing() {
       {/* Features */}
       <section className="py-20 px-6 bg-gradient-to-br from-blue-950 via-indigo-950 to-purple-950">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-12">Why Loveable?</h2>
+          <h2 className="text-4xl font-bold text-center mb-12">Why ReportFlow?</h2>
           <div className="grid md:grid-cols-4 gap-8">
             {features.map((f, i) => (
               <div key={i} className="bg-white/10 rounded-2xl p-8 flex flex-col items-center shadow-lg hover:scale-105 transition-transform">
@@ -146,7 +146,7 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="py-8 text-center text-slate-400">
-        &copy; {new Date().getFullYear()} Loveable. All rights reserved.
+        &copy; {new Date().getFullYear()} ReportFlow. All rights reserved.
       </footer>
     </div>
   );
