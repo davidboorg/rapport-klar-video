@@ -1,5 +1,4 @@
-
-import { Rocket, FileText, Brain, Video, Headphones, CheckCircle, Star, ArrowRight, Sparkles } from "lucide-react";
+import { Rocket, FileText, Brain, Video, Headphones, CheckCircle, Star, ArrowRight } from "lucide-react";
 import { ModernButton } from "@/components/ui/modern-button";
 import { ModernCard, ModernCardContent, ModernCardHeader, ModernCardTitle } from "@/components/ui/modern-card";
 import { Link } from "react-router-dom";
@@ -47,7 +46,7 @@ const testimonials = [
 const stats = [
   { label: "Reports Processed", value: "10,000+", icon: <FileText className="w-6 h-6" /> },
   { label: "Hours Saved", value: "50,000+", icon: <CheckCircle className="w-6 h-6" /> },
-  { label: "Companies Trust Us", value: "500+", icon: <Sparkles className="w-6 h-6" /> },
+  { label: "Companies Trust Us", value: "500+", icon: <Star className="w-6 h-6" /> },
 ];
 
 export default function Landing() {
@@ -91,11 +90,6 @@ export default function Landing() {
       <section className="relative z-10 flex flex-col items-center justify-center min-h-[80vh] px-6 text-center">
         <div className="max-w-5xl mx-auto space-y-8">
           <div className="space-y-4">
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 backdrop-blur">
-              <Sparkles className="w-4 h-4 text-yellow-400 mr-2" />
-              <span className="text-sm font-semibold text-blue-200">AI-First Reporting Platform</span>
-            </div>
-            
             <h1 className="text-6xl md:text-8xl font-extrabold leading-tight">
               <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 Transform Reports
