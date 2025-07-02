@@ -4,7 +4,7 @@ import { ModernButton } from '@/components/ui/modern-button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, CheckCircle, Clock, AlertCircle, Upload, Brain, FileText, Headphones, Video } from 'lucide-react';
-import UploadStep from './UploadStep';
+import DemoUploadStep from './DemoUploadStep';
 import ProcessingStep from './ProcessingStep';
 import ScriptReviewStep from './ScriptReviewStep';
 import { useDocumentExtraction } from '@/hooks/useDocumentExtraction';
@@ -24,6 +24,54 @@ interface WorkflowState {
   videoUrl: string | null;
   projectId: string | null;
 }
+
+const DEMO_TEXT = `IMPORTANT INFO – BOARD MEETING AHEAD: THE JUNGLE LAB
+
+Dear Board Members,
+
+Our next meeting won't take place in a boardroom. You're being flown to the heart of our operation – a real jungle. This is where we're building the world's most adaptive battery lab: The Jungle Lab.
+
+This is not a metaphor. It's a functioning R&D and production ecosystem in a tropical environment. Nature sets the rules. We adapt. Just like in the open market.
+
+We believe a lab should be like a zoo – alive, unpredictable, and full of learning. Engineers, biologists, off-grid specialists and software developers work side by side. It's loud. It's humid. It's productive.
+
+We're not building for comfort. We're building for resilience. If it works here, it will work anywhere.
+
+OUR NUMBERS – Q2 2025
+Revenue: SEK 118 million (up from SEK 81 million in Q1)
+Gross margin: 41%
+Battery capacity deployed: 68 MWh across three microgrid pilots
+Confirmed industry partners: 3 (incl. a European defense contractor)
+Prototype-to-install time: Reduced from 84 to 49 days
+
+OUR NEXT STEP: SEK 20 BILLION RAISE
+To scale our concept globally, we are raising SEK 20 billion (~EUR 1.7B / USD 1.8B). The funds will be allocated to:
+
+1. Infrastructure – SEK 11.2B
+4 new lab units across 3 continents
+Modular, AI-driven production
+On-site solar and hydrogen systems
+
+2. R&D – SEK 8.8B
+Development of biomaterial-reactive battery cells using moss and mycelium
+Adaptive battery management software
+Global feedback/data platform
+
+We're not pitching fantasy. We're pitching proof – and building a decentralized, sustainable alternative to today's mega-factories.
+
+WHAT TO EXPECT
+During the meeting, we'll present:
+Term sheets from two institutional investors
+Patent activity and roadmap
+Site plan for Jungle Lab Alpha II
+Risk and resilience strategy
+
+This isn't about following trends. It's about building quietly and boldly where others don't dare.
+
+We look forward to seeing you in the jungle. Wear boots. Bring questions.
+
+Warm regards,
+The Jungle Lab Team`;
 
 const ModernWorkflowController: React.FC = () => {
   const [state, setState] = useState<WorkflowState>({
@@ -48,6 +96,68 @@ const ModernWorkflowController: React.FC = () => {
     { id: 'video', label: 'Video', icon: Video },
     { id: 'complete', label: 'Complete', icon: CheckCircle }
   ];
+
+  const handleDemoUpload = async () => {
+    try {
+      setState(prev => ({ ...prev, currentStep: 'processing', progress: 20 }));
+
+      // Create project for demo
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          name: 'ReportFlow Demo: The Jungle Lab',
+          description: 'Demo content from The Jungle Lab board meeting',
+          status: 'processing',
+          user_id: '00000000-0000-0000-0000-000000000000'
+        })
+        .select()
+        .single();
+
+      if (projectError) throw projectError;
+
+      const projectId = project.id;
+      setState(prev => ({ 
+        ...prev, 
+        projectId, 
+        extractedText: DEMO_TEXT,
+        progress: 60 
+      }));
+
+      toast({
+        title: "Demo Content Loaded",
+        description: "Using The Jungle Lab demo content to generate your script.",
+      });
+
+      // Generate script directly from demo text
+      const scriptResult = await RealApiIntegration.generateScript({
+        projectId,
+        extractedText: DEMO_TEXT,
+        documentType: 'board',
+        targetAudience: 'board'
+      });
+
+      setState(prev => ({ 
+        ...prev, 
+        script: scriptResult.script,
+        currentStep: 'script',
+        progress: 80 
+      }));
+
+      toast({
+        title: "Script Generated Successfully",
+        description: "Your demo script is ready for review!",
+      });
+
+    } catch (error) {
+      console.error('Demo upload workflow error:', error);
+      toast({
+        title: "Demo Processing Failed",
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: "destructive",
+      });
+      setState(prev => ({ ...prev, currentStep: 'upload', progress: 0 }));
+    }
+  };
 
   const handleFileUpload = async (file: File) => {
     try {
@@ -164,7 +274,7 @@ const ModernWorkflowController: React.FC = () => {
   const renderCurrentStep = () => {
     switch (state.currentStep) {
       case 'upload':
-        return <UploadStep onUpload={handleFileUpload} />;
+        return <DemoUploadStep onUpload={handleFileUpload} onDemoUpload={handleDemoUpload} />;
       case 'processing':
         return <ProcessingStep />;
       case 'script':
