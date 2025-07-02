@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { ModernCard, ModernCardContent } from '@/components/ui/modern-card';
 import { ModernButton } from '@/components/ui/modern-button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle, Clock, AlertCircle, Upload, Brain, FileText, Headphones, Video } from 'lucide-react';
 import UploadStep from './UploadStep';
 import ProcessingStep from './ProcessingStep';
 import ScriptReviewStep from './ScriptReviewStep';
@@ -42,12 +41,12 @@ const ModernWorkflowController: React.FC = () => {
   const { toast } = useToast();
 
   const steps = [
-    { id: 'upload', label: 'Upload', icon: '📄' },
-    { id: 'processing', label: 'Processing', icon: '🧠' },
-    { id: 'script', label: 'Script', icon: '📝' },
-    { id: 'audio', label: 'Audio', icon: '🎧' },
-    { id: 'video', label: 'Video', icon: '🎬' },
-    { id: 'complete', label: 'Complete', icon: '✅' }
+    { id: 'upload', label: 'Upload', icon: Upload },
+    { id: 'processing', label: 'Processing', icon: Brain },
+    { id: 'script', label: 'Script', icon: FileText },
+    { id: 'audio', label: 'Audio', icon: Headphones },
+    { id: 'video', label: 'Video', icon: Video },
+    { id: 'complete', label: 'Complete', icon: CheckCircle }
   ];
 
   const handleFileUpload = async (file: File) => {
@@ -224,6 +223,7 @@ const ModernWorkflowController: React.FC = () => {
               {steps.map((step, index) => {
                 const isActive = step.id === state.currentStep;
                 const isCompleted = steps.findIndex(s => s.id === state.currentStep) > index;
+                const StepIcon = step.icon;
                 
                 return (
                   <div key={step.id} className="text-center space-y-2">
@@ -232,7 +232,7 @@ const ModernWorkflowController: React.FC = () => {
                       isActive ? 'bg-blue-500/20 text-blue-400 border-2 border-blue-500' :
                       'bg-slate-700/50 text-slate-400 border-2 border-slate-600'
                     }`}>
-                      {isCompleted ? <CheckCircle className="w-5 h-5" /> : step.icon}
+                      <StepIcon className="w-4 h-4" />
                     </div>
                     <p className={`text-xs font-medium ${
                       isActive ? 'text-blue-400' : 
