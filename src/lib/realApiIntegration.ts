@@ -27,9 +27,11 @@ export interface VideoGenerationRequest {
 }
 
 export class RealApiIntegration {
-  // Generate script using OpenAI
+  // Generate script using OpenAI with better error handling
   static async generateScript(request: ScriptGenerationRequest) {
     try {
+      console.log('Calling analyze-financial-data with request:', request);
+      
       const { data, error } = await supabase.functions.invoke('analyze-financial-data', {
         body: {
           projectId: request.projectId,
@@ -39,8 +41,28 @@ export class RealApiIntegration {
         }
       });
 
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'Script generation failed');
+      console.log('Response from analyze-financial-data:', { data, error });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(`Script generation failed: ${error.message || 'Unknown error'}`);
+      }
+      
+      if (!data?.success) {
+        console.error('API returned failure:', data);
+        const errorMsg = data?.error || 'Unknown error from AI service';
+        
+        // Handle specific error types
+        if (errorMsg.includes('429')) {
+          throw new Error('OpenAI API rate limit exceeded. Please try again in a few minutes.');
+        } else if (errorMsg.includes('401')) {
+          throw new Error('OpenAI API key is invalid or missing. Please check your configuration.');
+        } else if (errorMsg.includes('quota')) {
+          throw new Error('OpenAI API quota exceeded. Please check your billing settings.');
+        } else {
+          throw new Error(`Script generation failed: ${errorMsg}`);
+        }
+      }
 
       return {
         success: true,
@@ -49,8 +71,14 @@ export class RealApiIntegration {
         financialData: data.financial_data
       };
     } catch (error) {
-      console.error('Script generation error:', error);
-      throw error;
+      console.error('Script generation error details:', error);
+      
+      // Re-throw with more context if it's not already a detailed error
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error(`Script generation failed: ${String(error)}`);
+      }
     }
   }
 

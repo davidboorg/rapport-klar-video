@@ -98,10 +98,13 @@ const ModernWorkflowController: React.FC = () => {
   ];
 
   const handleDemoUpload = async () => {
+    console.log('Starting demo upload workflow...');
+    
     try {
       setState(prev => ({ ...prev, currentStep: 'processing', progress: 20 }));
 
       // Create project for demo
+      console.log('Creating demo project...');
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
@@ -113,9 +116,14 @@ const ModernWorkflowController: React.FC = () => {
         .select()
         .single();
 
-      if (projectError) throw projectError;
+      if (projectError) {
+        console.error('Project creation error:', projectError);
+        throw new Error(`Failed to create project: ${projectError.message}`);
+      }
 
       const projectId = project.id;
+      console.log('Project created successfully:', projectId);
+      
       setState(prev => ({ 
         ...prev, 
         projectId, 
@@ -125,16 +133,19 @@ const ModernWorkflowController: React.FC = () => {
 
       toast({
         title: "Demo Content Loaded",
-        description: "Using The Jungle Lab demo content to generate your script.",
+        description: "Generating script from The Jungle Lab demo content...",
       });
 
       // Generate script directly from demo text
+      console.log('Generating script with demo text...');
       const scriptResult = await RealApiIntegration.generateScript({
         projectId,
         extractedText: DEMO_TEXT,
         documentType: 'board',
         targetAudience: 'board'
       });
+
+      console.log('Script generation result:', scriptResult);
 
       setState(prev => ({ 
         ...prev, 
@@ -150,11 +161,15 @@ const ModernWorkflowController: React.FC = () => {
 
     } catch (error) {
       console.error('Demo upload workflow error:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
       toast({
         title: "Demo Processing Failed",
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        description: errorMessage,
         variant: "destructive",
       });
+      
       setState(prev => ({ ...prev, currentStep: 'upload', progress: 0 }));
     }
   };
