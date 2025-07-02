@@ -41,7 +41,7 @@ export const useDocumentExtraction = () => {
 
       console.log('Document uploaded, extracting content...');
 
-      // Call extraction edge function
+      // Call extraction edge function with fileName
       const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-content', {
         body: {
           pdfUrl: publicUrl,
@@ -60,9 +60,12 @@ export const useDocumentExtraction = () => {
         throw new Error(extractionData?.error || 'Failed to extract document content');
       }
 
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      const documentType = fileExtension === 'pdf' ? 'PDF' : fileExtension === 'docx' ? 'Word-dokument' : 'dokument';
+
       toast({
-        title: "Document Processed Successfully",
-        description: `Extracted ${extractionData.metadata?.wordCount || 'text'} words from ${file.name}`,
+        title: "Dokument bearbetat framgångsrikt",
+        description: `Extraherade ${extractionData.metadata?.wordCount || 'text'} ord från ${documentType}`,
       });
 
       return {
@@ -82,7 +85,7 @@ export const useDocumentExtraction = () => {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
       toast({
-        title: "Extraction Failed",
+        title: "Extraktion misslyckades",
         description: errorMessage,
         variant: "destructive",
       });

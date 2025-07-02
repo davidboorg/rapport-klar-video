@@ -8,91 +8,120 @@ const corsHeaders = {
 };
 
 // Constants - much more conservative to avoid timeouts
-const MAX_PDF_SIZE = 5 * 1024 * 1024; // 5MB (reduced from 8MB)
-const EXTRACTION_TIMEOUT = 15000; // 15 seconds (reduced from 30s)
-const MIN_TEXT_LENGTH = 50; // Reduced minimum
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const EXTRACTION_TIMEOUT = 15000; // 15 seconds
+const MIN_TEXT_LENGTH = 50;
 const DOWNLOAD_TIMEOUT = 10000; // 10 seconds
 
-// Simple PDF text extraction - optimized for speed
-const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> => {
-  console.log('Starting fast PDF extraction...');
+// Simple text extraction for different file types
+const extractTextFromFile = async (fileArrayBuffer: ArrayBuffer, fileName: string): Promise<string> => {
+  console.log(`Starting extraction for file: ${fileName}`);
   const startTime = Date.now();
   
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
-      reject(new Error('PDF-extraktion timeout - filen är för komplex'));
+      reject(new Error('Fil-extraktion timeout - filen är för komplex'));
     }, EXTRACTION_TIMEOUT);
 
     try {
-      const pdfBytes = new Uint8Array(pdfArrayBuffer);
+      const fileBytes = new Uint8Array(fileArrayBuffer);
+      const fileExtension = fileName.toLowerCase().split('.').pop();
       
-      // Quick PDF validation
-      const header = new TextDecoder('utf-8', { fatal: false }).decode(pdfBytes.slice(0, 8));
-      if (!header.startsWith('%PDF')) {
-        throw new Error('Inte en giltig PDF-fil');
-      }
-
-      // Convert to text - simple approach
-      const pdfText = new TextDecoder('utf-8', { fatal: false }).decode(pdfBytes);
+      let extractedText = '';
       
-      const textSegments: string[] = [];
-      
-      // Strategy 1: Quick parentheses extraction (limit iterations)
-      const parenthesesRegex = /\(([^)]{5,200})\)/g;
-      let match;
-      let iterations = 0;
-      const maxIterations = 500; // Limit to prevent timeout
-      
-      while ((match = parenthesesRegex.exec(pdfText)) !== null && iterations < maxIterations) {
-        iterations++;
-        let text = match[1];
-        
-        // Skip obvious metadata quickly
-        if (text.includes('Creator') || text.includes('Producer') || 
-            text.includes('Mozilla') || text.includes('Chrome') ||
-            text.includes('Google Docs') || text.includes('PDF')) {
-          continue;
+      if (fileExtension === 'pdf') {
+        // PDF extraction logic
+        const header = new TextDecoder('utf-8', { fatal: false }).decode(fileBytes.slice(0, 8));
+        if (!header.startsWith('%PDF')) {
+          throw new Error('Inte en giltig PDF-fil');
         }
         
-        // Quick clean
-        text = text
-          .replace(/\\n/g, ' ')
-          .replace(/\\r/g, ' ')
-          .replace(/\s+/g, ' ')
+        const pdfText = new TextDecoder('utf-8', { fatal: false }).decode(fileBytes);
+        const textSegments: string[] = [];
+        
+        // Quick parentheses extraction for PDF
+        const parenthesesRegex = /\(([^)]{5,200})\)/g;
+        let match;
+        let iterations = 0;
+        const maxIterations = 500;
+        
+        while ((match = parenthesesRegex.exec(pdfText)) !== null && iterations < maxIterations) {
+          iterations++;
+          let text = match[1];
+          
+          if (text.includes('Creator') || text.includes('Producer') || 
+              text.includes('Mozilla') || text.includes('Chrome') ||
+              text.includes('Google Docs') || text.includes('PDF')) {
+            continue;
+          }
+          
+          text = text
+            .replace(/\\n/g, ' ')
+            .replace(/\\r/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          
+          if (text.length >= 5 && /[a-zA-ZåäöÅÄÖ]{2,}/.test(text)) {
+            textSegments.push(text);
+          }
+          
+          if (textSegments.length >= 100) break;
+        }
+        
+        extractedText = [...new Set(textSegments)]
+          .filter(s => s.length >= 5 && s.length <= 300)
+          .slice(0, 50)
+          .join(' ')
           .trim();
+          
+      } else if (fileExtension === 'docx') {
+        // Word document extraction - basic approach
+        console.log('Processing Word document...');
         
-        // Basic content validation
-        if (text.length >= 5 && /[a-zA-ZåäöÅÄÖ]{2,}/.test(text)) {
-          textSegments.push(text);
+        // Convert to text and look for readable content
+        const docText = new TextDecoder('utf-8', { fatal: false }).decode(fileBytes);
+        
+        // Extract text from Word document XML structure
+        const textSegments: string[] = [];
+        
+        // Look for text within <w:t> tags (Word's text elements)
+        const wordTextRegex = /<w:t[^>]*>([^<]+)<\/w:t>/g;
+        let match;
+        
+        while ((match = wordTextRegex.exec(docText)) !== null) {
+          const text = match[1]
+            .replace(/\s+/g, ' ')
+            .trim();
+            
+          if (text.length >= 3 && /[a-zA-ZåäöÅÄÖ]{2,}/.test(text)) {
+            textSegments.push(text);
+          }
         }
         
-        // Stop if we have enough content
-        if (textSegments.length >= 100) break;
-      }
-      
-      console.log(`Found ${textSegments.length} text segments in ${iterations} iterations`);
-      
-      // Strategy 2: Quick search for readable text patterns (limited)
-      if (textSegments.length < 20) {
-        const readableRegex = /[A-Za-zÅÄÖåäö]{4,}(?:\s+[A-Za-zÅÄÖåäö0-9.,%-]{2,}){1,10}/g;
-        const readableMatches = pdfText.match(readableRegex) || [];
-        
-        for (const text of readableMatches.slice(0, 50)) { // Limit to 50
-          if (text.length > 8 && !text.includes('Creator') && !text.includes('Producer')) {
-            const cleaned = text.replace(/\s+/g, ' ').trim();
-            if (cleaned.length >= 8) {
-              textSegments.push(cleaned);
+        // If no XML tags found, try simple text extraction
+        if (textSegments.length < 5) {
+          const readableRegex = /[A-Za-zÅÄÖåäö]{4,}(?:\s+[A-Za-zÅÄÖåäö0-9.,%-]{2,}){1,10}/g;
+          const readableMatches = docText.match(readableRegex) || [];
+          
+          for (const text of readableMatches.slice(0, 100)) {
+            if (text.length > 8 && !/^(Creator|Producer|Mozilla|Chrome|Word|Microsoft)/.test(text)) {
+              const cleaned = text.replace(/\s+/g, ' ').trim();
+              if (cleaned.length >= 8) {
+                textSegments.push(cleaned);
+              }
             }
           }
         }
+        
+        extractedText = [...new Set(textSegments)]
+          .filter(s => s.length >= 3 && s.length <= 300)
+          .slice(0, 100)
+          .join(' ')
+          .trim();
+          
+      } else {
+        throw new Error(`Filtyp '${fileExtension}' stöds inte. Endast PDF och DOCX-filer är tillåtna.`);
       }
-      
-      // Quick deduplication and combination
-      const uniqueSegments = [...new Set(textSegments)]
-        .filter(s => s.length >= 5 && s.length <= 300)
-        .slice(0, 50); // Keep only best 50
-      
-      let extractedText = uniqueSegments.join(' ').trim();
       
       // Simple final cleanup
       extractedText = extractedText
@@ -110,12 +139,12 @@ const extractTextFromPDF = async (pdfArrayBuffer: ArrayBuffer): Promise<string> 
       
       // Quick validation
       if (extractedText.length < MIN_TEXT_LENGTH) {
-        throw new Error(`För lite text extraherad (${extractedText.length} tecken). PDF kan vara bildbaserad.`);
+        throw new Error(`För lite text extraherad (${extractedText.length} tecken). Dokumentet kan vara bildbaserat eller tomt.`);
       }
       
       const wordCount = extractedText.split(/\s+/).length;
       if (wordCount < 5) {
-        throw new Error('För få läsbara ord hittades i PDF:en');
+        throw new Error('För få läsbara ord hittades i dokumentet');
       }
       
       clearTimeout(timeoutId);
@@ -134,7 +163,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log('=== PDF EXTRACTION REQUEST ===');
+  console.log('=== DOCUMENT EXTRACTION REQUEST ===');
   const startTime = Date.now();
 
   try {
@@ -169,13 +198,13 @@ serve(async (req) => {
       );
     }
 
-    const { pdfUrl, projectId } = requestBody;
+    const { pdfUrl, projectId, fileName } = requestBody;
 
     if (!pdfUrl || !projectId) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'PDF URL och projekt-ID krävs',
+          error: 'Dokument URL och projekt-ID krävs',
           code: 'MISSING_PARAMS'
         }),
         { 
@@ -185,24 +214,24 @@ serve(async (req) => {
       );
     }
 
-    console.log('Downloading PDF...');
+    console.log(`Downloading document: ${fileName || 'unknown'}`);
     
     // Quick download with timeout
     const downloadController = new AbortController();
     const downloadTimeout = setTimeout(() => downloadController.abort(), DOWNLOAD_TIMEOUT);
     
-    let pdfResponse;
+    let documentResponse;
     try {
-      pdfResponse = await fetch(pdfUrl, {
+      documentResponse = await fetch(pdfUrl, {
         signal: downloadController.signal,
-        headers: { 'User-Agent': 'PDFExtractor/1.0' }
+        headers: { 'User-Agent': 'DocumentExtractor/1.0' }
       });
     } catch (error) {
       clearTimeout(downloadTimeout);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Kunde inte ladda ner PDF',
+          error: 'Kunde inte ladda ner dokumentet',
           code: 'DOWNLOAD_FAILED'
         }),
         { 
@@ -214,11 +243,11 @@ serve(async (req) => {
     
     clearTimeout(downloadTimeout);
     
-    if (!pdfResponse.ok) {
+    if (!documentResponse.ok) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `Download fel: ${pdfResponse.status}`,
+          error: `Download fel: ${documentResponse.status}`,
           code: 'DOWNLOAD_ERROR'
         }),
         { 
@@ -228,14 +257,14 @@ serve(async (req) => {
       );
     }
 
-    const pdfArrayBuffer = await pdfResponse.arrayBuffer();
-    console.log(`PDF downloaded: ${pdfArrayBuffer.byteLength} bytes`);
+    const documentArrayBuffer = await documentResponse.arrayBuffer();
+    console.log(`Document downloaded: ${documentArrayBuffer.byteLength} bytes`);
 
-    if (pdfArrayBuffer.byteLength === 0) {
+    if (documentArrayBuffer.byteLength === 0) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'PDF-filen är tom',
+          error: 'Dokumentfilen är tom',
           code: 'EMPTY_FILE'
         }),
         { 
@@ -245,11 +274,11 @@ serve(async (req) => {
       );
     }
 
-    if (pdfArrayBuffer.byteLength > MAX_PDF_SIZE) {
+    if (documentArrayBuffer.byteLength > MAX_FILE_SIZE) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `PDF för stor (${Math.round(pdfArrayBuffer.byteLength / 1024 / 1024)}MB, max ${MAX_PDF_SIZE / 1024 / 1024}MB)`,
+          error: `Dokument för stort (${Math.round(documentArrayBuffer.byteLength / 1024 / 1024)}MB, max ${MAX_FILE_SIZE / 1024 / 1024}MB)`,
           code: 'FILE_TOO_LARGE'
         }),
         { 
@@ -263,7 +292,7 @@ serve(async (req) => {
     
     let extractedText;
     try {
-      extractedText = await extractTextFromPDF(pdfArrayBuffer);
+      extractedText = await extractTextFromFile(documentArrayBuffer, fileName || 'document');
     } catch (error) {
       console.error('Extraction failed:', error);
       return new Response(
@@ -296,8 +325,9 @@ serve(async (req) => {
           hasSwedishChars: /[åäöÅÄÖ]/.test(extractedText),
           hasFinancialTerms: /(omsättning|intäkter|resultat|vinst|förlust|miljoner|mkr|procent|revenue|profit)/i.test(extractedText),
           processingTimeMs: processingTime,
-          fileSizeMB: Math.round(pdfArrayBuffer.byteLength / 1024 / 1024 * 100) / 100,
-          sample: extractedText.substring(0, 200)
+          fileSizeMB: Math.round(documentArrayBuffer.byteLength / 1024 / 1024 * 100) / 100,
+          sample: extractedText.substring(0, 200),
+          fileType: fileName ? fileName.split('.').pop()?.toLowerCase() : 'unknown'
         },
         message: 'Text extraherad framgångsrikt'
       }),
@@ -314,7 +344,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: 'Oväntat fel vid PDF-bearbetning',
+        error: 'Oväntat fel vid dokumentbearbetning',
         code: 'UNEXPECTED_ERROR',
         details: error.message
       }),
