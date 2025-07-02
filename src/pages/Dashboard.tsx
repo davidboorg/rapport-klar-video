@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,7 +9,6 @@ import {
   FolderOpen,
   Play,
   Settings,
-  Sparkles,
   TrendingUp,
   BarChart3,
   FileText,
@@ -90,7 +88,6 @@ const Dashboard = () => {
         {/* Welcome Header */}
         <div className="text-center space-y-6">
           <div className="flex items-center justify-center space-x-3 mb-4">
-            <Sparkles className="w-8 h-8 text-yellow-400 animate-bounce" />
             <h1 className="text-4xl lg:text-5xl font-bold">
               <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 Welcome back, {userName}!
