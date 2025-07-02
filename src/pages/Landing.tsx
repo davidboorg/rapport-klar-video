@@ -1,4 +1,3 @@
-
 import { Rocket, FileText, Brain, Video, Headphones, CheckCircle, Users, Building2 } from "lucide-react";
 
 const features = [
@@ -63,12 +62,14 @@ export default function Landing() {
             AI-powered scripts, podcasts, and videos for investor relations and board management.<br />
             <span className="text-blue-200">All in one click. 100% EU-compliant.</span>
           </p>
-          <a href="/register">
-            <button className="px-8 py-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold text-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2">
-              <Rocket className="w-6 h-6" />
-              Get Started
-            </button>
-          </a>
+          <div className="flex justify-center">
+            <a href="/register">
+              <button className="px-8 py-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold text-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2">
+                <Rocket className="w-6 h-6" />
+                Get Started
+              </button>
+            </a>
+          </div>
         </div>
       </section>
 
@@ -136,12 +137,14 @@ export default function Landing() {
       {/* CTA */}
       <section className="py-20 px-6 text-center">
         <h2 className="text-4xl font-bold mb-6">Ready to transform your reporting?</h2>
-        <a href="/register">
-          <button className="px-10 py-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold text-2xl shadow-lg hover:scale-105 transition-transform flex items-center gap-2">
-            <Rocket className="w-7 h-7" />
-            Get Started Now
-          </button>
-        </a>
+        <div className="flex justify-center">
+          <a href="/register">
+            <button className="px-10 py-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold text-2xl shadow-lg hover:scale-105 transition-transform flex items-center gap-2">
+              <Rocket className="w-7 h-7" />
+              Get Started Now
+            </button>
+          </a>
+        </div>
       </section>
 
       {/* Footer */}
