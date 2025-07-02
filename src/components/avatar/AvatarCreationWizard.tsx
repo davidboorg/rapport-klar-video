@@ -2,13 +2,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAvatars } from '@/hooks/useAvatars';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { ModernCard, ModernCardContent, ModernCardHeader, ModernCardTitle } from '@/components/ui/modern-card';
+import { ModernButton } from '@/components/ui/modern-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ArrowRight, Upload, Video, Mic, User } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Upload, Video, Mic, User, CheckCircle, Lightbulb, Camera } from 'lucide-react';
 
 interface WizardStep {
   id: number;
@@ -21,25 +21,25 @@ const steps: WizardStep[] = [
   {
     id: 1,
     title: "Avatar Information",
-    description: "Grundläggande information om din avatar",
+    description: "Basic information about your avatar",
     icon: <User className="h-5 w-5" />
   },
   {
     id: 2,
     title: "Video Recording",
-    description: "Spela in träningsvideo för din avatar",
+    description: "Record training video for your avatar",
     icon: <Video className="h-5 w-5" />
   },
   {
     id: 3,
     title: "Voice Sample",
-    description: "Spela in röstprov för naturlig tal",
+    description: "Record voice sample for natural speech",
     icon: <Mic className="h-5 w-5" />
   },
   {
     id: 4,
     title: "Processing",
-    description: "Din avatar skapas och tränas",
+    description: "Your avatar is being created and trained",
     icon: <Upload className="h-5 w-5" />
   }
 ];
@@ -81,116 +81,155 @@ const AvatarCreationWizard = () => {
     switch (currentStep) {
       case 1:
         return (
-          <div className="space-y-6">
-            <div>
-              <Label htmlFor="avatarName">Avatar Namn</Label>
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <Label htmlFor="avatarName" className="text-lg font-medium text-white">Avatar Name</Label>
               <Input
                 id="avatarName"
-                placeholder="T.ex. Professionell Presentation"
+                placeholder="e.g. Professional Presentation Avatar"
                 value={avatarName}
                 onChange={(e) => setAvatarName(e.target.value)}
-                className="mt-2"
+                className="h-12 text-lg bg-white/5 border-white/20 text-white placeholder:text-slate-400"
               />
-              <p className="text-sm text-muted-foreground mt-2">
-                Välj ett beskrivande namn för din avatar
+              <p className="text-slate-300">
+                Choose a descriptive name for your avatar
               </p>
             </div>
             
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-medium text-blue-900 mb-2">Tips för bästa resultat:</h4>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Välj en tydlig, professionell bakgrund</li>
-                <li>• Se till att du har bra belysning</li>
-                <li>• Titta direkt in i kameran</li>
-                <li>• Tala tydligt och naturligt</li>
-              </ul>
-            </div>
+            <ModernCard variant="glass" className="p-6">
+              <ModernCardHeader className="pb-4">
+                <ModernCardTitle className="flex items-center space-x-2 text-blue-400">
+                  <Lightbulb className="h-5 w-5" />
+                  <span>Tips for Best Results</span>
+                </ModernCardTitle>
+              </ModernCardHeader>
+              <ModernCardContent className="space-y-3">
+                <div className="grid gap-3">
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span className="text-slate-300">Choose a clear, professional background</span>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span className="text-slate-300">Ensure you have good lighting</span>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span className="text-slate-300">Look directly into the camera</span>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span className="text-slate-300">Speak clearly and naturally</span>
+                  </div>
+                </div>
+              </ModernCardContent>
+            </ModernCard>
           </div>
         );
 
       case 2:
         return (
-          <div className="space-y-6">
-            <div className="text-center">
-              <div className="aspect-video bg-slate-100 rounded-lg mb-4 flex items-center justify-center">
-                <Video className="h-16 w-16 text-muted-foreground" />
+          <div className="space-y-8">
+            <div className="text-center space-y-6">
+              <div className="aspect-video bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl border border-white/10 flex items-center justify-center backdrop-blur">
+                <div className="text-center space-y-4">
+                  <Video className="h-20 w-20 text-slate-400 mx-auto" />
+                  <p className="text-slate-300 text-lg">
+                    Record a 2-5 minute video where you speak naturally
+                  </p>
+                </div>
               </div>
-              <p className="text-muted-foreground">
-                Spela in en 2-5 minuter lång video där du pratar naturligt
-              </p>
             </div>
             
             <div className="space-y-4">
-              <Button className="w-full" size="lg">
-                <Video className="h-5 w-5 mr-2" />
-                Börja Inspelning
-              </Button>
+              <ModernButton size="lg" className="w-full group">
+                <Camera className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" />
+                Start Recording
+              </ModernButton>
               
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">eller</p>
+                <p className="text-sm text-slate-400 mb-4">or</p>
               </div>
               
-              <Button variant="outline" className="w-full" size="lg">
+              <ModernButton variant="glass" size="lg" className="w-full">
                 <Upload className="h-5 w-5 mr-2" />
-                Ladda Upp Video
-              </Button>
+                Upload Video
+              </ModernButton>
             </div>
           </div>
         );
 
       case 3:
         return (
-          <div className="space-y-6">
-            <div className="text-center">
-              <div className="w-32 h-32 bg-slate-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <Mic className="h-16 w-16 text-muted-foreground" />
+          <div className="space-y-8">
+            <div className="text-center space-y-6">
+              <div className="w-40 h-40 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full mx-auto flex items-center justify-center backdrop-blur border border-white/10">
+                <Mic className="h-20 w-20 text-purple-400" />
               </div>
-              <p className="text-muted-foreground">
-                Spela in ett röstprov på 1-2 minuter för röstkloning
+              <p className="text-slate-300 text-lg">
+                Record a 1-2 minute voice sample for voice cloning
               </p>
             </div>
             
-            <div className="space-y-4">
-              <Button className="w-full" size="lg">
+            <div className="space-y-6">
+              <ModernButton size="lg" className="w-full">
                 <Mic className="h-5 w-5 mr-2" />
-                Spela In Röst
-              </Button>
+                Record Voice
+              </ModernButton>
               
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h4 className="font-medium text-green-900 mb-2">Röstinspelningstips:</h4>
-                <ul className="text-sm text-green-800 space-y-1">
-                  <li>• Använd en tyst miljö</li>
-                  <li>• Tala i normal hastighet</li>
-                  <li>• Inkludera olika känslor</li>
-                  <li>• Läs texten naturligt</li>
-                </ul>
-              </div>
+              <ModernCard variant="glass" className="p-6">
+                <ModernCardHeader className="pb-4">
+                  <ModernCardTitle className="text-green-400">Voice Recording Tips</ModernCardTitle>
+                </ModernCardHeader>
+                <ModernCardContent className="space-y-3">
+                  <div className="grid gap-3">
+                    <div className="flex items-start space-x-3">
+                      <CheckCircle className="h-4 w-4 text-green-400 mt-1 flex-shrink-0" />
+                      <span className="text-slate-300 text-sm">Use a quiet environment</span>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <CheckCircle className="h-4 w-4 text-green-400 mt-1 flex-shrink-0" />
+                      <span className="text-slate-300 text-sm">Speak at normal pace</span>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <CheckCircle className="h-4 w-4 text-green-400 mt-1 flex-shrink-0" />
+                      <span className="text-slate-300 text-sm">Include different emotions</span>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <CheckCircle className="h-4 w-4 text-green-400 mt-1 flex-shrink-0" />
+                      <span className="text-slate-300 text-sm">Read text naturally</span>
+                    </div>
+                  </div>
+                </ModernCardContent>
+              </ModernCard>
             </div>
           </div>
         );
 
       case 4:
         return (
-          <div className="space-y-6 text-center">
-            <div className="w-32 h-32 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-              <Upload className="h-16 w-16 text-blue-600 animate-bounce" />
+          <div className="space-y-8 text-center">
+            <div className="space-y-6">
+              <div className="w-40 h-40 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full mx-auto flex items-center justify-center backdrop-blur border border-white/10">
+                <Upload className="h-20 w-20 text-blue-400 animate-bounce" />
+              </div>
+              
+              <div className="space-y-4">
+                <h3 className="text-2xl font-bold text-white">Creating your avatar...</h3>
+                <p className="text-slate-300 text-lg max-w-md mx-auto">
+                  This may take 10-15 minutes. You'll receive a notification when your avatar is ready.
+                </p>
+              </div>
             </div>
             
-            <div>
-              <h3 className="text-xl font-semibold mb-2">Skapar din avatar...</h3>
-              <p className="text-muted-foreground mb-6">
-                Detta kan ta 10-15 minuter. Du får ett meddelande när avataren är klar.
-              </p>
-            </div>
-            
-            <Button 
+            <ModernButton 
               onClick={handleCreateAvatar}
               disabled={isProcessing || !avatarName.trim()}
-              size="lg"
-              className="w-full"
+              size="xl"
+              className="min-w-[200px]"
             >
-              {isProcessing ? 'Skapar avatar...' : 'Skapa Avatar'}
-            </Button>
+              {isProcessing ? 'Creating Avatar...' : 'Create Avatar'}
+            </ModernButton>
           </div>
         );
 
@@ -200,77 +239,104 @@ const AvatarCreationWizard = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-8">
-        <Button variant="ghost" onClick={() => navigate('/avatars')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Tillbaka till Avatarer
-        </Button>
-      </div>
+    <div className="min-h-screen">
+      <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <ModernButton variant="glass" onClick={() => navigate('/avatars')} className="mb-6">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Avatars
+          </ModernButton>
+          
+          <div className="text-center space-y-6">
+            <div className="flex items-center justify-center space-x-3 mb-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <User className="w-8 h-8 text-white" />
+              </div>
+            </div>
+            <div>
+              <h1 className="text-4xl lg:text-5xl font-bold mb-4">
+                <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
+                  Create New Avatar
+                </span>
+              </h1>
+              <p className="text-xl text-slate-300 max-w-2xl mx-auto">
+                Follow our guide to create a high-quality AI avatar that represents you professionally
+              </p>
+            </div>
+          </div>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between mb-4">
-            <CardTitle>Skapa Ny Avatar</CardTitle>
-            <Badge variant="outline">
-              Steg {currentStep} av {steps.length}
+        {/* Progress Card */}
+        <ModernCard className="mb-8 p-6" variant="glass">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-white">Progress</h3>
+            <Badge variant="outline" className="bg-white/10 text-white border-white/20">
+              Step {currentStep} of {steps.length}
             </Badge>
           </div>
           
-          <Progress value={progress} className="mb-4" />
+          <Progress value={progress} className="mb-8 h-2" />
           
-          <div className="flex items-center space-x-4">
+          {/* Step Indicators */}
+          <div className="grid grid-cols-4 gap-4">
             {steps.map((step) => (
               <div 
                 key={step.id}
-                className={`flex items-center space-x-2 ${
-                  step.id === currentStep ? 'text-blue-600' : 
-                  step.id < currentStep ? 'text-green-600' : 'text-muted-foreground'
+                className={`text-center space-y-3 ${
+                  step.id === currentStep ? 'text-blue-400' : 
+                  step.id < currentStep ? 'text-green-400' : 'text-slate-500'
                 }`}
               >
-                {step.icon}
-                <span className="text-sm font-medium hidden sm:inline">
-                  {step.title}
-                </span>
+                <div className={`mx-auto w-12 h-12 rounded-xl border-2 flex items-center justify-center transition-all ${
+                  step.id === currentStep ? 'border-blue-400 bg-blue-400/10' :
+                  step.id < currentStep ? 'border-green-400 bg-green-400/10' : 'border-slate-600 bg-slate-800/50'
+                }`}>
+                  {step.icon}
+                </div>
+                <div>
+                  <p className="text-sm font-medium hidden sm:block">{step.title}</p>
+                </div>
               </div>
             ))}
           </div>
-        </CardHeader>
+        </ModernCard>
 
-        <CardContent>
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-2">
-              {steps[currentStep - 1]?.title}
-            </h3>
-            <CardDescription>
-              {steps[currentStep - 1]?.description}
-            </CardDescription>
-          </div>
-
-          {renderStepContent()}
-
-          <div className="flex justify-between mt-8">
-            <Button 
-              variant="outline" 
+        {/* Current Step Content */}
+        <ModernCard className="p-8" variant="glass">
+          <ModernCardHeader className="mb-8">
+            <ModernCardTitle className="text-2xl text-white">{steps[currentStep - 1]?.title}</ModernCardTitle>
+            <p className="text-slate-300 text-lg mt-2">{steps[currentStep - 1]?.description}</p>
+          </ModernCardHeader>
+          
+          <ModernCardContent>
+            {renderStepContent()}
+          </ModernCardContent>
+          
+          {/* Navigation */}
+          <div className="flex justify-between items-center mt-8 pt-6 border-t border-white/10">
+            <ModernButton 
+              variant="glass" 
               onClick={handlePrevious}
               disabled={currentStep === 1}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Föregående
-            </Button>
+              Previous
+            </ModernButton>
             
             {currentStep < steps.length && (
-              <Button 
+              <ModernButton 
                 onClick={handleNext}
                 disabled={currentStep === 1 && !avatarName.trim()}
+                size="lg"
               >
-                Nästa
+                Next Step
                 <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+              </ModernButton>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </ModernCard>
+      </div>
     </div>
   );
 };
