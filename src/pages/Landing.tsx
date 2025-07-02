@@ -3,23 +3,23 @@ import { Rocket, FileText, Brain, Video, Headphones, CheckCircle, Users, Buildin
 const features = [
   {
     icon: <FileText className="w-8 h-8 text-blue-500" />,
-    title: "Effortless Upload",
-    desc: "Upload your financial report or board document in seconds. No technical skills required.",
+    title: "One Upload. Endless Output.",
+    desc: "Drop in your board deck or report – our AI takes it from there. No manuals, no fuss.",
   },
   {
     icon: <Brain className="w-8 h-8 text-purple-500" />,
-    title: "AI-Powered Analysis",
-    desc: "Our EU-based AI extracts, summarizes, and transforms your data securely and accurately.",
+    title: "Built-in Intelligence. Based in Europe.",
+    desc: "Secure, GDPR-compliant AI that understands nuance and turns data into clarity.",
   },
   {
     icon: <Video className="w-8 h-8 text-pink-500" />,
-    title: "Executive Video",
-    desc: "Generate professional, branded video presentations for investors and stakeholders.",
+    title: "Investor-Ready Video. Instantly.",
+    desc: "Branded, polished, and straight to the point. Your story, told like it matters.",
   },
   {
     icon: <Headphones className="w-8 h-8 text-green-500" />,
-    title: "Board Podcast",
-    desc: "Create strategic audio briefings for board members and management teams.",
+    title: "Boardroom Audio Briefings. On Demand.",
+    desc: "From static PDFs to smart podcasts tailored for decision-makers.",
   },
 ];
 
