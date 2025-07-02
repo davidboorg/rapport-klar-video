@@ -19,6 +19,7 @@ import NotFound from "./pages/NotFound";
 import MarketSelection from "./pages/MarketSelection";
 import IRDashboard from "./pages/IRDashboard";
 import BoardDashboard from "./pages/BoardDashboard";
+import Workflow from "./pages/Workflow";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ function App() {
               
               {/* Protected routes with layout */}
               <Route element={<AppLayout />}>
+                <Route path="/workflow" element={<Workflow />} />
                 <Route path="/market-selection" element={<MarketSelection />} />
                 <Route path="/ir-dashboard" element={<IRDashboard />} />
                 <Route path="/board-dashboard" element={<BoardDashboard />} />
