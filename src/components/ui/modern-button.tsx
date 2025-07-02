@@ -3,7 +3,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Button, ButtonProps } from '@/components/ui/button';
 
-interface ModernButtonProps extends Omit<ButtonProps, 'size'> {
+interface ModernButtonProps extends Omit<ButtonProps, 'variant' | 'size'> {
   variant?: 'primary' | 'secondary' | 'glass' | 'outline';
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
