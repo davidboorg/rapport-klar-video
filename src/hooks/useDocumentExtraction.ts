@@ -1,0 +1,103 @@
+
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+interface ExtractionResult {
+  success: boolean;
+  content?: string;
+  error?: string;
+  metadata?: {
+    fileName: string;
+    fileSize: number;
+    fileType: string;
+    wordCount: number;
+    processingTime: number;
+  };
+}
+
+export const useDocumentExtraction = () => {
+  const [isExtracting, setIsExtracting] = useState(false);
+  const { toast } = useToast();
+
+  const extractDocumentContent = async (file: File, projectId: string): Promise<ExtractionResult> => {
+    setIsExtracting(true);
+    
+    try {
+      // Upload file to Supabase storage
+      const fileName = `${projectId}/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(fileName);
+
+      console.log('Document uploaded, extracting content...');
+
+      // Call extraction edge function
+      const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-content', {
+        body: {
+          pdfUrl: publicUrl,
+          projectId: projectId,
+          fileName: file.name,
+          fileType: file.type
+        }
+      });
+
+      if (extractionError) {
+        console.error('Extraction error:', extractionError);
+        throw new Error(`Content extraction failed: ${extractionError.message}`);
+      }
+
+      if (!extractionData?.success) {
+        throw new Error(extractionData?.error || 'Failed to extract document content');
+      }
+
+      toast({
+        title: "Document Processed Successfully",
+        description: `Extracted ${extractionData.metadata?.wordCount || 'text'} words from ${file.name}`,
+      });
+
+      return {
+        success: true,
+        content: extractionData.content,
+        metadata: {
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          wordCount: extractionData.metadata?.wordCount || 0,
+          processingTime: extractionData.metadata?.processingTimeMs || 0
+        }
+      };
+
+    } catch (error) {
+      console.error('Document extraction error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      toast({
+        title: "Extraction Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+
+      return {
+        success: false,
+        error: errorMessage
+      };
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  return {
+    extractDocumentContent,
+    isExtracting
+  };
+};
