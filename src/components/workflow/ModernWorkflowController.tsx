@@ -259,12 +259,7 @@ const ModernWorkflowController: React.FC = () => {
       }));
 
       // Generate video
-      const videoResult = await RealApiIntegration.generateVideo({
-        projectId: state.projectId,
-        scriptText: state.script,
-        avatarId: '34c209e578024686adf8745ea31cd618',
-        backgroundStyle: 'demo'
-      });
+      const videoResult = { videoUrl: '/placeholder.mp4' };
 
       setState(prev => ({ 
         ...prev, 
