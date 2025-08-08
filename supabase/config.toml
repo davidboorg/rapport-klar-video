@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.generate-podcast]
 verify_jwt = false
+
+[functions.create-heygen-avatar]
+verify_jwt = false
