@@ -82,33 +82,40 @@ export class RealApiIntegration {
     }
   }
 
-  // Generate podcast using ElevenLabs
+  // Generate podcast using ElevenLabs via Edge Function
   static async generatePodcast(request: PodcastGenerationRequest) {
     try {
-      const { data, error } = await supabase.functions.invoke('elevenlabs-proxy', {
+      const { data, error } = await supabase.functions.invoke('generate-podcast', {
         body: {
           text: request.scriptText,
-          voice_id: request.voiceId || 'EXAVITQu4vr4xnSDxMaL', // Default Sarah voice
-          model_id: 'eleven_multilingual_v2',
-          voice_settings: request.voiceSettings || {
-            stability: 0.5,
-            similarity_boost: 0.8,
-            style: 0.2
-          }
-        }
+          voice: request.voiceId || '9BWtsMINqrJLrRacOk9x', // Default: Aria
+          projectId: request.projectId,
+          voiceSettings: request.voiceSettings,
+        },
       });
 
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'Podcast generation failed');
+      if (error) {
+        throw new Error(`Podcast generation failed: ${error.message || 'Unknown error'}`);
+      }
+      if (!data?.success) {
+        throw new Error(data?.error || 'Podcast generation failed');
+      }
+
+      // Convert base64 to blob URL for playback
+      const audioBlob = new Blob(
+        [Uint8Array.from(atob(data.audioContent), (c) => c.charCodeAt(0))],
+        { type: 'audio/mpeg' }
+      );
+      const audioUrl = URL.createObjectURL(audioBlob);
 
       return {
         success: true,
-        audioUrl: data.audio_url,
-        duration: data.duration
+        audioUrl,
       };
     } catch (error) {
       console.error('Podcast generation error:', error);
-      throw error;
+      if (error instanceof Error) throw error;
+      throw new Error(`Podcast generation failed: ${String(error)}`);
     }
   }
 
