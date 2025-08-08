@@ -10,7 +10,7 @@ jwt_expiry = 3600
 verify_jwt = false
 
 [functions.berget-api-proxy]
-verify_jwt = true
+verify_jwt = false
 
 [functions.elevenlabs-proxy]
 verify_jwt = true
@@ -19,4 +19,10 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.create-heygen-avatar]
+verify_jwt = false
+
+[functions.extract-pdf-content]
+verify_jwt = false
+
+[functions.refresh-avatar-data]
 verify_jwt = false
