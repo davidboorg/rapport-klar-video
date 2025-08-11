@@ -34,17 +34,20 @@ export const useDocumentExtraction = () => {
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
+      // Create a signed URL (valid for 1 hour)
+      const { data: signedData, error: signedError } = await supabase.storage
         .from('documents')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 60 * 60);
 
+      if (signedError || !signedData?.signedUrl) {
+        throw new Error(`Failed to create signed URL: ${signedError?.message || 'Unknown error'}`);
+      }
       console.log('Document uploaded, extracting content...');
 
       // Call extraction edge function with fileName
       const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-content', {
         body: {
-          pdfUrl: publicUrl,
+          pdfUrl: signedData.signedUrl,
           projectId: projectId,
           fileName: file.name,
           fileType: file.type

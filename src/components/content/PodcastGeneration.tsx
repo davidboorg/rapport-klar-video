@@ -1,5 +1,5 @@
-import React from 'react';
-import IRCommunicationSuite from '../ir/IRCommunicationSuite';
+import React, { Suspense } from 'react';
+const IRCommunicationSuite = React.lazy(() => import('../ir/IRCommunicationSuite'));
 
 interface PodcastGenerationProps {
   projectId: string;
@@ -17,11 +17,13 @@ const PodcastGeneration = ({
   // For IR market, use the advanced suite
   if (marketType === 'ir') {
     return (
-      <IRCommunicationSuite
-        projectId={projectId}
-        scriptText={scriptText}
-        onPodcastGenerated={onPodcastGenerated}
-      />
+      <Suspense fallback={<div className="p-8 text-center">Laddar kommunikationssvit...</div>}>
+        <IRCommunicationSuite
+          projectId={projectId}
+          scriptText={scriptText}
+          onPodcastGenerated={onPodcastGenerated}
+        />
+      </Suspense>
     );
   }
 
@@ -29,7 +31,7 @@ const PodcastGeneration = ({
   return (
     <div className="text-center p-8">
       <h3 className="text-xl font-bold mb-4">Board Communication</h3>
-      <p className="text-gray-600">
+      <p className="text-muted-foreground">
         Board-specific podcast features coming soon.
       </p>
     </div>

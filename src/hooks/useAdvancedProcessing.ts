@@ -95,16 +95,21 @@ export const useAdvancedProcessing = (projectId: string) => {
       updateTaskStatus('upload', 'completed', 100);
       setCurrentTaskIndex(1);
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
+      // Create signed URL for the uploaded document (1 hour)
+      const { data: signedData, error: signedError } = await supabase.storage
         .from('documents')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 60 * 60);
 
-      // Update project with PDF URL
+      if (signedError || !signedData?.signedUrl) {
+        updateTaskError('upload', `Failed to create signed URL: ${signedError?.message || 'Unknown error'}`);
+        throw new Error(`Failed to create signed URL: ${signedError?.message || 'Unknown error'}`);
+      }
+
+      // Update project with signed PDF URL
       await supabase
         .from('projects')
         .update({ 
-          pdf_url: publicUrl,
+          pdf_url: signedData.signedUrl,
           status: 'processing' 
         })
         .eq('id', projectId);
@@ -114,7 +119,7 @@ export const useAdvancedProcessing = (projectId: string) => {
 
       const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-content', {
         body: {
-          pdfUrl: publicUrl,
+          pdfUrl: signedData.signedUrl,
           projectId: projectId
         }
       });

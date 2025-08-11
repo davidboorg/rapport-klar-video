@@ -83,17 +83,22 @@ const WorkflowController: React.FC = () => {
         throw new Error(`Uppladdning misslyckades: ${uploadError.message}`);
       }
 
-      // Get the public URL
-      const { data: { publicUrl } } = supabase.storage
+      // Create a signed URL (valid for 1 hour)
+      const { data: signedData, error: signedError } = await supabase.storage
         .from('documents')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 60 * 60);
 
-      console.log('File uploaded, URL:', publicUrl);
+      if (signedError || !signedData?.signedUrl) {
+        console.error('Signed URL error:', signedError);
+        throw new Error(`Kunde inte skapa signerad URL: ${signedError?.message || 'okänt fel'}`);
+      }
+
+      console.log('File uploaded, URL:', signedData.signedUrl);
 
       // Update project with PDF URL
       const { error: updateError } = await supabase
         .from('projects')
-        .update({ pdf_url: publicUrl })
+        .update({ pdf_url: signedData.signedUrl })
         .eq('id', project.id);
 
       if (updateError) {
@@ -105,12 +110,12 @@ const WorkflowController: React.FC = () => {
 
       console.log('=== CALLING ENHANCED PDF EXTRACTION ===');
       console.log('Project ID:', project.id);
-      console.log('PDF URL:', publicUrl);
+      console.log('PDF URL:', signedData.signedUrl);
 
       // Extract PDF content med förbättrad felhantering
       const { data: extractionData, error: extractionError } = await supabase.functions.invoke('extract-pdf-content', {
         body: {
-          pdfUrl: publicUrl,
+          pdfUrl: signedData.signedUrl,
           projectId: project.id
         }
       });
