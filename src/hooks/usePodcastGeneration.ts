@@ -49,7 +49,14 @@ export const usePodcastGeneration = () => {
         throw new Error(`Podcast error: ${audioData?.error || 'Unknown error'}`);
       }
 
-      // Convert base64 to blob URL for playback
+      // Prefer signed URL from server (private storage)
+      if (audioData?.audioUrl) {
+        setGeneratedAudioUrl(audioData.audioUrl);
+        toast({ title: "Podcast Generated!", description: "Din podcast är redo att spelas upp" });
+        return audioData.audioUrl;
+      }
+
+      // Fallback: base64 to blob URL for playback
       const audioBlob = new Blob([Uint8Array.from(atob(audioData.audioContent), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
       const audioUrl = URL.createObjectURL(audioBlob);
       

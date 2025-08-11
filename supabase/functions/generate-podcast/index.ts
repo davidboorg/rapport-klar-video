@@ -1,7 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -90,33 +90,57 @@ serve(async (req) => {
       );
     }
 
-    // Convert audio response to ArrayBuffer and then to base64
+    // Receive audio as ArrayBuffer
     const audioArrayBuffer = await elevenLabsResponse.arrayBuffer();
-    const audioUint8Array = new Uint8Array(audioArrayBuffer);
-    
-    // Use a more efficient method to convert to base64
-    const chunks = [];
-    const chunkSize = 8192; // Process in chunks to avoid stack overflow
-    
-    for (let i = 0; i < audioUint8Array.length; i += chunkSize) {
-      const chunk = audioUint8Array.slice(i, i + chunkSize);
-      chunks.push(String.fromCharCode.apply(null, Array.from(chunk)));
-    }
-    
-    const base64Audio = btoa(chunks.join(''));
 
-    console.log(`Podcast generated successfully for project ${projectId}`);
+    // Upload to Supabase Storage (private bucket)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error('Supabase credentials not configured');
+    }
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const safeProjectId = projectId || 'misc';
+    const objectPath = `${safeProjectId}/${Date.now()}.mp3`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('generated-audio')
+      .upload(objectPath, audioArrayBuffer, { contentType: 'audio/mpeg' });
+
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError);
+      return new Response(
+        JSON.stringify({ success: false, error: `Upload failed: ${uploadError.message}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create a signed URL valid for 24 hours
+    const { data: signed, error: signedError } = await supabase.storage
+      .from('generated-audio')
+      .createSignedUrl(objectPath, 60 * 60 * 24);
+
+    if (signedError || !signed?.signedUrl) {
+      console.error('Signed URL error:', signedError);
+      return new Response(
+        JSON.stringify({ success: false, error: `Signed URL failed: ${signedError?.message || 'Unknown'}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Podcast generated and stored at ${objectPath}`);
 
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        audioContent: base64Audio,
-        projectId: projectId,
+        success: true,
+        audioUrl: signed.signedUrl,
+        path: objectPath,
+        projectId: safeProjectId,
         voiceSettings: finalVoiceSettings
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
