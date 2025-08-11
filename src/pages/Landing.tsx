@@ -2,6 +2,7 @@ import { Rocket, FileText, Brain, Video, Headphones, CheckCircle, Star, ArrowRig
 import { ModernButton } from "@/components/ui/modern-button";
 import { ModernCard, ModernCardContent, ModernCardHeader, ModernCardTitle } from "@/components/ui/modern-card";
 import { Link } from "react-router-dom";
+import QuickPodcastTest from "@/components/dev/QuickPodcastTest";
 
 const features = [
   {
@@ -267,6 +268,7 @@ export default function Landing() {
           </p>
         </div>
       </footer>
+    <QuickPodcastTest />
     </div>
   );
 }
