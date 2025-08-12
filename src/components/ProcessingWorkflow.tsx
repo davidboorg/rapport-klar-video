@@ -12,7 +12,7 @@ import {
   RefreshCw,
   FileText,
   Brain,
-  Video
+  Mic
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -61,10 +61,10 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
     {
       id: 'content-generation',
       title: 'Content Generation',
-      description: 'Finalizing scripts and preparing for video',
+      description: 'Finalizing scripts and preparing for audio',
       status: 'pending',
       progress: 0,
-      icon: <Video className="w-5 h-5" />
+      icon: <Mic className="w-5 h-5" />
     }
   ]);
 

@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Play, User, Settings, LogOut, Menu, X } from 'lucide-react';
 import { useState } from 'react';
-import QuickPodcastTest from '@/components/dev/QuickPodcastTest';
 
 const AppLayout = () => {
   const { user, logout } = useAuth();
@@ -179,8 +178,6 @@ const AppLayout = () => {
       <main className="relative z-10">
         <Outlet />
       </main>
-
-      <QuickPodcastTest />
     </div>
   );
 };

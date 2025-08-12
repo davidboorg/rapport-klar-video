@@ -66,8 +66,8 @@ const ScriptReviewInterface: React.FC<ScriptReviewInterfaceProps> = ({
     } else if (activeTab === 'compare' && selectedScript) {
       setActiveTab('edit');
     } else if (activeTab === 'edit') {
-      // Continue to video generation
-      console.log('Ready for video generation');
+      // Continue to podcast generation
+      console.log('Ready for podcast generation');
     }
   };
 
@@ -165,7 +165,7 @@ const ScriptReviewInterface: React.FC<ScriptReviewInterfaceProps> = ({
                 (activeTab === 'data' && !financialData)
               }
             >
-              {activeTab === 'edit' ? 'Fortsätt till Video' : 'Nästa Steg'}
+              {activeTab === 'edit' ? 'Fortsätt till Podcast' : 'Nästa Steg'}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>

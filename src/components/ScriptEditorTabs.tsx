@@ -43,7 +43,6 @@ interface ScriptEditorTabsProps {
   isProcessing: boolean;
   financialData: FinancialData | null;
   scriptAlternatives: ScriptAlternative[];
-  existingVideoUrl: string | null;
   dataLoadingState: 'loading' | 'loaded' | 'error';
   onSave: () => void;
   onPreview: () => void;
@@ -61,7 +60,6 @@ const ScriptEditorTabs = ({
   isProcessing,
   financialData,
   scriptAlternatives,
-  existingVideoUrl,
   dataLoadingState,
   onSave,
   onPreview,
@@ -72,7 +70,7 @@ const ScriptEditorTabs = ({
 }: ScriptEditorTabsProps) => {
   return (
     <Tabs defaultValue="review" className="w-full">
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="review" className="flex items-center gap-2">
           <Brain className="w-4 h-4" />
           Granska & Välj
@@ -80,10 +78,6 @@ const ScriptEditorTabs = ({
         <TabsTrigger value="script" className="flex items-center gap-2">
           <FileText className="w-4 h-4" />
           Redigera Manus
-        </TabsTrigger>
-        <TabsTrigger value="video" className="flex items-center gap-2">
-          <Film className="w-4 h-4" />
-          Generera Video
         </TabsTrigger>
       </TabsList>
       
@@ -138,14 +132,6 @@ const ScriptEditorTabs = ({
         />
       </TabsContent>
 
-      <TabsContent value="video">
-        <VideoGeneration
-          projectId={projectId}
-          scriptText={script}
-          financialData={financialData}
-          existingVideoUrl={existingVideoUrl}
-        />
-      </TabsContent>
     </Tabs>
   );
 };

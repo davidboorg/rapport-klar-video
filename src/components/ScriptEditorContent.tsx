@@ -7,8 +7,7 @@ import { useScriptEditorUpload } from "@/hooks/useScriptEditorUpload";
 import AdvancedProcessingViewer from "./processing/AdvancedProcessingViewer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Brain, FileText, Film, Mic, Upload, Shield } from "lucide-react";
-import VideoGeneration from "./VideoGeneration";
+import { Brain, FileText, Mic, Upload, Shield } from "lucide-react";
 import PodcastGeneration from "./content/PodcastGeneration";
 import UploadTab from "./script-editor/UploadTab";
 import ReviewTab from "./script-editor/ReviewTab";
@@ -145,7 +144,7 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
   return (
     <div className="space-y-6">
       <Tabs defaultValue="upload" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="upload" className="flex items-center gap-2">
             <Upload className="w-4 h-4" />
             Upload
@@ -161,10 +160,6 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
           <TabsTrigger value="podcast" className="flex items-center gap-2">
             <Mic className="w-4 h-4" />
             Podcast
-          </TabsTrigger>
-          <TabsTrigger value="video" className="flex items-center gap-2">
-            <Film className="w-4 h-4" />
-            Video
           </TabsTrigger>
         </TabsList>
         
@@ -204,14 +199,6 @@ const ScriptEditorContent = ({ projectId, initialScript = "", onScriptUpdate }: 
           />
         </TabsContent>
         
-        <TabsContent value="video">
-          <VideoGeneration
-            projectId={projectId}
-            scriptText={script}
-            financialData={financialData}
-            existingVideoUrl={null}
-          />
-        </TabsContent>
       </Tabs>
     </div>
   );

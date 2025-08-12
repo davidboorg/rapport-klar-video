@@ -14,9 +14,9 @@ import {
   Users,
   ArrowRight,
   Brain,
-  Mic,
-  Video
+  Mic
 } from 'lucide-react';
+import QuickPodcastTest from '@/components/dev/QuickPodcastTest';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -39,9 +39,9 @@ const Dashboard = () => {
 
   const stats = [
     { label: "Documents Processed", value: "12", icon: <FileText className="w-6 h-6" />, color: "text-blue-400" },
-    { label: "Videos Generated", value: "8", icon: <Video className="w-6 h-6" />, color: "text-purple-400" },
     { label: "Podcasts Created", value: "15", icon: <Mic className="w-6 h-6" />, color: "text-green-400" },
     { label: "Hours Saved", value: "24", icon: <Clock className="w-6 h-6" />, color: "text-yellow-400" },
+    { label: "Avg Growth", value: "+12%", icon: <TrendingUp className="w-6 h-6" />, color: "text-purple-400" },
   ];
 
   const quickActions = [
@@ -70,7 +70,6 @@ const Dashboard = () => {
 
   const recentActivity = [
     { type: "document", title: "Q4 Financial Report", status: "completed", time: "2 hours ago" },
-    { type: "video", title: "Board Meeting Summary", status: "processing", time: "1 day ago" },
     { type: "podcast", title: "Investor Update", status: "completed", time: "3 days ago" },
   ];
 
@@ -85,7 +84,7 @@ const Dashboard = () => {
             </span>
           </h1>
           <p className="text-xl text-slate-300 max-w-3xl mx-auto">
-            Transform your financial documents into professional videos and podcasts with AI-powered automation
+            Transform your financial documents into professional podcasts with AI-powered automation
           </p>
         </div>
 
@@ -143,7 +142,6 @@ const Dashboard = () => {
                   <div className="flex items-center space-x-4">
                     <div className="w-10 h-10 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl flex items-center justify-center">
                       {item.type === 'document' && <FileText className="w-5 h-5 text-blue-400" />}
-                      {item.type === 'video' && <Video className="w-5 h-5 text-purple-400" />}
                       {item.type === 'podcast' && <Mic className="w-5 h-5 text-green-400" />}
                     </div>
                     <div>
@@ -186,10 +184,11 @@ const Dashboard = () => {
                 <Upload className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
                 Start Your First Project
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </ModernButton>
+            </ModernButton>
             </Link>
           </div>
         </ModernCard>
+        <QuickPodcastTest />
       </div>
     </div>
   );

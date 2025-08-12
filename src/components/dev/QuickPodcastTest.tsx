@@ -22,7 +22,7 @@ export default function QuickPodcastTest() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-[360px] max-w-[90vw]">
+    <div className="fixed bottom-6 right-6 z-50 w-[360px] max-w-[90vw]" role="complementary" aria-label="Snabbtest Podcast">
       <ModernCard variant="glass" className="shadow-xl">
         <ModernCardHeader>
           <ModernCardTitle className="flex items-center gap-2">

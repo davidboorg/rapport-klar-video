@@ -4,7 +4,6 @@ import ProcessingStep from './ProcessingStep';
 import ScriptReviewStep from './ScriptReviewStep';
 import ScriptComparisonStep from './ScriptComparisonStep';
 import PodcastGeneration from '../content/PodcastGeneration';
-import VideoGenerationStep from './VideoGenerationStep';
 import DownloadStep from './DownloadStep';
 import StatusIndicator from './StatusIndicator';
 import PDFTextPreview from '../pdf/PDFTextPreview';
@@ -13,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 
-export type WorkflowStep = 'upload' | 'processing' | 'textPreview' | 'scriptReview' | 'audio' | 'video' | 'download';
+export type WorkflowStep = 'upload' | 'processing' | 'textPreview' | 'scriptReview' | 'audio' | 'download';
 
 const WorkflowController: React.FC = () => {
   const [step, setStep] = useState<WorkflowStep>('upload');
@@ -393,8 +392,6 @@ Tack för er uppmärksamhet.
     setFile(null);
     setExtractedText('');
     setScript(null);
-    setAudioUrl(null);
-    setVideoUrl(null);
     setProjectId(null);
     setIsProcessingAI(false);
     setStatus('Väntar på uppladdning');
@@ -452,13 +449,9 @@ Tack för er uppmärksamhet.
           onPodcastGenerated={handlePodcastGenerated}
         />
       )}
-      {step === 'video' && script && (
-        <VideoGenerationStep script={script} videoUrl={videoUrl} />
-      )}
       {step === 'download' && (
         <DownloadStep 
           audioUrl={audioUrl} 
-          videoUrl={videoUrl} 
           onDownload={handleDownload} 
           onReset={handleReset} 
         />

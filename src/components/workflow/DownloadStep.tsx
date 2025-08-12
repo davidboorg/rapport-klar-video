@@ -6,14 +6,12 @@ import { Download, CheckCircle, RotateCcw } from 'lucide-react';
 
 interface DownloadStepProps {
   audioUrl: string | null;
-  videoUrl: string | null;
   onDownload: () => void;
   onReset: () => void;
 }
 
 const DownloadStep: React.FC<DownloadStepProps> = ({ 
   audioUrl, 
-  videoUrl, 
   onDownload, 
   onReset 
 }) => {
@@ -27,15 +25,6 @@ const DownloadStep: React.FC<DownloadStepProps> = ({
     }
   };
 
-  const handleDownloadVideo = () => {
-    if (videoUrl) {
-      const link = document.createElement('a');
-      link.href = videoUrl;
-      link.download = 'video.mp4';
-      link.click();
-      onDownload();
-    }
-  };
 
   return (
     <Card>
@@ -48,10 +37,10 @@ const DownloadStep: React.FC<DownloadStepProps> = ({
       <CardContent>
         <div className="space-y-4">
           <p className="text-gray-600">
-            Fantastiskt! Både podcast och video är klara för nedladdning.
+            Klart! Din podcast är redo för nedladdning.
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div className="bg-green-50 p-4 rounded-lg">
               <h4 className="font-medium text-green-800 mb-2">Podcast</h4>
               <p className="text-sm text-green-600 mb-3">
@@ -64,20 +53,6 @@ const DownloadStep: React.FC<DownloadStepProps> = ({
               >
                 <Download className="w-4 h-4" />
                 Ladda ner MP3
-              </Button>
-            </div>
-            
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-medium text-blue-800 mb-2">Video</h4>
-              <p className="text-sm text-blue-600 mb-3">
-                Video med avatar redo
-              </p>
-              <Button 
-                onClick={handleDownloadVideo}
-                className="w-full flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Ladda ner MP4
               </Button>
             </div>
           </div>
