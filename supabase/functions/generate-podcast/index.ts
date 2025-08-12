@@ -17,15 +17,32 @@ serve(async (req) => {
     const { text, voice = '9BWtsMINqrJLrRacOk9x', projectId, voiceSettings } = await req.json();
     
     // Sanitize text to remove invalid/control characters and normalize encoding
-    const sanitizeText = (input: unknown) => {
-      const raw = String(input ?? '');
-      const cleaned = raw
-        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ' ')
-        .replace(/\u2028|\u2029/g, '\n')
-        .normalize('NFC')
-        .trim();
-      return cleaned;
-    };
+      const sanitizeText = (input: unknown) => {
+        const raw = String(input ?? '');
+        
+        // Normalize then remove problematic unicode controls/invisibles
+        const normalized = raw.normalize('NFC');
+
+        const cleaned = normalized
+          // Replace ASCII and Latin-1 control chars
+          .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ' ')
+          // Replace non-breaking spaces
+          .replace(/\u00A0/g, ' ')
+          // Remove zero-width characters (ZWSP, ZWNJ, ZWJ, BOM)
+          .replace(/[\u200B-\u200D\uFEFF]/g, '')
+          // Remove bidi/formatting marks
+          .replace(/[\u200E\u200F\u202A-\u202E]/g, '')
+          // Normalize line/paragraph separators to newlines
+          .replace(/\u2028|\u2029/g, '\n')
+          // Collapse excessive whitespace
+          .replace(/[ \t\u00A0]{2,}/g, ' ')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+
+        // Final pass: remove remaining format/surrogate/private-use/unassigned chars
+        const final = cleaned.replace(/[\p{Cf}\p{Cs}\p{Co}\p{Cn}]/gu, '');
+        return final;
+      };
 
     const sanitizedText = sanitizeText(text);
 
