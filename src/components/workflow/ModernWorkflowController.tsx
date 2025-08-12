@@ -85,7 +85,7 @@ const ModernWorkflowController: React.FC = () => {
     projectId: null
   });
 
-  const { extractDocumentContent, isExtracting } = useDocumentExtraction();
+  const { extractDocumentContent, isExtracting } = useDocumentExtraction({ silent: true });
   const { toast } = useToast();
 
   const steps = [
@@ -135,10 +135,6 @@ const ModernWorkflowController: React.FC = () => {
         progress: 60 
       }));
 
-      toast({
-        title: "Demo Content Loaded",
-        description: "Generating script from The Jungle Lab demo content...",
-      });
 
       // Generate script directly from demo text
       console.log('Generating script with demo text...');
@@ -158,10 +154,6 @@ const ModernWorkflowController: React.FC = () => {
         progress: 80 
       }));
 
-      toast({
-        title: "Script Generated Successfully",
-        description: "Your demo script is ready for review!",
-      });
 
     } catch (error) {
       console.error('Demo upload workflow error:', error);
@@ -231,10 +223,6 @@ const ModernWorkflowController: React.FC = () => {
         progress: 80 
       }));
 
-      toast({
-        title: "Document Processed Successfully",
-        description: "Your script has been generated and is ready for review.",
-      });
 
     } catch (error) {
       console.error('Upload workflow error:', error);
@@ -266,10 +254,6 @@ const ModernWorkflowController: React.FC = () => {
         progress: 100 
       }));
 
-      toast({
-        title: "Content Generation Complete",
-        description: "Your audio content is ready!",
-      });
 
     } catch (error) {
       console.error('Content generation error:', error);

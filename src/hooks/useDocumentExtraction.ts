@@ -16,9 +16,10 @@ interface ExtractionResult {
   };
 }
 
-export const useDocumentExtraction = () => {
+export const useDocumentExtraction = (options?: { silent?: boolean }) => {
   const [isExtracting, setIsExtracting] = useState(false);
   const { toast } = useToast();
+  const silent = options?.silent ?? false;
 
   const extractDocumentContent = async (file: File, projectId: string): Promise<ExtractionResult> => {
     setIsExtracting(true);
@@ -66,10 +67,12 @@ export const useDocumentExtraction = () => {
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
       const documentType = fileExtension === 'pdf' ? 'PDF' : fileExtension === 'docx' ? 'Word-dokument' : 'dokument';
 
-      toast({
-        title: "Dokument bearbetat framgångsrikt",
-        description: `Extraherade ${extractionData.metadata?.wordCount || 'text'} ord från ${documentType}`,
-      });
+      if (!silent) {
+        toast({
+          title: "Dokument bearbetat framgångsrikt",
+          description: `Extraherade ${extractionData.metadata?.wordCount || 'text'} ord från ${documentType}`,
+        });
+      }
 
       return {
         success: true,

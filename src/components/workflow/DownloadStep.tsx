@@ -45,7 +45,6 @@ const DownloadStep: React.FC<DownloadStepProps> = ({
       setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 
       onDownload();
-      toast({ title: 'Nedladdning startad', description: 'Din podcast laddas ner.' });
     } catch (err) {
       console.error('Download failed, opening in new tab as fallback:', err);
       toast({
