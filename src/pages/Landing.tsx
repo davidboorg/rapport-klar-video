@@ -1,4 +1,4 @@
-import { Rocket, FileText, Brain, Video, Headphones, CheckCircle, Star, ArrowRight } from "lucide-react";
+import { Rocket, FileText, Brain, Headphones, CheckCircle, Star, ArrowRight } from "lucide-react";
 import { ModernButton } from "@/components/ui/modern-button";
 import { ModernCard, ModernCardContent, ModernCardHeader, ModernCardTitle } from "@/components/ui/modern-card";
 import { Link } from "react-router-dom";
@@ -16,9 +16,9 @@ const features = [
     desc: "Secure, GDPR-compliant AI that understands nuance and turns data into clarity.",
   },
   {
-    icon: <Video className="w-8 h-8 text-pink-400" />,
-    title: "Investor-Ready Video. Instantly.",
-    desc: "Branded, polished, and straight to the point. Your story, told like it matters.",
+    icon: <Headphones className="w-8 h-8 text-pink-400" />,
+    title: "Secure Audio Briefings. Instantly.",
+    desc: "Branded, polished, and straight to the point. Your story, as podcasts.",
   },
   {
     icon: <Headphones className="w-8 h-8 text-green-400" />,
@@ -31,7 +31,7 @@ const testimonials = [
   {
     name: "Anna Svensson",
     title: "CFO, NordicTech",
-    quote: "ReportFlow transformed our quarterly reporting. The AI-generated videos and podcasts are a game changer for our investor relations.",
+    quote: "ReportFlow transformed our quarterly reporting. The AI-generated podcasts are a game changer for our investor relations.",
     avatar: "https://images.unsplash.com/photo-1494790108755-2616b332c1cd?w=150&h=150&fit=crop&crop=face",
     rating: 5,
   },
@@ -100,7 +100,7 @@ export default function Landing() {
             </h1>
             
             <p className="text-xl md:text-2xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
-              AI-powered scripts, podcasts, and videos for investor relations and board management.
+              AI-powered scripts and podcasts for investor relations and board management.
               <br />
               <span className="text-blue-200 font-semibold">All in one click. 100% EU-compliant.</span>
             </p>
@@ -115,8 +115,8 @@ export default function Landing() {
               </ModernButton>
             </Link>
             <ModernButton variant="glass" size="xl">
-              <Video className="w-6 h-6 mr-3" />
-              Watch Demo
+              <Headphones className="w-6 h-6 mr-3" />
+              Listen Demo
             </ModernButton>
           </div>
 
@@ -151,7 +151,7 @@ export default function Landing() {
             {[
               { icon: <FileText className="w-12 h-12" />, title: "Upload", desc: "Drop your PDF report", step: "01" },
               { icon: <Brain className="w-12 h-12" />, title: "AI Magic", desc: "Our AI analyzes & creates", step: "02" },
-              { icon: <Video className="w-12 h-12" />, title: "Media Ready", desc: "Get videos & podcasts", step: "03" }
+              { icon: <Headphones className="w-12 h-12" />, title: "Podcast Ready", desc: "Get podcasts", step: "03" }
             ].map((item, index) => (
               <ModernCard key={index} variant="glass" className="text-center p-8 relative">
                 <div className="absolute -top-4 left-8 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-bold px-3 py-1 rounded-full">
@@ -249,7 +249,7 @@ export default function Landing() {
               Ready to Transform Your Reporting?
             </h2>
             <p className="text-xl text-slate-200 mb-8 max-w-2xl mx-auto">
-              Join hundreds of companies already using ReportFlow to create professional videos and podcasts from their financial reports.
+              Join hundreds of companies already using ReportFlow to create professional podcasts from their financial reports.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link to="/register">

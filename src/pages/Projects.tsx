@@ -54,7 +54,7 @@ const Projects = () => {
       color: "from-purple-500 to-pink-500"
     },
     {
-      name: "Annual Report Video",
+      name: "Annual Report Podcast",
       description: "Comprehensive yearly overview",
       icon: <Sparkles className="w-6 h-6" />,
       color: "from-green-500 to-teal-500"
@@ -71,7 +71,7 @@ const Projects = () => {
               Your Projects
             </h1>
             <p className="text-lg text-slate-300">
-              Manage your financial report video projects and templates.
+              Manage your audio projects and templates.
             </p>
           </div>
           <ModernButton className="group">
@@ -133,7 +133,7 @@ const Projects = () => {
               <div className="space-y-2">
                 <h3 className="text-2xl font-bold text-white">No Projects Yet</h3>
                 <p className="text-slate-300 leading-relaxed">
-                  Create your first project to start generating professional videos from your financial reports. 
+                  Create your first project to start generating professional podcasts from your financial reports. 
                   Choose from our templates or start from scratch.
                 </p>
               </div>

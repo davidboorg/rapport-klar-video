@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import ScriptReviewInterface from "./ScriptReviewInterface";
 import ScriptManualEditor from "./ScriptManualEditor";
-import VideoGeneration from "./VideoGeneration";
 
 interface FinancialData {
   company_name?: string;
