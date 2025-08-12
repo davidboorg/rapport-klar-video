@@ -2,7 +2,7 @@ import { Rocket, FileText, Brain, Video, Headphones, CheckCircle, Star, ArrowRig
 import { ModernButton } from "@/components/ui/modern-button";
 import { ModernCard, ModernCardContent, ModernCardHeader, ModernCardTitle } from "@/components/ui/modern-card";
 import { Link } from "react-router-dom";
-import QuickPodcastTest from "@/components/dev/QuickPodcastTest";
+import SecurityAssurance from "@/components/marketing/SecurityAssurance";
 
 const features = [
   {
@@ -234,6 +234,13 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Security & Compliance */}
+      <section className="relative z-10 py-16 px-6">
+        <div className="max-w-6xl mx-auto">
+          <SecurityAssurance />
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="relative z-10 py-24 px-6">
         <div className="max-w-4xl mx-auto text-center">
@@ -268,7 +275,7 @@ export default function Landing() {
           </p>
         </div>
       </footer>
-    <QuickPodcastTest />
+    
     </div>
   );
 }
