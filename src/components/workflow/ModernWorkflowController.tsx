@@ -105,13 +105,17 @@ const ModernWorkflowController: React.FC = () => {
 
       // Create project for demo
       console.log('Creating demo project...');
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('Du måste vara inloggad för att skapa projekt');
+      }
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
           name: 'ReportFlow Demo: The Jungle Lab',
           description: 'Demo content from The Jungle Lab board meeting',
           status: 'processing',
-          user_id: '00000000-0000-0000-0000-000000000000'
+          user_id: user.id
         })
         .select()
         .single();
@@ -179,13 +183,17 @@ const ModernWorkflowController: React.FC = () => {
       setState(prev => ({ ...prev, file, currentStep: 'processing', progress: 20 }));
 
       // Create project
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('Du måste vara inloggad för att skapa projekt');
+      }
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
           name: `ReportFlow: ${file.name}`,
           description: 'AI-generated content from uploaded document',
           status: 'processing',
-          user_id: '00000000-0000-0000-0000-000000000000' // Demo user
+          user_id: user.id
         })
         .select()
         .single();

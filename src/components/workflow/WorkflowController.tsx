@@ -49,15 +49,17 @@ const WorkflowController: React.FC = () => {
       }
 
       // Create a new project in Supabase
-      const demoUserId = '00000000-0000-0000-0000-000000000000';
-      
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('Du måste vara inloggad för att skapa projekt');
+      }
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
           name: `Demo: ${uploadedFile.name}`,
           description: 'Demo workflow project',
           status: 'processing',
-          user_id: demoUserId
+          user_id: user.id
         })
         .select()
         .single();
