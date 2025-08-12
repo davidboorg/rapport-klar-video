@@ -265,6 +265,40 @@ const ModernWorkflowController: React.FC = () => {
     }
   };
 
+  const handleDownloadAudio = async () => {
+    if (!state.audioUrl) return;
+    try {
+      const res = await fetch(state.audioUrl);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      const match = state.audioUrl.split('/').pop()?.split('?')[0];
+      const fileName = match && match.endsWith('.mp3') ? match : 'podcast.mp3';
+      link.href = objectUrl;
+      link.download = fileName;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (err) {
+      console.error('Download failed, opening in new tab as fallback:', err);
+      toast({
+        title: 'Nedladdning misslyckades',
+        description: 'Försöker öppna filen i en ny flik.',
+        variant: 'destructive',
+      });
+      if (state.audioUrl) {
+        window.open(state.audioUrl, '_blank');
+      }
+    }
+  };
+
   const renderCurrentStep = () => {
     switch (state.currentStep) {
       case 'upload':
@@ -366,8 +400,8 @@ const ModernWorkflowController: React.FC = () => {
               
               <div className="grid grid-cols-1 gap-4">
                 {state.audioUrl && (
-                  <ModernButton variant="glass" className="w-full">
-                    Download Audio
+                  <ModernButton variant="glass" className="w-full" onClick={handleDownloadAudio}>
+                    Ladda ner MP3
                   </ModernButton>
                 )}
               </div>
