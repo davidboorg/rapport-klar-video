@@ -16,11 +16,24 @@ serve(async (req) => {
   try {
     const { text, voice = '9BWtsMINqrJLrRacOk9x', projectId, voiceSettings } = await req.json();
     
-    if (!text) {
+    // Sanitize text to remove invalid/control characters and normalize encoding
+    const sanitizeText = (input: unknown) => {
+      const raw = String(input ?? '');
+      const cleaned = raw
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ' ')
+        .replace(/\u2028|\u2029/g, '\n')
+        .normalize('NFC')
+        .trim();
+      return cleaned;
+    };
+
+    const sanitizedText = sanitizeText(text);
+
+    if (!sanitizedText) {
       return new Response(
         JSON.stringify({ 
           success: false,
-          error: 'Text är required för podcast-generering' 
+          error: 'Ingen giltig text att generera från efter sanering' 
         }),
         { 
           status: 400, 
@@ -69,7 +82,7 @@ serve(async (req) => {
         'xi-api-key': elevenLabsApiKey,
       },
       body: JSON.stringify({
-        text: text,
+        text: sanitizedText,
         model_id: 'eleven_multilingual_v2',
         voice_settings: finalVoiceSettings
       }),

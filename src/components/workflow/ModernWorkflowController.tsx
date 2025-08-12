@@ -3,7 +3,7 @@ import { ModernCard, ModernCardContent } from '@/components/ui/modern-card';
 import { ModernButton } from '@/components/ui/modern-button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, CheckCircle, Clock, AlertCircle, Upload, Brain, FileText, Headphones, Video } from 'lucide-react';
+import { ArrowRight, CheckCircle, Clock, AlertCircle, Upload, Brain, FileText, Headphones } from 'lucide-react';
 import DemoUploadStep from './DemoUploadStep';
 import ProcessingStep from './ProcessingStep';
 import ScriptReviewStep from './ScriptReviewStep';
@@ -12,7 +12,7 @@ import { RealApiIntegration } from '@/lib/realApiIntegration';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
-export type WorkflowStep = 'upload' | 'processing' | 'script' | 'audio' | 'video' | 'complete';
+export type WorkflowStep = 'upload' | 'processing' | 'script' | 'audio' | 'complete';
 
 interface WorkflowState {
   currentStep: WorkflowStep;
@@ -21,7 +21,7 @@ interface WorkflowState {
   extractedText: string;
   script: string;
   audioUrl: string | null;
-  videoUrl: string | null;
+  
   projectId: string | null;
 }
 
@@ -81,7 +81,7 @@ const ModernWorkflowController: React.FC = () => {
     extractedText: '',
     script: '',
     audioUrl: null,
-    videoUrl: null,
+    
     projectId: null
   });
 
@@ -93,7 +93,7 @@ const ModernWorkflowController: React.FC = () => {
     { id: 'processing', label: 'Processing', icon: Brain },
     { id: 'script', label: 'Script', icon: FileText },
     { id: 'audio', label: 'Audio', icon: Headphones },
-    { id: 'video', label: 'Video', icon: Video },
+    
     { id: 'complete', label: 'Complete', icon: CheckCircle }
   ];
 
@@ -262,23 +262,13 @@ const ModernWorkflowController: React.FC = () => {
       setState(prev => ({ 
         ...prev, 
         audioUrl: podcastResult.audioUrl,
-        currentStep: 'video',
-        progress: 90 
-      }));
-
-      // Generate video
-      const videoResult = { videoUrl: '/placeholder.mp4' };
-
-      setState(prev => ({ 
-        ...prev, 
-        videoUrl: videoResult.videoUrl,
         currentStep: 'complete',
         progress: 100 
       }));
 
       toast({
         title: "Content Generation Complete",
-        description: "Your audio and video content are ready!",
+        description: "Your audio content is ready!",
       });
 
     } catch (error) {
@@ -349,7 +339,7 @@ const ModernWorkflowController: React.FC = () => {
             <Progress value={state.progress} className="h-2" />
             
             {/* Step Indicators */}
-            <div className="grid grid-cols-6 gap-2">
+            <div className="grid grid-cols-5 gap-2">
               {steps.map((step, index) => {
                 const isActive = step.id === state.currentStep;
                 const isCompleted = steps.findIndex(s => s.id === state.currentStep) > index;
@@ -390,15 +380,10 @@ const ModernWorkflowController: React.FC = () => {
                 <p className="text-slate-300">Your professional content is ready for download and sharing.</p>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 {state.audioUrl && (
                   <ModernButton variant="glass" className="w-full">
                     Download Audio
-                  </ModernButton>
-                )}
-                {state.videoUrl && (
-                  <ModernButton className="w-full">
-                    Download Video
                   </ModernButton>
                 )}
               </div>
