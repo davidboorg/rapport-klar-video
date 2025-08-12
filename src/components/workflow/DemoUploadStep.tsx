@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ModernCard, ModernCardContent } from '@/components/ui/modern-card';
 import { ModernButton } from '@/components/ui/modern-button';
@@ -13,6 +12,7 @@ interface DemoUploadStepProps {
 
 const DemoUploadStep: React.FC<DemoUploadStepProps> = ({ onUpload, onDemoUpload, onUseText }) => {
   const [customText, setCustomText] = useState('');
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -40,10 +40,7 @@ const DemoUploadStep: React.FC<DemoUploadStepProps> = ({ onUpload, onDemoUpload,
               <p className="text-sm text-slate-300 mb-4">
                 Use our sample board meeting report from The Jungle Lab to see ReportFlow in action
               </p>
-              <ModernButton 
-                onClick={onDemoUpload}
-                className="w-full flex items-center gap-2"
-              >
+              <ModernButton onClick={onDemoUpload} className="w-full flex items-center gap-2">
                 <Zap className="w-4 h-4" />
                 Use Demo Text
               </ModernButton>
@@ -53,9 +50,7 @@ const DemoUploadStep: React.FC<DemoUploadStepProps> = ({ onUpload, onDemoUpload,
             <div className="p-6 border border-slate-600 rounded-lg">
               <Upload className="w-8 h-8 text-slate-400 mx-auto mb-3" />
               <h4 className="font-semibold text-white mb-2">Upload File</h4>
-              <p className="text-sm text-slate-300 mb-4">
-                Upload your own PDF or Word document
-              </p>
+              <p className="text-sm text-slate-300 mb-4">Upload your own PDF or Word document</p>
               <input
                 type="file"
                 accept=".pdf,.docx"
@@ -94,6 +89,10 @@ const DemoUploadStep: React.FC<DemoUploadStepProps> = ({ onUpload, onDemoUpload,
                 </ModernButton>
               </div>
             </div>
+          </div>
+        </div>
+      </ModernCardContent>
+    </ModernCard>
   );
 };
 
