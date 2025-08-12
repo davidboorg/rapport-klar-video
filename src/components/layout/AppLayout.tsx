@@ -23,7 +23,6 @@ const AppLayout = () => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard' },
     { name: 'Projects', href: '/projects' },
-    { name: 'Avatars', href: '/avatars' },
     { name: 'Templates', href: '/templates' },
   ];
 

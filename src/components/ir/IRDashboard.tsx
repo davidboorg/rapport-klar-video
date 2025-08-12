@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   TrendingUp, 
   FileText, 
-  Video, 
   Mic, 
   Calendar,
   Users,
@@ -24,7 +23,7 @@ interface IRProject {
   year: number;
   status: 'draft' | 'processing' | 'completed';
   created_at: string;
-  content_types: Array<'video' | 'podcast' | 'summary'>;
+  content_types: Array<'podcast' | 'summary'>;
   company_name: string;
 }
 
@@ -37,7 +36,7 @@ const IRDashboard = () => {
       year: 2024,
       status: 'completed',
       created_at: '2024-01-15',
-      content_types: ['video', 'podcast', 'summary'],
+      content_types: ['podcast', 'summary'],
       company_name: 'TechCorp AB'
     },
     {
@@ -47,7 +46,7 @@ const IRDashboard = () => {
       year: 2025,
       status: 'processing',
       created_at: '2024-04-10',
-      content_types: ['video', 'summary'],
+      content_types: ['podcast', 'summary'],
       company_name: 'TechCorp AB'
     }
   ]);
@@ -105,9 +104,9 @@ const IRDashboard = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center space-x-2">
-              <Video className="w-8 h-8 text-green-600" />
+              <Mic className="w-8 h-8 text-green-600" />
               <div>
-                <p className="text-sm text-gray-600">Videos Created</p>
+                <p className="text-sm text-gray-600">Audio Briefings</p>
                 <p className="text-2xl font-bold">18</p>
               </div>
             </div>
@@ -172,7 +171,6 @@ const IRDashboard = () => {
                         <span className="text-sm text-slate-600">Content:</span>
                         {project.content_types.map((type) => (
                           <Badge key={type} variant="outline" className="text-xs">
-                            {type === 'video' && <Video className="w-3 h-3 mr-1" />}
                             {type === 'podcast' && <Mic className="w-3 h-3 mr-1" />}
                             {type === 'summary' && <FileText className="w-3 h-3 mr-1" />}
                             {type}

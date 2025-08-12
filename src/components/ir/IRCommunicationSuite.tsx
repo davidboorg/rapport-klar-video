@@ -10,7 +10,6 @@ import {
   Users,
   Globe,
   Mic2,
-  Video,
   FileText,
   Settings,
   Star,
@@ -112,14 +111,10 @@ const IRCommunicationSuite: React.FC<IRCommunicationSuiteProps> = ({
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="podcast" className="flex items-center gap-2">
             <Headphones className="w-4 h-4" />
             Premium Podcast
-          </TabsTrigger>
-          <TabsTrigger value="video" className="flex items-center gap-2">
-            <Video className="w-4 h-4" />
-            AI Video (Soon)
           </TabsTrigger>
           <TabsTrigger value="analytics" className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4" />
@@ -140,19 +135,6 @@ const IRCommunicationSuite: React.FC<IRCommunicationSuiteProps> = ({
           />
         </TabsContent>
 
-        <TabsContent value="video" className="mt-6">
-          <Card className="p-8 text-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Video className="w-8 h-8 text-white" />
-            </div>
-            <h3 className="text-xl font-bold mb-2">AI Video Generation</h3>
-            <p className="text-gray-600 mb-4 max-w-md mx-auto">
-              Professional AI avatars for video presentations are coming soon. 
-              Create personalized CEO messages and board presentations.
-            </p>
-            <Badge variant="outline">Coming Soon</Badge>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="analytics" className="mt-6">
           <Card className="p-8 text-center">

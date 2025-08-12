@@ -13,8 +13,6 @@ import Projects from "./pages/Projects";
 import ProjectEditor from "./pages/ProjectEditor";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
-import Avatars from "./pages/Avatars";
-import AvatarSetup from "./pages/AvatarSetup";
 import NotFound from "./pages/NotFound";
 import MarketSelection from "./pages/MarketSelection";
 import IRDashboard from "./pages/IRDashboard";
@@ -47,8 +45,6 @@ function App() {
                 <Route path="/projects/:projectId" element={<ProjectEditor />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/profile" element={<Profile />} />
-                <Route path="/avatars/*" element={<Avatars />} />
-                <Route path="/avatars/create" element={<AvatarSetup />} />
               </Route>
               
               <Route path="*" element={<NotFound />} />
