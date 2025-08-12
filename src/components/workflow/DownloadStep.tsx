@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, CheckCircle, RotateCcw } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface DownloadStepProps {
   audioUrl: string | null;
@@ -15,13 +16,45 @@ const DownloadStep: React.FC<DownloadStepProps> = ({
   onDownload, 
   onReset 
 }) => {
-  const handleDownloadAudio = () => {
-    if (audioUrl) {
+  const { toast } = useToast();
+
+  const handleDownloadAudio = async () => {
+    if (!audioUrl) return;
+
+    try {
+      // Fetch as blob to avoid cross-origin download issues
+      const res = await fetch(audioUrl);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
       const link = document.createElement('a');
-      link.href = audioUrl;
-      link.download = 'podcast.mp3';
+      // Try to derive filename from URL, fallback to default
+      const match = audioUrl.split('/').pop()?.split('?')[0];
+      const fileName = match && match.endsWith('.mp3') ? match : 'podcast.mp3';
+      link.href = objectUrl;
+      link.download = fileName;
+
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+
+      // Revoke after a tick
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+
       onDownload();
+      toast({ title: 'Nedladdning startad', description: 'Din podcast laddas ner.' });
+    } catch (err) {
+      console.error('Download failed, opening in new tab as fallback:', err);
+      toast({
+        title: 'Nedladdning misslyckades',
+        description: 'Försöker öppna filen i en ny flik.',
+        variant: 'destructive',
+      });
+      // Fallback: open signed URL in a new tab
+      window.open(audioUrl, '_blank');
     }
   };
 
