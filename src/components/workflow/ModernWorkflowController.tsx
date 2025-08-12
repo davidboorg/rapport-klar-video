@@ -235,6 +235,54 @@ const ModernWorkflowController: React.FC = () => {
     }
   };
 
+  const handleUseText = async (text: string) => {
+    try {
+      setState(prev => ({ ...prev, currentStep: 'processing', progress: 20 }));
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('Du måste vara inloggad för att skapa projekt');
+      }
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          name: 'ReportFlow: Direct Text',
+          description: 'User-provided text input',
+          status: 'processing',
+          user_id: user.id
+        })
+        .select()
+        .single();
+
+      if (projectError) throw projectError;
+      const projectId = project.id;
+
+      setState(prev => ({ ...prev, projectId, extractedText: text, progress: 60 }));
+
+      const scriptResult = await RealApiIntegration.generateScript({
+        projectId,
+        extractedText: text,
+        documentType: 'quarterly',
+        targetAudience: 'investors'
+      });
+
+      setState(prev => ({
+        ...prev,
+        script: scriptResult.script,
+        currentStep: 'script',
+        progress: 80
+      }));
+
+    } catch (error) {
+      console.error('Direct text workflow error:', error);
+      toast({
+        title: 'Processing Failed',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive'
+      });
+      setState(prev => ({ ...prev, currentStep: 'upload', progress: 0 }));
+    }
+  };
   const handleScriptApprove = async () => {
     if (!state.projectId || !state.script) return;
 
@@ -302,7 +350,7 @@ const ModernWorkflowController: React.FC = () => {
   const renderCurrentStep = () => {
     switch (state.currentStep) {
       case 'upload':
-        return <DemoUploadStep onUpload={handleFileUpload} onDemoUpload={handleDemoUpload} />;
+        return <DemoUploadStep onUpload={handleFileUpload} onDemoUpload={handleDemoUpload} onUseText={handleUseText} />;
       case 'processing':
         return <ProcessingStep />;
       case 'script':

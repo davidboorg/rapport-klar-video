@@ -8,89 +8,69 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Create a focused financial analysis prompt
+// Create a focused financial analysis prompt (English)
 const createAnalysisPrompt = (content: string): string => {
   return `
-Du är en finansiell analytiker. Analysera denna text och extrahera exakt finansiell information.
+You are a meticulous financial analyst. Analyze the following text and extract ONLY factual financial information present in the text.
 
-VIKTIGT: Använd endast information som FAKTISKT finns i texten. Om något inte finns, skriv "Ej tillgänglig".
+Important: Use only facts explicitly stated. If something is missing, write "Not available".
 
-Returnera JSON i exakt detta format:
+Return STRICT JSON in exactly this format:
 {
-  "company_name": "Exakt företagsnamn från texten",
-  "period": "Exakt period/år från texten",
+  "company_name": "Exact company name from the text",
+  "period": "Exact period/year from the text",
   "financial_metrics": {
-    "revenue": "Omsättning med exakt siffra och valuta",
-    "growth_rate": "Tillväxt i % om angivet",
-    "operating_result": "Rörelseresultat med siffra",
-    "net_result": "Nettoresultat med siffra"
+    "revenue": "Revenue with exact figure and currency",
+    "growth_rate": "Growth rate in % if stated",
+    "operating_result": "Operating result with figure",
+    "net_result": "Net result with figure"
   },
-  "key_highlights": ["Max 3 faktiska punkter från texten"],
-  "data_quality": "high om du hittar företagsnamn och siffror, annars low"
+  "key_highlights": ["Up to 3 factual bullet points from the text"],
+  "data_quality": "high if company and figures found, otherwise low"
 }
 
-Text att analysera:
+Text to analyze:
 ${content.substring(0, 2000)}
 `;
 };
 
-// Generate script based on extracted data
+// Generate an executive-level English script based on extracted data
 const generateScript = (financialData: any): string => {
-  const company = financialData.company_name !== 'Ej tillgänglig' ? financialData.company_name : null;
-  const period = financialData.period !== 'Ej tillgänglig' ? financialData.period : null;
+  const company = financialData.company_name !== 'Not available' ? financialData.company_name : null;
+  const period = financialData.period !== 'Not available' ? financialData.period : null;
   const metrics = financialData.financial_metrics || {};
-  
-  // Only generate if we have real data
+
   if (!company || financialData.data_quality === 'low') {
-    throw new Error('Kunde inte extrahera tillräckligt med finansiell information från dokumentet för att skapa ett meningsfullt manus');
-  }
-  
-  let script = `Välkommen till en finansiell sammanfattning för ${company}`;
-  if (period) {
-    script += ` för ${period}`;
-  }
-  script += '.\n\n';
-
-  // Add financial metrics
-  let hasMetrics = false;
-  
-  if (metrics.revenue && metrics.revenue !== 'Ej tillgänglig') {
-    script += `Omsättningen uppgick till ${metrics.revenue}.\n`;
-    hasMetrics = true;
-  }
-  
-  if (metrics.growth_rate && metrics.growth_rate !== 'Ej tillgänglig') {
-    script += `Tillväxten var ${metrics.growth_rate}.\n`;
-    hasMetrics = true;
-  }
-  
-  if (metrics.operating_result && metrics.operating_result !== 'Ej tillgänglig') {
-    script += `Rörelseresultatet blev ${metrics.operating_result}.\n`;
-    hasMetrics = true;
-  }
-  
-  if (metrics.net_result && metrics.net_result !== 'Ej tillgänglig') {
-    script += `Nettoresultatet uppgick till ${metrics.net_result}.\n`;
-    hasMetrics = true;
+    throw new Error('Insufficient financial information to create a meaningful script');
   }
 
-  if (!hasMetrics) {
-    throw new Error('Inga konkreta finansiella siffror kunde extraheras från dokumentet');
+  const lines: string[] = [];
+  lines.push(`Welcome to an executive financial update for ${company}${period ? ` for ${period}` : ''}.`);
+
+  // Core metrics with polished phrasing
+  if (metrics.revenue && metrics.revenue !== 'Not available') {
+    lines.push(`Revenue came in at ${metrics.revenue}.`);
+  }
+  if (metrics.growth_rate && metrics.growth_rate !== 'Not available') {
+    lines.push(`Growth was ${metrics.growth_rate}, reflecting disciplined execution.`);
+  }
+  if (metrics.operating_result && metrics.operating_result !== 'Not available') {
+    lines.push(`Operating result reached ${metrics.operating_result}.`);
+  }
+  if (metrics.net_result && metrics.net_result !== 'Not available') {
+    lines.push(`Net result was ${metrics.net_result}.`);
   }
 
-  // Add highlights
-  const highlights = financialData.key_highlights || [];
-  if (highlights.length > 0 && highlights[0] !== 'Ej tillgänglig') {
-    script += '\nViktiga punkter:\n';
-    highlights.forEach((highlight: string) => {
-      if (highlight && highlight !== 'Ej tillgänglig') {
-        script += `• ${highlight}\n`;
-      }
-    });
+  const highlights = (financialData.key_highlights || []).filter((h: string) => h && h !== 'Not available');
+  if (highlights.length) {
+    lines.push('Key highlights:');
+    highlights.forEach((h: string) => lines.push(`• ${h}`));
   }
 
-  script += '\nTack för er uppmärksamhet.';
-  
+  lines.push('Thank you for listening.');
+
+  // Executive yet accessible tone
+  const script = lines.join('\n');
   return script;
 };
 
@@ -137,7 +117,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'Du är en finansiell analytiker som extraherar exakt information från dokument. Returnera endast giltig JSON.'
+            content: 'You are a financial analyst who extracts precise information from documents. Return ONLY valid JSON.'
           },
           {
             role: 'user',
@@ -183,16 +163,16 @@ serve(async (req) => {
     // Try to generate script - this will throw if data quality is too low
     const generatedScript = generateScript(extractedData);
     
-    const scriptAlternatives = [
-      {
-        type: 'executive',
-        title: 'Finansiell sammanfattning',
-        duration: '2-3 minuter',
-        script: generatedScript,
-        tone: 'Professionell',
-        key_points: extractedData.key_highlights || []
-      }
-    ];
+const scriptAlternatives = [
+  {
+    type: 'executive',
+    title: 'Executive Financial Summary',
+    duration: '2-3 minutes',
+    script: generatedScript,
+    tone: 'Executive, confident, accessible',
+    key_points: extractedData.key_highlights || []
+  }
+];
 
     // Save results to database
     const { error: contentError } = await supabase
@@ -223,16 +203,16 @@ serve(async (req) => {
 
     console.log('Analysis completed successfully');
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        company_analyzed: extractedData.company_name,
-        period: extractedData.period,
-        data_quality: extractedData.data_quality,
-        financial_data: extractedData,
-        script_text: generatedScript,
-        message: 'Finansiell analys och manus genererat framgångsrikt'
-      }),
+return new Response(
+  JSON.stringify({ 
+    success: true, 
+    company_analyzed: extractedData.company_name,
+    period: extractedData.period,
+    data_quality: extractedData.data_quality,
+    financial_data: extractedData,
+    script_text: generatedScript,
+    message: 'Financial analysis and script generated successfully'
+  }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 

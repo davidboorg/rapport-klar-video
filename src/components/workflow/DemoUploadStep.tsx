@@ -1,15 +1,18 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ModernCard, ModernCardContent } from '@/components/ui/modern-card';
 import { ModernButton } from '@/components/ui/modern-button';
 import { Upload, FileText, Zap } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 
 interface DemoUploadStepProps {
   onUpload: (file: File) => void;
   onDemoUpload: () => void;
+  onUseText: (text: string) => void;
 }
 
-const DemoUploadStep: React.FC<DemoUploadStepProps> = ({ onUpload, onDemoUpload }) => {
+const DemoUploadStep: React.FC<DemoUploadStepProps> = ({ onUpload, onDemoUpload, onUseText }) => {
+  const [customText, setCustomText] = useState('');
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -55,7 +58,7 @@ const DemoUploadStep: React.FC<DemoUploadStepProps> = ({ onUpload, onDemoUpload 
               </p>
               <input
                 type="file"
-                accept=".pdf,.docx,.doc"
+                accept=".pdf,.docx"
                 onChange={handleFileUpload}
                 className="hidden"
                 id="document-upload"
@@ -66,10 +69,31 @@ const DemoUploadStep: React.FC<DemoUploadStepProps> = ({ onUpload, onDemoUpload 
                 </ModernButton>
               </label>
             </div>
-          </div>
-        </div>
-      </ModernCardContent>
-    </ModernCard>
+
+            {/* Direct Text Option */}
+            <div className="p-6 border border-slate-600 rounded-lg col-span-1 md:col-span-2">
+              <FileText className="w-8 h-8 text-slate-400 mx-auto mb-3" />
+              <h4 className="font-semibold text-white mb-2">Write Text Directly</h4>
+              <p className="text-sm text-slate-300 mb-4">
+                Paste or write your content here and generate a script without uploading a file
+              </p>
+              <Textarea
+                value={customText}
+                onChange={(e) => setCustomText(e.target.value)}
+                placeholder="Paste your content here..."
+                className="min-h-[140px]"
+              />
+              <div className="mt-4">
+                <ModernButton
+                  variant="glass"
+                  className="w-full"
+                  onClick={() => customText.trim() && onUseText(customText.trim())}
+                  disabled={!customText.trim()}
+                >
+                  Use This Text
+                </ModernButton>
+              </div>
+            </div>
   );
 };
 

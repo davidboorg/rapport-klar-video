@@ -7,7 +7,7 @@ additional_redirect_urls = ["https://localhost:3000"]
 jwt_expiry = 3600
 
 [functions.analyze-financial-data]
-verify_jwt = false
+verify_jwt = true
 
 [functions.berget-api-proxy]
 verify_jwt = false
@@ -22,7 +22,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.extract-pdf-content]
-verify_jwt = false
+verify_jwt = true
 
 [functions.refresh-avatar-data]
 verify_jwt = false
