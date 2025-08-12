@@ -11,7 +11,7 @@ import { useDocumentExtraction } from '@/hooks/useDocumentExtraction';
 import { RealApiIntegration } from '@/lib/realApiIntegration';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-
+import { useAuth } from '@/contexts/AuthContext';
 export type WorkflowStep = 'upload' | 'processing' | 'script' | 'audio' | 'complete';
 
 interface WorkflowState {
@@ -85,9 +85,9 @@ const ModernWorkflowController: React.FC = () => {
     projectId: null
   });
 
-  const { extractDocumentContent, isExtracting } = useDocumentExtraction({ silent: true });
-  const { toast } = useToast();
-
+const { extractDocumentContent, isExtracting } = useDocumentExtraction({ silent: true });
+const { toast } = useToast();
+const { user } = useAuth();
   const steps = [
     { id: 'upload', label: 'Upload', icon: Upload },
     { id: 'processing', label: 'Processing', icon: Brain },
@@ -104,11 +104,16 @@ const ModernWorkflowController: React.FC = () => {
       setState(prev => ({ ...prev, currentStep: 'processing', progress: 20 }));
 
       // Create project for demo
-      console.log('Creating demo project...');
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        throw new Error('Du måste vara inloggad för att skapa projekt');
-      }
+console.log('Creating demo project...');
+if (!user) {
+  toast({
+    title: 'Inloggning krävs',
+    description: 'Logga in för att skapa projekt och ladda upp dokument.',
+    variant: 'destructive',
+  });
+  setState(prev => ({ ...prev, currentStep: 'upload', progress: 0 }));
+  return;
+}
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
@@ -175,10 +180,15 @@ const ModernWorkflowController: React.FC = () => {
       setState(prev => ({ ...prev, file, currentStep: 'processing', progress: 20 }));
 
       // Create project
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        throw new Error('Du måste vara inloggad för att skapa projekt');
-      }
+if (!user) {
+  toast({
+    title: 'Inloggning krävs',
+    description: 'Logga in för att skapa projekt och ladda upp dokument.',
+    variant: 'destructive',
+  });
+  setState(prev => ({ ...prev, currentStep: 'upload', progress: 0 }));
+  return;
+}
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
@@ -239,10 +249,15 @@ const ModernWorkflowController: React.FC = () => {
     try {
       setState(prev => ({ ...prev, currentStep: 'processing', progress: 20 }));
 
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        throw new Error('Du måste vara inloggad för att skapa projekt');
-      }
+if (!user) {
+  toast({
+    title: 'Inloggning krävs',
+    description: 'Logga in för att skapa projekt och ladda upp dokument.',
+    variant: 'destructive',
+  });
+  setState(prev => ({ ...prev, currentStep: 'upload', progress: 0 }));
+  return;
+}
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
@@ -349,8 +364,22 @@ const ModernWorkflowController: React.FC = () => {
 
   const renderCurrentStep = () => {
     switch (state.currentStep) {
-      case 'upload':
-        return <DemoUploadStep onUpload={handleFileUpload} onDemoUpload={handleDemoUpload} onUseText={handleUseText} />;
+case 'upload':
+  if (!user) {
+    return (
+      <ModernCard className="max-w-2xl mx-auto">
+        <ModernCardContent className="p-8 text-center space-y-4">
+          <h3 className="text-2xl font-bold text-white">Logga in för att ladda upp</h3>
+          <p className="text-slate-300">Du behöver vara inloggad för att ladda upp dokument och generera innehåll.</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <a href="/login"><ModernButton className="w-full">Logga in</ModernButton></a>
+            <a href="/register"><ModernButton variant="glass" className="w-full">Skapa konto</ModernButton></a>
+          </div>
+        </ModernCardContent>
+      </ModernCard>
+    );
+  }
+  return <DemoUploadStep onUpload={handleFileUpload} onDemoUpload={handleDemoUpload} onUseText={handleUseText} />;
       case 'processing':
         return <ProcessingStep />;
       case 'script':
