@@ -20,10 +20,18 @@ serve(async (req) => {
       const sanitizeText = (input: unknown) => {
         const raw = String(input ?? '');
         
-        // Normalize then remove problematic unicode controls/invisibles
+        // Normalize first
         const normalized = raw.normalize('NFC');
 
-        const cleaned = normalized
+        // Map problematic typography to safe ASCII
+        const typographicSafe = normalized
+          .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'")
+          .replace(/[\u201C\u201D\u2033]/g, '"')
+          .replace(/[\u2013\u2014\u2212]/g, '-')
+          .replace(/\u2026/g, '...')
+          .replace(/\u2022/g, '-');
+
+        const cleaned = typographicSafe
           // Replace ASCII and Latin-1 control chars
           .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ' ')
           // Replace non-breaking spaces
@@ -39,8 +47,11 @@ serve(async (req) => {
           .replace(/\n{3,}/g, '\n\n')
           .trim();
 
+        // Remove any remaining disallowed symbols (e.g., emojis, private use)
+        const withoutWeirdSymbols = cleaned.replace(/[^\p{L}\p{N}\p{P}\p{Zs}\n\r\t]/gu, '');
+
         // Final pass: remove remaining format/surrogate/private-use/unassigned chars
-        const final = cleaned.replace(/[\p{Cf}\p{Cs}\p{Co}\p{Cn}]/gu, '');
+        const final = withoutWeirdSymbols.replace(/[\p{Cf}\p{Cs}\p{Co}\p{Cn}]/gu, '');
         return final;
       };
 

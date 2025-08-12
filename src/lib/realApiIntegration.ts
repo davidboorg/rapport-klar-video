@@ -101,17 +101,28 @@ export class RealApiIntegration {
         throw new Error(data?.error || 'Podcast generation failed');
       }
 
-      // Convert base64 to blob URL for playback
-      const audioBlob = new Blob(
-        [Uint8Array.from(atob(data.audioContent), (c) => c.charCodeAt(0))],
-        { type: 'audio/mpeg' }
-      );
-      const audioUrl = URL.createObjectURL(audioBlob);
+      // Prefer signed URL returned by the Edge Function (stored in private bucket)
+      if (data.audioUrl) {
+        return {
+          success: true,
+          audioUrl: data.audioUrl as string,
+        };
+      }
 
-      return {
-        success: true,
-        audioUrl,
-      };
+      // Fallback: handle legacy base64 payloads
+      if (data.audioContent) {
+        const audioBlob = new Blob(
+          [Uint8Array.from(atob(data.audioContent as string), (c) => c.charCodeAt(0))],
+          { type: 'audio/mpeg' }
+        );
+        const audioUrl = URL.createObjectURL(audioBlob);
+        return {
+          success: true,
+          audioUrl,
+        };
+      }
+
+      throw new Error('Podcast generation failed: No audio returned');
     } catch (error) {
       console.error('Podcast generation error:', error);
       if (error instanceof Error) throw error;
