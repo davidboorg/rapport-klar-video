@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Play, Eye, EyeOff, Shield, AlertCircle, Wifi, WifiOff } from "lucide-react";
 
 const Login = () => {
@@ -17,7 +17,11 @@ const Login = () => {
   const [error, setError] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, loading, isOnline } = useAuth();
+
+  // Get the redirect path from the state (where user was trying to go)
+  const from = location.state?.from?.pathname || "/dashboard";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,12 +72,12 @@ const Login = () => {
         });
       }
     } else {
-      console.log('Login successful, navigating to dashboard');
+      console.log(`Login successful, navigating to ${from}`);
       toast({
         title: "Welcome back!",
         description: "You have been logged in successfully",
       });
-      navigate("/dashboard");
+      navigate(from, { replace: true });
     }
   };
 
